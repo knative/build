@@ -1,0 +1,50 @@
+/*
+Copyright 2018 Google, Inc. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package main
+
+import (
+	"bytes"
+	"flag"
+	"os/exec"
+
+	"github.com/golang/glog"
+)
+
+var (
+	url       = flag.String("url", "", "The url of the Git repository to initialize.")
+	commitish = flag.String("commitish", "", "One of branch/tag/ref/commit to make the repository HEAD")
+)
+
+func runOrFail(cmd string, args ...string) {
+	c := exec.Command(cmd, args...)
+	var output bytes.Buffer
+	c.Stderr = &output
+	c.Stdout = &output
+	if err := c.Run(); err != nil {
+		glog.Fatalf("Unexpected error running %v %v: %v\n%v", cmd, args, err, output.String())
+	}
+}
+
+func main() {
+	flag.Parse()
+
+	runOrFail("git", "init")
+	runOrFail("git", "remote", "add", "origin", *url)
+	runOrFail("git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *commitish)
+	runOrFail("git", "reset", "--hard", "FETCH_HEAD")
+
+	glog.Infof("Successfully cloned %q @ %q", *url, *commitish)
+}
