@@ -276,10 +276,11 @@ func FromCRD(build *v1alpha1.Build) (*batchv1.Job, error) {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					// If the build fails, don't restart it.
-					RestartPolicy:  corev1.RestartPolicyNever,
-					InitContainers: initContainers,
-					Containers:     []corev1.Container{nopContainer},
-					Volumes:        volumes,
+					RestartPolicy:      corev1.RestartPolicyNever,
+					InitContainers:     initContainers,
+					Containers:         []corev1.Container{nopContainer},
+					ServiceAccountName: build.Spec.ServiceAccountName,
+					Volumes:            volumes,
 					// TODO(mattmoor): We may need support for imagePullSecrets for pulling private images.
 				},
 			},
@@ -383,9 +384,10 @@ func ToCRD(job *batchv1.Job) (*v1alpha1.Build, error) {
 	return &v1alpha1.Build{
 		// TODO(mattmoor): What should we do for ObjectMeta stuff?
 		Spec: v1alpha1.BuildSpec{
-			Source:  scm,
-			Steps:   steps,
-			Volumes: volumes,
+			Source:             scm,
+			Steps:              steps,
+			ServiceAccountName: podSpec.ServiceAccountName,
+			Volumes:            volumes,
 		},
 	}, nil
 }

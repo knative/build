@@ -56,6 +56,9 @@ func remarshal(in, out interface{}) error {
 }
 
 func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
+	if u.ServiceAccountName != "" {
+		return nil, fmt.Errorf("Unsupported: ServiceAccountName with Google builder, got: %v", u.ServiceAccountName)
+	}
 	bld := cloudbuild.Build{
 		Steps: make([]*cloudbuild.BuildStep, 0, len(u.Steps)),
 	}
