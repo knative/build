@@ -19,16 +19,16 @@ spec:
   steps:
   # Use the build's declared argument value.
   - image: ubuntu
-    comment: ['bash']
+    command: ['bash']
     args: ['-c', '[[ ${FOO} == "foo" ]]']
   # Use the template parameter's default value.
   - image: ubuntu
-    comment: ['bash']
+    command: ['bash']
     args: ['-c', '[[ ${BAR} == "bar" ]]']
   # Use the build's declared argument value, overriding the parameter's default
   # value.
   - image: ubuntu
-    comment: ['bash']
+    command: ['bash']
     args: ['-c', '[[ ${BAZ} == "bazzzzz" ]]']
   # This is just an environment variable, not a template parameter.
   - image: ubuntu

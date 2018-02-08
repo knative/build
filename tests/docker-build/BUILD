@@ -23,9 +23,9 @@ metadata:
     expect: complete
 spec:
   source:
-    git:
-      url: https://github.com/GoogleCloudPlatform/cloud-builders.git
-      branch: master
+    custom:
+      image: gcr.io/cloud-builders/git
+      args: ["clone", "https://github.com/GoogleCloudPlatform/cloud-builders.git", "."]
 
   template:
     name: docker-build-push

@@ -149,3 +149,20 @@ func TestUnsupportedCRDs(t *testing.T) {
 		}
 	}
 }
+
+func TestSupportedCRDsOneWay(t *testing.T) {
+	inputs := []string{
+		"buildcrd/testdata/docker-build.yaml",
+	}
+
+	for _, in := range inputs {
+		var og v1alpha1.BuildSpec
+		if err := buildtest.DataAs(in, &og); err != nil {
+			t.Fatalf("Unexpected error in buildtest.DataAs(%q, v1alpha1.BuildSpec): %v", in, err)
+		}
+
+		if _, err := FromCRD(&og); err != nil {
+			t.Errorf("Unable to convert %q from CRD: %v", in, err)
+		}
+	}
+}
