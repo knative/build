@@ -107,6 +107,10 @@ func (nb *Builder) Builder() v1alpha1.BuildProvider {
 	return v1alpha1.GoogleBuildProvider
 }
 
+func (nb *Builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) *buildercommon.ValidationError {
+	return buildercommon.ValidateBuild(u, tmpl)
+}
+
 func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {
 	return &build{builder: nb}, nil
 }

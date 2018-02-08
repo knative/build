@@ -151,6 +151,10 @@ func (b *builder) Builder() v1alpha1.BuildProvider {
 	return v1alpha1.ClusterBuildProvider
 }
 
+func (b *builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) *buildercommon.ValidationError {
+	return buildercommon.ValidateBuild(u, tmpl)
+}
+
 func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) {
 	bld, err := convert.FromCRD(u)
 	if err != nil {
