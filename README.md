@@ -13,10 +13,6 @@ To set the paths of the imports right, make sure you clone into the directory
 $ export GOPATH=$(pwd)/go  # Choose your directory.
 $ mkdir -p ${GOPATH}
 
-# These are dependencies that we currently require on GOPATH
-$ go get k8s.io/apimachinery
-$ go get k8s.io/code-generator
-
 # Grab the repo itself.
 $ go get github.com/google/build-crd
 $ cd ${GOPATH}/src/github.com/google/build-crd

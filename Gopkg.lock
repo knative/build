@@ -235,6 +235,15 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/ast/astutil",
+    "imports"
+  ]
+  revision = "66487607e2081c7c2af2281c62c14ee000d5024b"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/api"
   packages = [
     "cloudbuild/v1",
@@ -313,6 +322,8 @@
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/apimachinery",
+    "pkg/apimachinery/registered",
     "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
@@ -509,6 +520,47 @@
   revision = "18ec62fe90328a54f7ab513d5fedf3e8650c98b5"
 
 [[projects]]
+  branch = "master"
+  name = "k8s.io/code-generator"
+  packages = [
+    "cmd/client-gen",
+    "cmd/client-gen/args",
+    "cmd/client-gen/generators",
+    "cmd/client-gen/generators/fake",
+    "cmd/client-gen/generators/scheme",
+    "cmd/client-gen/generators/util",
+    "cmd/client-gen/path",
+    "cmd/client-gen/types",
+    "cmd/deepcopy-gen",
+    "cmd/deepcopy-gen/args",
+    "cmd/defaulter-gen",
+    "cmd/defaulter-gen/args",
+    "cmd/informer-gen",
+    "cmd/informer-gen/args",
+    "cmd/informer-gen/generators",
+    "cmd/lister-gen",
+    "cmd/lister-gen/args",
+    "cmd/lister-gen/generators",
+    "pkg/util"
+  ]
+  revision = "2a248ce75d2b247e5ca033ded85ad6a63e0f297e"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/gengo"
+  packages = [
+    "args",
+    "examples/deepcopy-gen/generators",
+    "examples/defaulter-gen/generators",
+    "examples/set-gen/sets",
+    "generator",
+    "namer",
+    "parser",
+    "types"
+  ]
+  revision = "8394c995ab8fbe52216f38d0e1a37de36d820528"
+
+[[projects]]
   name = "k8s.io/kube-openapi"
   packages = [
     "pkg/common",
@@ -519,6 +571,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5e9d6f498e420387c1f31da27c617b11e973e284625a5ce4eaa9bb831e777791"
+  inputs-digest = "6790a6d2af66402aa4864241b68411e2a7a929321f7540698654d853e77c5fb7"
   solver-name = "gps-cdcl"
   solver-version = 1
