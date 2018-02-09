@@ -36,14 +36,14 @@ func (ve *ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", ve.Reason, ve.Message)
 }
 
-func validationError(reason, format string, fmtArgs ...interface{}) *ValidationError {
+func validationError(reason, format string, fmtArgs ...interface{}) error {
 	return &ValidationError{
 		Reason:  reason,
 		Message: fmt.Sprintf(format, fmtArgs...),
 	}
 }
 
-func validateSteps(steps []corev1.Container) *ValidationError {
+func validateSteps(steps []corev1.Container) error {
 	// Build must not duplicate step names.
 	names := map[string]struct{}{}
 	for _, s := range steps {
@@ -58,7 +58,7 @@ func validateSteps(steps []corev1.Container) *ValidationError {
 	return nil
 }
 
-func validateVolumes(volumes []corev1.Volume) *ValidationError {
+func validateVolumes(volumes []corev1.Volume) error {
 	// Build must not duplicate volume names.
 	vols := map[string]struct{}{}
 	for _, v := range volumes {
@@ -72,7 +72,7 @@ func validateVolumes(volumes []corev1.Volume) *ValidationError {
 
 // ValidateBuild returns a ValidationError if the build and optional template do not
 // specify a valid build.
-func ValidateBuild(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) *ValidationError {
+func ValidateBuild(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
 	if u.Spec.Template != nil && len(u.Spec.Steps) > 0 {
 		return validationError("TemplateAndSteps", "build cannot specify both template and steps")
 	}
@@ -105,7 +105,7 @@ func ValidateBuild(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) *ValidationE
 	return nil
 }
 
-func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplate) *ValidationError {
+func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplate) error {
 	// Build must not duplicate argument names.
 	seen := map[string]struct{}{}
 	for _, a := range args {
@@ -139,7 +139,7 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplat
 }
 
 // ValidateTemplate returns a ValidationError if the build template is invalid.
-func ValidateTemplate(tmpl *v1alpha1.BuildTemplate) *ValidationError {
+func ValidateTemplate(tmpl *v1alpha1.BuildTemplate) error {
 	if err := validateSteps(tmpl.Spec.Steps); err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func ValidateTemplate(tmpl *v1alpha1.BuildTemplate) *ValidationError {
 	return nil
 }
 
-func validateParameters(params []v1alpha1.ParameterSpec) *ValidationError {
+func validateParameters(params []v1alpha1.ParameterSpec) error {
 	// Template must not duplicate parameter names.
 	seen := map[string]struct{}{}
 	for _, p := range params {
@@ -167,7 +167,7 @@ func validateParameters(params []v1alpha1.ParameterSpec) *ValidationError {
 	return nil
 }
 
-func validatePlaceholders(steps []corev1.Container) *ValidationError {
+func validatePlaceholders(steps []corev1.Container) error {
 	for si, s := range steps {
 		if nestedPlaceholderRE.MatchString(s.Name) {
 			return validationError("NestedPlaceholder", "nested placeholder in step name %d: %q", si, s.Name)

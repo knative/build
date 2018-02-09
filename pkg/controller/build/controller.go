@@ -301,7 +301,11 @@ func (c *Controller) syncHandler(key string) error {
 					return err
 				}
 			}
-			if verr := c.builder.Validate(build, tmpl); verr != nil {
+			if err := c.builder.Validate(build, tmpl); err != nil {
+				verr, ok := err.(*builder.ValidationError)
+				if !ok {
+					return err
+				}
 				build.Status.SetCondition(v1alpha1.BuildInvalid, &v1alpha1.BuildCondition{
 					Type:               v1alpha1.BuildInvalid,
 					Status:             corev1.ConditionTrue,

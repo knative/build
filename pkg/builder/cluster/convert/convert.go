@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/google/build-crd/pkg/builder"
 )
 
 // These are effectively const, but Go doesn't have such an annotation.
@@ -66,7 +67,10 @@ func validateVolumes(vs []corev1.Volume) error {
 	seen := make(map[string]interface{})
 	for i, v := range vs {
 		if _, ok := seen[v.Name]; ok {
-			return fmt.Errorf("saw Volume %q defined multiple times", v.Name)
+			return &builder.ValidationError{
+				Reason:  "DuplicateVolume",
+				Message: fmt.Sprintf("saw Volume %q defined multiple times", v.Name),
+			}
 		}
 		seen[v.Name] = i
 	}
@@ -102,7 +106,10 @@ var (
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
 func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 	if git.Url == "" {
-		return nil, fmt.Errorf("git sources are expected to specify a Url, got: %v", git)
+		return nil, &builder.ValidationError{
+			Reason:  "MissingUrl",
+			Message: fmt.Sprintf("git sources are expected to specify a Url, got: %v", git),
+		}
 	}
 	var commitish string
 	switch {
@@ -115,7 +122,10 @@ func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 	case git.Ref != "":
 		commitish = git.Ref
 	default:
-		return nil, fmt.Errorf("git sources are expected to specify one of commit/tag/branch/ref, got %v", git)
+		return nil, &builder.ValidationError{
+			Reason:  "MissingCommitish",
+			Message: fmt.Sprintf("git sources are expected to specify one of commit/tag/branch/ref, got %v", git),
+		}
 	}
 	return &corev1.Container{
 		Name:  gitSource,
@@ -179,7 +189,10 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 
 func customToContainer(source *corev1.Container) (*corev1.Container, error) {
 	if source.Name != "" {
-		return nil, fmt.Errorf("custom source containers are expected to omit Name, got: %v", source.Name)
+		return nil, &builder.ValidationError{
+			Reason:  "OmitName",
+			Message: fmt.Sprintf("custom source containers are expected to omit Name, got: %v", source.Name),
+		}
 	}
 	custom := source.DeepCopy()
 	custom.Name = customSource
@@ -201,7 +214,10 @@ func sourceToContainer(source *v1alpha1.SourceSpec) (*corev1.Container, error) {
 	case source.Custom != nil:
 		return customToContainer(source.Custom)
 	default:
-		return nil, fmt.Errorf("saw SourceSpec with no supported contents: %v", source)
+		return nil, &builder.ValidationError{
+			Reason:  "UnrecognizedSource",
+			Message: fmt.Sprintf("saw SourceSpec with no supported contents: %v", source),
+		}
 	}
 }
 
@@ -233,8 +249,7 @@ func FromCRD(build *v1alpha1.Build) (*batchv1.Job, error) {
 	}
 	// Add workspace to the explicitly declared user volumes.
 	volumes := append(build.Spec.Volumes, implicitVolumes...)
-	err := validateVolumes(volumes)
-	if err != nil {
+	if err := validateVolumes(volumes); err != nil {
 		return nil, err
 	}
 

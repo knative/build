@@ -254,7 +254,11 @@ func (c *Controller) syncHandler(key string) error {
 	tmpl = tmpl.DeepCopy()
 
 	// TODO(mattmoor): Consider making this specific to a particular builder implementation.
-	if verr := builder.ValidateTemplate(tmpl); verr != nil {
+	if err := builder.ValidateTemplate(tmpl); err != nil {
+		verr, ok := err.(*builder.ValidationError)
+		if !ok {
+			return err
+		}
 		tmpl.Status.SetCondition(v1alpha1.BuildTemplateInvalid, &v1alpha1.BuildTemplateCondition{
 			Type:               v1alpha1.BuildTemplateInvalid,
 			Status:             corev1.ConditionTrue,

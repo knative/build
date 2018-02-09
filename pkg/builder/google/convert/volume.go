@@ -22,6 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"google.golang.org/api/cloudbuild/v1"
+
+	"github.com/google/build-crd/pkg/builder"
 )
 
 func ToVolumeMountFromVolume(og *cloudbuild.Volume) (*corev1.VolumeMount, error) {
@@ -33,13 +35,22 @@ func ToVolumeMountFromVolume(og *cloudbuild.Volume) (*corev1.VolumeMount, error)
 
 func ToVolumeFromVolumeMount(og *corev1.VolumeMount) (*cloudbuild.Volume, error) {
 	if og.ReadOnly {
-		return nil, fmt.Errorf("the Build CRD does not support ReadOnly volumes, got: %v", og)
+		return nil, &builder.ValidationError{
+			Reason:  "ReadOnly",
+			Message: fmt.Sprintf("container builder does not support ReadOnly volumes, got: %v", og),
+		}
 	}
 	if og.MountPropagation != nil {
-		return nil, fmt.Errorf("the Build CRD does not support mountPropagation on volumes, got: %v", og)
+		return nil, &builder.ValidationError{
+			Reason:  "MountPropagation",
+			Message: fmt.Sprintf("container builder does not support mountPropagation on volumes, got: %v", og),
+		}
 	}
 	if og.SubPath != "" {
-		return nil, fmt.Errorf("the Build CRD does not support subPath on volumes, got: %v", og)
+		return nil, &builder.ValidationError{
+			Reason:  "VolumeSubpath",
+			Message: fmt.Sprintf("container builder does not support subPath on volumes, got: %v", og),
+		}
 	}
 
 	return &cloudbuild.Volume{

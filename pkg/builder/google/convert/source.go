@@ -23,6 +23,8 @@ import (
 	"google.golang.org/api/cloudbuild/v1"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+
+	"github.com/google/build-crd/pkg/builder"
 )
 
 var (
@@ -32,7 +34,11 @@ var (
 func ToRepoSourceFromGit(og *v1alpha1.GitSourceSpec) (*cloudbuild.RepoSource, error) {
 	if !csr.MatchString(og.Url) {
 		// TODO(mattmoor): This could fall back on logic as in the on-cluster builder.
-		return nil, fmt.Errorf("git.url must match %v for the Google builder, got %q", csr, og.Url)
+		// https://github.com/google/build-crd/issues/22
+		return nil, &builder.ValidationError{
+			Reason:  "UnsupportedGitUrl",
+			Message: fmt.Sprint("git.url must match %v for the Google builder, got %q", csr, og.Url),
+		}
 	}
 	// Extract the capture groups.
 	match := csr.FindStringSubmatch(og.Url)
@@ -59,16 +65,25 @@ func ToRepoSourceFromGit(og *v1alpha1.GitSourceSpec) (*cloudbuild.RepoSource, er
 			BranchName: og.Branch,
 		}, nil
 	case og.Ref != "":
-		return nil, fmt.Errorf("git.ref is unsupported by the Googler builder, got: %v", og.Ref)
+		return nil, &builder.ValidationError{
+			Reason:  "UnsupportedRef",
+			Message: fmt.Sprintf("git.ref is unsupported by the Googler builder, got: %v", og.Ref),
+		}
 	default:
-		return nil, fmt.Errorf("missing one of branch/tag/ref/commit, got: %v", og)
+		return nil, &builder.ValidationError{
+			Reason:  "MissingCommitish",
+			Message: fmt.Sprintf("missing one of branch/tag/ref/commit, got: %v", og),
+		}
 	}
 
 }
 
 func ToGitFromRepoSource(og *cloudbuild.RepoSource) (*v1alpha1.GitSourceSpec, error) {
 	if og.Dir != "" {
-		return nil, fmt.Errorf("the Build CRD doesn't support 'dir', got: %v", og.Dir)
+		return nil, &builder.ValidationError{
+			Reason:  "UnsupportedDir",
+			Message: fmt.Sprintf("the Build CRD doesn't support 'dir', got: %v", og.Dir),
+		}
 	}
 	return &v1alpha1.GitSourceSpec{
 		Url:    fmt.Sprintf("https://source.developers.google.com/p/%s/r/%s", og.ProjectId, og.RepoName),

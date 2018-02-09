@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/google/build-crd/pkg/builder"
 )
 
 const (
@@ -78,7 +79,10 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 			bld.Steps = append(bld.Steps, step)
 
 		default:
-			return nil, fmt.Errorf("unsupported Source, got %v", u.Source)
+			return nil, &builder.ValidationError{
+				Reason:  "UnsupportedSource",
+				Message: fmt.Sprintf("unsupported Source, got %v", u.Source),
+			}
 		}
 	}
 	// We only support roundtripping emptyDir volumes, but we support hostPath volumes
@@ -93,7 +97,10 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 			socketVolume = v.Name
 		case reflect.DeepEqual(v.VolumeSource, emptyVolumeSource):
 		default:
-			return nil, fmt.Errorf("only emptyDir volumes are supported, got %v", v.VolumeSource)
+			return nil, &builder.ValidationError{
+				Reason:  "UnsupportedVolume",
+				Message: fmt.Sprintf("only certain volumes are supported on the Google builder, got %v", v.VolumeSource),
+			}
 		}
 	}
 	for _, c := range u.Steps {
@@ -139,7 +146,10 @@ func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 			Custom: c,
 		}
 	case u.Source != nil:
-		return nil, fmt.Errorf("unsupported Source, got: %v", u.Source)
+		return nil, &builder.ValidationError{
+			Reason:  "UnsupportedSource",
+			Message: fmt.Sprintf("unsupported Source, got: %v", u.Source),
+		}
 	}
 	volumeNames := make(map[string]bool)
 	for _, step := range steps {

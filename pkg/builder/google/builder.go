@@ -129,8 +129,14 @@ func (b *builder) Builder() v1alpha1.BuildProvider {
 	return v1alpha1.GoogleBuildProvider
 }
 
-func (b *builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) *buildercommon.ValidationError {
-	return buildercommon.ValidateBuild(u, tmpl)
+func (b *builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
+	if err := buildercommon.ValidateBuild(u, tmpl); err != nil {
+		return err
+	}
+	if _, err := convert.FromCRD(&u.Spec); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) {
