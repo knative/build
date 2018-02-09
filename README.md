@@ -38,7 +38,7 @@ bazel clean
 ```
 
 Note that this expects your Docker authorization is [properly configured](
-https://github.com/bazelbuild/rules_docker#authorization).
+https://github.com/bazelbuild/rules_docker#authentication).
 
 ### Standing it up
 
