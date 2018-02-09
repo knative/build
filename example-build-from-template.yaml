@@ -16,4 +16,5 @@ kind: Build
 metadata:
   name: build-from-template
 spec:
-  template: 'build-template'
+  template:
+    name: 'build-template'
