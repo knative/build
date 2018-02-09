@@ -15,6 +15,7 @@ k8s_objects(
         "//tests/custom-source:test",
         "//tests/template-args:test",
         "//tests/unnamed-steps:test",
+        "//tests/docker-build:test",
 
         # Expected to be invalid.
         "//tests/template-duplicate-volume:test",
@@ -34,7 +35,5 @@ k8s_objects(
         "//tests/secret-env:test",
         # This works on GCB too, but it's harder to test with private repositories.
         "//tests/git-source:test",
-        # TODO(mattmoor): Support limited hostPath volumes on GCB.
-        "//tests/docker-build:test",
     ],
 )

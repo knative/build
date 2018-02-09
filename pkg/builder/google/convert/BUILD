@@ -28,6 +28,7 @@ go_test(
     ],
     data = [
         "//testdata:custom-source.yaml",
+        "//testdata:docker-build.yaml",
         "//testdata:env.yaml",
         "//testdata:env-valuefrom.yaml",
         "//testdata:git-branch.yaml",

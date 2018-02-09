@@ -149,3 +149,35 @@ func TestUnsupportedCRDs(t *testing.T) {
 		}
 	}
 }
+
+func TestSupportedCRDsOneWay(t *testing.T) {
+	inputs := []string{
+		"buildcrd/testdata/docker-build.yaml",
+	}
+
+	for _, in := range inputs {
+		var og v1alpha1.BuildSpec
+		if err := buildtest.DataAs(in, &og); err != nil {
+			t.Fatalf("Unexpected error in buildtest.DataAs(%q, v1alpha1.BuildSpec): %v", in, err)
+		}
+		b, err := FromCRD(&og)
+		if err != nil {
+			t.Errorf("Unable to convert %q from CRD: %v", in, err)
+		}
+		bs, err := ToCRD(b)
+		if err != nil {
+			t.Errorf("Unable to convert %q to CRD: %v", in, err)
+		}
+		// Compare the pretty json because we don't care whether slice fields are empty or nil.
+		// e.g. we want omitempty semantics.
+		if ogjson, err := buildtest.PrettyJSON(og); err != nil {
+			t.Errorf("Unexpected failure calling PrettyJSON(og=%v): %v", og, err)
+		} else if bjson, err := buildtest.PrettyJSON(b); err != nil {
+			t.Errorf("Unexpected failure calling PrettyJSON(b=%v): %v", b, err)
+		} else if bsjson, err := buildtest.PrettyJSON(bs); err != nil {
+			t.Errorf("Unexpected failure calling PrettyJSON(bs=%v): %v", bs, err)
+		} else if ogjson == bsjson {
+			t.Errorf("Roundtrip(%q); want different, got same: %v; intermediate: %v", in, bsjson, bjson)
+		}
+	}
+}

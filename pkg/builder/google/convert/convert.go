@@ -34,6 +34,13 @@ var (
 	emptyVolumeSource = corev1.VolumeSource{
 		EmptyDir: &corev1.EmptyDirVolumeSource{},
 	}
+	socketType               = corev1.HostPathSocket
+	daemonSocketVolumeSource = corev1.VolumeSource{
+		HostPath: &corev1.HostPathVolumeSource{
+			Path: "/var/run/docker.sock",
+			Type: &socketType,
+		},
+	}
 )
 
 func remarshal(in, out interface{}) error {
@@ -74,18 +81,35 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 			return nil, fmt.Errorf("unsupported Source, got %v", u.Source)
 		}
 	}
+	// We only support roundtripping emptyDir volumes, but we support hostPath volumes
+	// of the daemon socket as input, which GCB provides to all steps whether they need
+	// it or not.
+	socketVolume := ""
+	for _, v := range u.Volumes {
+		switch {
+		case reflect.DeepEqual(v.VolumeSource, daemonSocketVolumeSource):
+			// This is a lossy translation, we cannot roundtrip this without
+			// upgrading every ToCRD to a privileged Build.
+			socketVolume = v.Name
+		case reflect.DeepEqual(v.VolumeSource, emptyVolumeSource):
+		default:
+			return nil, fmt.Errorf("only emptyDir volumes are supported, got %v", v.VolumeSource)
+		}
+	}
 	for _, c := range u.Steps {
 		step, err := ToStepFromContainer(&c)
 		if err != nil {
 			return nil, err
 		}
-		bld.Steps = append(bld.Steps, step)
-	}
-	// We only support emptyDir volumes.
-	for _, v := range u.Volumes {
-		if !reflect.DeepEqual(v.VolumeSource, emptyVolumeSource) {
-			return nil, fmt.Errorf("only emptyDir volumes are supported, got %v", v.VolumeSource)
+		var vms []*cloudbuild.Volume
+		for _, vm := range step.Volumes {
+			if vm.Name == socketVolume {
+				continue
+			}
+			vms = append(vms, vm)
 		}
+		step.Volumes = vms
+		bld.Steps = append(bld.Steps, step)
 	}
 	return &bld, nil
 }
