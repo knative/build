@@ -21,12 +21,17 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/google/build-crd/pkg/builder"
 )
 
 func ToEnvVarFromString(og string) (*corev1.EnvVar, error) {
 	parts := strings.SplitN(og, "=", 2)
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("expected \"name=value\" form for entry, but got: %q", og)
+		return nil, &builder.ValidationError{
+			Reason:  "MalformedEnv",
+			Message: fmt.Sprintf("expected \"name=value\" form for entry, but got: %q", og),
+		}
 	}
 	return &corev1.EnvVar{
 		Name:  parts[0],
@@ -36,7 +41,10 @@ func ToEnvVarFromString(og string) (*corev1.EnvVar, error) {
 
 func ToStringFromEnvVar(og *corev1.EnvVar) (string, error) {
 	if og.ValueFrom != nil {
-		return "", fmt.Errorf("the downward API is unsupported in Build CRD environment variables, got: %v", og)
+		return "", &builder.ValidationError{
+			Reason:  "ValueFrom",
+			Message: fmt.Sprintf("container builder does not support the downward API, got: %v", og),
+		}
 	}
 	return fmt.Sprintf("%s=%s", og.Name, og.Value), nil
 }
