@@ -92,19 +92,19 @@ type BuildTemplateList struct {
 	Items []BuildTemplate `json:"items"`
 }
 
-func (b *BuildTemplateStatus) SetCondition(new *BuildTemplateCondition) {
-	if new == nil {
+func (b *BuildTemplateStatus) SetCondition(newCond *BuildTemplateCondition) {
+	if newCond == nil {
 		return
 	}
 
-	t := new.Type
+	t := newCond.Type
 	var conditions []BuildTemplateCondition
 	for _, cond := range b.Conditions {
 		if cond.Type != t {
 			conditions = append(conditions, cond)
 		}
 	}
-	conditions = append(conditions, *new)
+	conditions = append(conditions, *newCond)
 	b.Conditions = conditions
 }
 
