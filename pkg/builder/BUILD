@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/builder/validation:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
     ],
 )
