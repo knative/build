@@ -46,7 +46,7 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	}
 	status.Google.Operation = op.Name()
 	status.StartTime = op.startTime
-	status.SetCondition(v1alpha1.BuildComplete, &v1alpha1.BuildCondition{
+	status.SetCondition(&v1alpha1.BuildCondition{
 		Type:               v1alpha1.BuildComplete,
 		Status:             corev1.ConditionFalse,
 		Reason:             "Building",
@@ -72,7 +72,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 			}
 			if cbOp.Error != nil {
 				bs.RemoveCondition(v1alpha1.BuildComplete)
-				bs.SetCondition(v1alpha1.BuildFailed, &v1alpha1.BuildCondition{
+				bs.SetCondition(&v1alpha1.BuildCondition{
 					Type:   v1alpha1.BuildFailed,
 					Status: corev1.ConditionTrue,
 					// TODO(mattmoor): Considering inlining the final "Status"
@@ -82,7 +82,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 					LastTransitionTime: metav1.Now(),
 				})
 			} else {
-				bs.SetCondition(v1alpha1.BuildComplete, &v1alpha1.BuildCondition{
+				bs.SetCondition(&v1alpha1.BuildCondition{
 					Type:               v1alpha1.BuildComplete,
 					Status:             corev1.ConditionTrue,
 					LastTransitionTime: metav1.Now(),

@@ -259,7 +259,7 @@ func (c *Controller) syncHandler(key string) error {
 		if !ok {
 			return err
 		}
-		tmpl.Status.SetCondition(v1alpha1.BuildTemplateInvalid, &v1alpha1.BuildTemplateCondition{
+		tmpl.Status.SetCondition(&v1alpha1.BuildTemplateCondition{
 			Type:               v1alpha1.BuildTemplateInvalid,
 			Status:             corev1.ConditionTrue,
 			Reason:             verr.Reason,

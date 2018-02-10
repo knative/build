@@ -32,7 +32,7 @@ func TestBuildTemplateConditions(t *testing.T) {
 	}
 
 	// Add a new condition.
-	rev.Status.SetCondition(foo.Type, foo)
+	rev.Status.SetCondition(foo)
 
 	if len(rev.Status.Conditions) != 1 {
 		t.Fatalf("Unexpected Condition length; want 1, got %d", len(rev.Status.Conditions))
@@ -46,7 +46,7 @@ func TestBuildTemplateConditions(t *testing.T) {
 	}
 
 	// Add a second condition.
-	rev.Status.SetCondition(bar.Type, bar)
+	rev.Status.SetCondition(bar)
 
 	if len(rev.Status.Conditions) != 2 {
 		t.Fatalf("Unexpected Condition length; want 2, got %d", len(rev.Status.Conditions))
