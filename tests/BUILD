@@ -33,6 +33,7 @@ k8s_objects(
         "//tests/git-volume:test",
         "//tests/secret-volume:test",
         "//tests/secret-env:test",
+        "//tests/serviceaccount:test",
         # This works on GCB too, but it's harder to test with private repositories.
         "//tests/git-source:test",
     ],
