@@ -275,7 +275,7 @@ func (c *Controller) syncHandler(key string) error {
 			var tmpl *v1alpha1.BuildTemplate
 			if build.Spec.Template != nil {
 				if build.Spec.Template.Name == "" {
-					build.Status.SetCondition(v1alpha1.BuildInvalid, &v1alpha1.BuildCondition{
+					build.Status.SetCondition(&v1alpha1.BuildCondition{
 						Type:               v1alpha1.BuildInvalid,
 						Status:             corev1.ConditionTrue,
 						Reason:             "MissingTemplateName",
@@ -306,7 +306,7 @@ func (c *Controller) syncHandler(key string) error {
 				if !ok {
 					return err
 				}
-				build.Status.SetCondition(v1alpha1.BuildInvalid, &v1alpha1.BuildCondition{
+				build.Status.SetCondition(&v1alpha1.BuildCondition{
 					Type:               v1alpha1.BuildInvalid,
 					Status:             corev1.ConditionTrue,
 					Reason:             verr.Reason,
@@ -329,7 +329,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			op, err := b.Execute()
 			if err != nil {
-				build.Status.SetCondition(v1alpha1.BuildFailed, &v1alpha1.BuildCondition{
+				build.Status.SetCondition(&v1alpha1.BuildCondition{
 					Type:               v1alpha1.BuildFailed,
 					Status:             corev1.ConditionTrue,
 					Reason:             "BuildExecuteFailed",

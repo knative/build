@@ -51,7 +51,7 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.Cluster.Namespace = op.namespace
 	status.Cluster.JobName = op.Name()
 	status.StartTime = op.startTime
-	status.SetCondition(v1alpha1.BuildComplete, &v1alpha1.BuildCondition{
+	status.SetCondition(&v1alpha1.BuildCondition{
 		Type:               v1alpha1.BuildComplete,
 		Status:             corev1.ConditionFalse,
 		Reason:             "Building",
@@ -84,14 +84,14 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	}
 	if msg != "" {
 		bs.RemoveCondition(v1alpha1.BuildComplete)
-		bs.SetCondition(v1alpha1.BuildFailed, &v1alpha1.BuildCondition{
+		bs.SetCondition(&v1alpha1.BuildCondition{
 			Type:               v1alpha1.BuildFailed,
 			Status:             corev1.ConditionTrue,
 			Message:            msg,
 			LastTransitionTime: metav1.Now(),
 		})
 	} else {
-		bs.SetCondition(v1alpha1.BuildComplete, &v1alpha1.BuildCondition{
+		bs.SetCondition(&v1alpha1.BuildCondition{
 			Type:               v1alpha1.BuildComplete,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
