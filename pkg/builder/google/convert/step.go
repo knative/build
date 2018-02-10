@@ -17,13 +17,11 @@ limitations under the License.
 package convert
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 
 	"google.golang.org/api/cloudbuild/v1"
 
-	"github.com/google/build-crd/pkg/builder"
+	"github.com/google/build-crd/pkg/builder/validation"
 )
 
 func ToContainerFromStep(og *cloudbuild.BuildStep) (*corev1.Container, error) {
@@ -67,10 +65,7 @@ func ToStepFromContainer(og *corev1.Container) (*cloudbuild.BuildStep, error) {
 		// TODO(mattmoor): This is a restriction we should eliminate.  It also isn't clear that this
 		// is 100% fidelity translation, since Dockerfile's scalar vs. list semantics are not what this
 		// is doing (though the semantics of GCB and Kubernetes aren't necessarily 1:1 with that).
-		return nil, &builder.ValidationError{
-			Reason:  "UnsupportedCommand",
-			Message: fmt.Sprintf("the Google builder doesn't support multi-element commands, got: %v", og.Command),
-		}
+		return nil, validation.NewError("UnsupportedCommand", "the Google builder doesn't support multi-element commands, got: %v", og.Command)
 	}
 	return &cloudbuild.BuildStep{
 		Id:         og.Name,

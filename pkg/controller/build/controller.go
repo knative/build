@@ -35,6 +35,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/google/build-crd/pkg/builder"
+	"github.com/google/build-crd/pkg/builder/validation"
 	"github.com/google/build-crd/pkg/controller"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
@@ -302,7 +303,7 @@ func (c *Controller) syncHandler(key string) error {
 				}
 			}
 			if err := c.builder.Validate(build, tmpl); err != nil {
-				verr, ok := err.(*builder.ValidationError)
+				verr, ok := err.(*validation.Error)
 				if !ok {
 					return err
 				}

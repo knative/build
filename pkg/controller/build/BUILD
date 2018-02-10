@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
         "//pkg/builder:go_default_library",
+        "//pkg/builder/validation:go_default_library",
         "//pkg/client/clientset/versioned:go_default_library",
         "//pkg/client/clientset/versioned/scheme:go_default_library",
         "//pkg/client/informers/externalversions:go_default_library",

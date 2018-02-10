@@ -16,32 +16,15 @@ limitations under the License.
 package builder
 
 import (
-	"fmt"
 	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/google/build-crd/pkg/builder/validation"
 )
 
 var nestedPlaceholderRE = regexp.MustCompile(`\${[^}]+\$`)
-
-// ValidationError is for use with a FooInvalid Status Condition.
-type ValidationError struct {
-	Reason  string
-	Message string
-}
-
-func (ve *ValidationError) Error() string {
-	return fmt.Sprintf("%s: %s", ve.Reason, ve.Message)
-}
-
-func validationError(reason, format string, fmtArgs ...interface{}) error {
-	return &ValidationError{
-		Reason:  reason,
-		Message: fmt.Sprintf(format, fmtArgs...),
-	}
-}
 
 func validateSteps(steps []corev1.Container) error {
 	// Build must not duplicate step names.
@@ -51,7 +34,7 @@ func validateSteps(steps []corev1.Container) error {
 			continue
 		}
 		if _, ok := names[s.Name]; ok {
-			return validationError("DuplicateStepName", "duplicate step name %q", s.Name)
+			return validation.NewError("DuplicateStepName", "duplicate step name %q", s.Name)
 		}
 		names[s.Name] = struct{}{}
 	}
@@ -63,7 +46,7 @@ func validateVolumes(volumes []corev1.Volume) error {
 	vols := map[string]struct{}{}
 	for _, v := range volumes {
 		if _, ok := vols[v.Name]; ok {
-			return validationError("DuplicateVolumeName", "duplicate volume name %q", v.Name)
+			return validation.NewError("DuplicateVolumeName", "duplicate volume name %q", v.Name)
 		}
 		vols[v.Name] = struct{}{}
 	}
@@ -74,12 +57,12 @@ func validateVolumes(volumes []corev1.Volume) error {
 // specify a valid build.
 func ValidateBuild(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
 	if u.Spec.Template != nil && len(u.Spec.Steps) > 0 {
-		return validationError("TemplateAndSteps", "build cannot specify both template and steps")
+		return validation.NewError("TemplateAndSteps", "build cannot specify both template and steps")
 	}
 
 	if u.Spec.Template != nil {
 		if u.Spec.Template.Name == "" {
-			return validationError("MissingTemplateName", "template instantiation is missing template name: %v", u.Spec.Template)
+			return validation.NewError("MissingTemplateName", "template instantiation is missing template name: %v", u.Spec.Template)
 		}
 	}
 
@@ -88,7 +71,7 @@ func ValidateBuild(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
 	var volumes []corev1.Volume
 	if tmpl != nil {
 		if !IsValidTemplate(&tmpl.Status) {
-			return validationError("InvalidTemplate", "The referenced template is invalid.")
+			return validation.NewError("InvalidTemplate", "The referenced template is invalid.")
 		}
 		if err := validateArguments(u.Spec.Template.Arguments, tmpl); err != nil {
 			return err
@@ -110,7 +93,7 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplat
 	seen := map[string]struct{}{}
 	for _, a := range args {
 		if _, ok := seen[a.Name]; ok {
-			return validationError("DuplicateArgName", "duplicate argument name %q", a.Name)
+			return validation.NewError("DuplicateArgName", "duplicate argument name %q", a.Name)
 		}
 		seen[a.Name] = struct{}{}
 	}
@@ -132,7 +115,7 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplat
 			for k, v := range tmplParams {
 				unused = append(unused, pair{k, v})
 			}
-			return validationError("UnsatisfiedParameter", "build does not specify these required parameters: %s", unused)
+			return validation.NewError("UnsatisfiedParameter", "build does not specify these required parameters: %s", unused)
 		}
 	}
 	return nil
@@ -160,7 +143,7 @@ func validateParameters(params []v1alpha1.ParameterSpec) error {
 	seen := map[string]struct{}{}
 	for _, p := range params {
 		if _, ok := seen[p.Name]; ok {
-			return validationError("DuplicateParamName", "duplicate template parameter name %q", p.Name)
+			return validation.NewError("DuplicateParamName", "duplicate template parameter name %q", p.Name)
 		}
 		seen[p.Name] = struct{}{}
 	}
@@ -170,24 +153,24 @@ func validateParameters(params []v1alpha1.ParameterSpec) error {
 func validatePlaceholders(steps []corev1.Container) error {
 	for si, s := range steps {
 		if nestedPlaceholderRE.MatchString(s.Name) {
-			return validationError("NestedPlaceholder", "nested placeholder in step name %d: %q", si, s.Name)
+			return validation.NewError("NestedPlaceholder", "nested placeholder in step name %d: %q", si, s.Name)
 		}
 		for i, a := range s.Args {
 			if nestedPlaceholderRE.MatchString(a) {
-				return validationError("NestedPlaceholder", "nested placeholder in step %d arg %d: %q", si, i, a)
+				return validation.NewError("NestedPlaceholder", "nested placeholder in step %d arg %d: %q", si, i, a)
 			}
 		}
 		for i, e := range s.Env {
 			if nestedPlaceholderRE.MatchString(e.Value) {
-				return validationError("NestedPlaceholder", "nested placeholder in step %d env value %d: %q", si, i, e.Value)
+				return validation.NewError("NestedPlaceholder", "nested placeholder in step %d env value %d: %q", si, i, e.Value)
 			}
 		}
 		if nestedPlaceholderRE.MatchString(s.WorkingDir) {
-			return validationError("NestedPlaceholder", "nested placeholder in step %d working dir %q", si, s.WorkingDir)
+			return validation.NewError("NestedPlaceholder", "nested placeholder in step %d working dir %q", si, s.WorkingDir)
 		}
 		for i, c := range s.Command {
 			if nestedPlaceholderRE.MatchString(c) {
-				return validationError("NestedPlaceholder", "nested placeholder in step %d command %d: %q", si, i, c)
+				return validation.NewError("NestedPlaceholder", "nested placeholder in step %d command %d: %q", si, i, c)
 			}
 		}
 	}
