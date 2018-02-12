@@ -126,7 +126,7 @@ func TestFlagHandlingMissingFiles(t *testing.T) {
 	}
 }
 
-func TestFlagHandlingUrlCollision(t *testing.T) {
+func TestFlagHandlingURLCollision(t *testing.T) {
 	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
 	dir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {

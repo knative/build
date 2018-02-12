@@ -49,12 +49,21 @@ func init() {
 }
 
 // As the flag is read, this status is populated.
+// dockerConfig implements flag.Value
 type dockerConfig struct {
 	Entries map[string]entry `json:"auths"`
 }
 
 func (dc *dockerConfig) String() string {
-	return ""
+	if dc == nil {
+		// According to flag.Value this can happen.
+		return ""
+	}
+	var urls []string
+	for k, v := range dc.Entries {
+		urls = append(urls, fmt.Sprintf("%s=%s", v.Secret, k))
+	}
+	return strings.Join(urls, ",")
 }
 
 func (dc *dockerConfig) Set(value string) error {
@@ -78,6 +87,7 @@ func (dc *dockerConfig) Set(value string) error {
 }
 
 type entry struct {
+	Secret   string `json:"-"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Auth     string `json:"auth"`
@@ -100,6 +110,7 @@ func newEntry(secret string) (*entry, error) {
 	password := string(pb)
 
 	return &entry{
+		Secret:   secret,
 		Username: username,
 		Password: password,
 		Auth:     base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password))),

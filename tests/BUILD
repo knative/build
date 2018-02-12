@@ -34,6 +34,7 @@ k8s_objects(
         "//tests/secret-volume:test",
         "//tests/secret-env:test",
         "//tests/serviceaccount:test",
+        "//tests/docker-basic:test",
         # This works on GCB too, but it's harder to test with private repositories.
         "//tests/git-source:test",
     ],
