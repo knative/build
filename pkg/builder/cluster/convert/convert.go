@@ -25,9 +25,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/google/build-crd/pkg/builder"
 	"github.com/google/build-crd/pkg/builder/validation"
+	"github.com/google/build-crd/pkg/credentials"
+	"github.com/google/build-crd/pkg/credentials/dockercreds"
 )
 
 // These are effectively const, but Go doesn't have such an annotation.
@@ -75,15 +79,20 @@ func validateVolumes(vs []corev1.Volume) error {
 }
 
 const (
+	// Name of the credential initialization container.
+	credsInit = "credential-initializer"
 	// Names for source containers
 	gitSource    = "git-source"
 	customSource = "custom-source"
 )
 
 var (
+	// The container used to initialize credentials before the build runs.
+	credsImage = flag.String("creds-image", "override-with-creds:latest",
+		"The container image for preparing our Build's credentials.")
 	// The container with Git that we use to implement the Git source step.
 	gitImage = flag.String("git-image", "override-with-git:latest",
-		"The container image container out Git binary.")
+		"The container image containing our Git binary.")
 )
 
 var (
@@ -206,21 +215,83 @@ func sourceToContainer(source *v1alpha1.SourceSpec) (*corev1.Container, error) {
 	}
 }
 
-func FromCRD(build *v1alpha1.Build) (*batchv1.Job, error) {
+func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Container, []corev1.Volume, error) {
+	serviceAccountName := build.Spec.ServiceAccountName
+	if serviceAccountName == "" {
+		serviceAccountName = "default"
+	}
+
+	sa, err := kubeclient.CoreV1().ServiceAccounts(build.Namespace).Get(serviceAccountName, metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	builders := []credentials.Builder{dockercreds.NewBuilder()}
+
+	// Collect the volume declarations, there mounts into the cred-init container, and the arguments to it.
+	volumes := []corev1.Volume{}
+	volumeMounts := []corev1.VolumeMount{}
+	args := []string{}
+	for _, secretEntry := range sa.Secrets {
+		secret, err := kubeclient.CoreV1().Secrets(build.Namespace).Get(secretEntry.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		matched := false
+		for _, b := range builders {
+			if arg, found := b.HasMatchingAnnotation(secret); found {
+				matched = true
+				args = append(args, arg)
+			}
+		}
+
+		if matched {
+			name := fmt.Sprintf("secret-volume-%s", secret.Name)
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      name,
+				MountPath: credentials.VolumeName(secret.Name),
+			})
+			volumes = append(volumes, corev1.Volume{
+				Name: name,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secret.Name,
+					},
+				},
+			})
+		}
+	}
+
+	return &corev1.Container{
+		Name:         credsInit,
+		Image:        *credsImage,
+		Args:         args,
+		VolumeMounts: volumeMounts,
+	}, volumes, nil
+}
+
+func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*batchv1.Job, error) {
 	build = build.DeepCopy()
 
-	var sourceContainers []corev1.Container
+	cred, secrets, err := makeCredentialInitializer(build, kubeclient)
+	if err != nil {
+		return nil, err
+	}
+	setupContainers := []corev1.Container{*cred}
+	extraVolumes := append(implicitVolumes, secrets...)
+
 	if build.Spec.Source != nil {
 		scm, err := sourceToContainer(build.Spec.Source)
 		if err != nil {
 			return nil, err
 		}
-		sourceContainers = append(sourceContainers, *scm)
+		setupContainers = append(setupContainers, *scm)
 	}
 
 	// Add the implicit volume mounts to each step container.
 	var initContainers []corev1.Container
-	for i, step := range append(sourceContainers, build.Spec.Steps...) {
+	for i, step := range append(setupContainers, build.Spec.Steps...) {
 		if step.WorkingDir == "" {
 			step.WorkingDir = "/workspace"
 		}
@@ -232,8 +303,9 @@ func FromCRD(build *v1alpha1.Build) (*batchv1.Job, error) {
 		step.VolumeMounts = append(step.VolumeMounts, implicitVolumeMounts...)
 		initContainers = append(initContainers, step)
 	}
-	// Add workspace to the explicitly declared user volumes.
-	volumes := append(build.Spec.Volumes, implicitVolumes...)
+	// Add our implicit volumes and any volumes needed for secrets to the explicitly
+	// declared user volumes.
+	volumes := append(build.Spec.Volumes, extraVolumes...)
 	if err := validateVolumes(volumes); err != nil {
 		return nil, err
 	}
@@ -266,7 +338,6 @@ func FromCRD(build *v1alpha1.Build) (*batchv1.Job, error) {
 					Containers:         []corev1.Container{nopContainer},
 					ServiceAccountName: build.Spec.ServiceAccountName,
 					Volumes:            volumes,
-					// TODO(mattmoor): We may need support for imagePullSecrets for pulling private images.
 				},
 			},
 		},
@@ -353,6 +424,11 @@ func ToCRD(job *batchv1.Job) (*v1alpha1.Build, error) {
 		steps = append(steps, step)
 	}
 	volumes := filterImplicitVolumes(podSpec.Volumes)
+
+	// Strip the credential initializer.
+	if steps[0].Name == credsInit {
+		steps = steps[1:]
+	}
 
 	var scm *v1alpha1.SourceSpec
 	if conv, ok := containerToSourceMap[steps[0].Name]; ok {

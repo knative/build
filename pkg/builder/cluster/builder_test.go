@@ -17,6 +17,7 @@ limitations under the License.
 package cluster
 
 import (
+	"strings"
 	"time"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
@@ -45,7 +46,7 @@ func newBuilder(cs kubernetes.Interface) *builder {
 }
 
 func TestBasicFlow(t *testing.T) {
-	cs := fakek8s.NewSimpleClientset()
+	cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}})
 	builder := newBuilder(cs)
 	b, err := builder.BuildFromSpec(&v1alpha1.Build{})
 	if err != nil {
@@ -135,7 +136,7 @@ func TestBasicFlow(t *testing.T) {
 }
 
 func TestNonFinalUpdateFlow(t *testing.T) {
-	cs := fakek8s.NewSimpleClientset()
+	cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}})
 	builder := newBuilder(cs)
 	b, err := builder.BuildFromSpec(&v1alpha1.Build{})
 	if err != nil {
@@ -237,7 +238,7 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 }
 
 func TestFailureFlow(t *testing.T) {
-	cs := fakek8s.NewSimpleClientset()
+	cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}})
 	builder := newBuilder(cs)
 	b, err := builder.BuildFromSpec(&v1alpha1.Build{})
 	if err != nil {
@@ -325,4 +326,66 @@ func TestFailureFlow(t *testing.T) {
 	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
 		t.Fatal("timed out in op.Wait()")
 	})
+}
+
+func TestBasicFlowWithCredentials(t *testing.T) {
+	name := "my-secret-identity"
+	cs := fakek8s.NewSimpleClientset(
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Secrets: []corev1.ObjectReference{{
+				Name: name,
+			}, {
+				Name: "not-annotated",
+			}},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				Annotations: map[string]string{
+					"cloudbuild.googleapis.com/docker-0": "https://gcr.io",
+				},
+			},
+			Type: corev1.SecretTypeBasicAuth,
+			Data: map[string][]byte{
+				corev1.BasicAuthUsernameKey: []byte("user1"),
+				corev1.BasicAuthPasswordKey: []byte("password"),
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "not-annotated",
+			},
+			Type: corev1.SecretTypeBasicAuth,
+			Data: map[string][]byte{
+				corev1.BasicAuthUsernameKey: []byte("user2"),
+				corev1.BasicAuthPasswordKey: []byte("password"),
+			},
+		})
+	builder := newBuilder(cs)
+	b, err := builder.BuildFromSpec(&v1alpha1.Build{})
+	if err != nil {
+		t.Fatalf("Unexpected error creating builder.Build from Spec: %v", err)
+	}
+	op, err := b.Execute()
+	if err != nil {
+		t.Fatalf("Unexpected error executing builder.Build: %v", err)
+	}
+
+	// We should be able to fetch the Job that b.Execute() created in our fake client.
+	jobsclient := cs.BatchV1().Jobs(namespace)
+	job, err := jobsclient.Get(op.Name(), metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Unexpected error fetching Job: %v", err)
+	}
+
+	credInit := job.Spec.Template.Spec.InitContainers[0]
+	if got, want := len(credInit.Args), 1; got != want {
+		t.Errorf("len(CredInit.Args); got %v, want %v", got, want)
+	}
+	if !strings.Contains(credInit.Args[0], name) {
+		t.Errorf("arg[0]; got: %v, wanted string containing %q", credInit.Args[0], name)
+	}
 }
