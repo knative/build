@@ -10,6 +10,7 @@ go_library(
     deps = [
         "//pkg/credentials:go_default_library",
         "//pkg/credentials/dockercreds:go_default_library",
+        "//pkg/credentials/gitcreds:go_default_library",
         "//vendor/github.com/golang/glog:go_default_library",
     ],
 )

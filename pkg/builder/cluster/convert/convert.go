@@ -31,6 +31,7 @@ import (
 	"github.com/google/build-crd/pkg/builder/validation"
 	"github.com/google/build-crd/pkg/credentials"
 	"github.com/google/build-crd/pkg/credentials/dockercreds"
+	"github.com/google/build-crd/pkg/credentials/gitcreds"
 )
 
 // These are effectively const, but Go doesn't have such an annotation.
@@ -225,7 +226,7 @@ func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Inte
 		return nil, nil, err
 	}
 
-	builders := []credentials.Builder{dockercreds.NewBuilder()}
+	builders := []credentials.Builder{dockercreds.NewBuilder(), gitcreds.NewBuilder()}
 
 	// Collect the volume declarations, there mounts into the cred-init container, and the arguments to it.
 	volumes := []corev1.Volume{}

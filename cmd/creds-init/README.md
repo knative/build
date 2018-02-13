@@ -86,6 +86,8 @@ Given URLs, usernames, and passwords of the form: `https://url{n}.com`,
 `user{n}`, and `pass{n}`.  We will generate the following for Git:
 ```
 === ~/.gitconfig ===
+[credential]
+	helper = store
 [credential "https://url1.com"]
     username = "user1"
 [credential "https://url2.com"]

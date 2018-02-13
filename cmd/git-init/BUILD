@@ -17,10 +17,19 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+
+container_image(
+    name = "strip_cred_helper",
+    base = "@git_base//image",
+    directory = "/etc",
+    files = ["gitconfig"],
+)
+
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
     name = "image",
-    base = "@git_base//image",
+    base = ":strip_cred_helper",
     binary = ":git-init",
 )
