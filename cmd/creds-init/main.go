@@ -22,12 +22,13 @@ import (
 
 	"github.com/google/build-crd/pkg/credentials"
 	"github.com/google/build-crd/pkg/credentials/dockercreds"
+	"github.com/google/build-crd/pkg/credentials/gitcreds"
 )
 
 func main() {
 	flag.Parse()
 
-	builders := []credentials.Builder{dockercreds.NewBuilder()}
+	builders := []credentials.Builder{dockercreds.NewBuilder(), gitcreds.NewBuilder()}
 	for _, c := range builders {
 		if err := c.Write(); err != nil {
 			glog.Fatalf("Error initializing credentials: %v", err)
