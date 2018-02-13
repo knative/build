@@ -20,6 +20,9 @@ import (
 	"github.com/google/build-crd/pkg/buildtest"
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakek8s "k8s.io/client-go/kubernetes/fake"
 
 	"testing"
 )
@@ -56,7 +59,8 @@ func TestParsing(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error in read2CRD(%q): %v", in, err)
 		}
-		j, err := FromCRD(og)
+		cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}})
+		j, err := FromCRD(og, cs)
 		if err != nil {
 			t.Errorf("Unable to convert %q from CRD: %v", in, err)
 			continue

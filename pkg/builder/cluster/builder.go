@@ -155,14 +155,14 @@ func (b *builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) erro
 	if err := buildercommon.ValidateBuild(u, tmpl); err != nil {
 		return err
 	}
-	if _, err := convert.FromCRD(u); err != nil {
+	if _, err := convert.FromCRD(u, b.kubeclient); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) {
-	bld, err := convert.FromCRD(u)
+	bld, err := convert.FromCRD(u, b.kubeclient)
 	if err != nil {
 		return nil, err
 	}

@@ -15,6 +15,7 @@ k8s_object(
     name = "controller",
     images = {
         "build-controller:latest": "//cmd/controller:image",
+        "creds-image:latest": "//cmd/creds-init:image",
         "git-image:latest": "//cmd/git-init:image",
     },
     template = "controller.yaml",

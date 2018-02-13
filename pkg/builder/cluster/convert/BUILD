@@ -7,11 +7,15 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/builder:go_default_library",
         "//pkg/builder/validation:go_default_library",
+        "//pkg/credentials:go_default_library",
+        "//pkg/credentials/dockercreds:go_default_library",
         "//vendor/k8s.io/api/batch/v1:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/runtime/schema:go_default_library",
+        "//vendor/k8s.io/client-go/kubernetes:go_default_library",
     ],
 )
 
@@ -39,5 +43,8 @@ go_test(
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
         "//pkg/buildtest:go_default_library",
+        "//vendor/k8s.io/api/core/v1:go_default_library",
+        "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+        "//vendor/k8s.io/client-go/kubernetes/fake:go_default_library",
     ],
 )
