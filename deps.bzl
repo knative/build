@@ -4,6 +4,8 @@ def repositories():
   container_pull(
       name = "git_base",
       registry = "gcr.io",
-      repository = "cloud-builders/git",
+      # The gcloud container has git, but doesn't install the gcloud.sh
+      # cred helper which causes problems.
+      repository = "cloud-builders/gcloud",
       tag = "latest",
   )
