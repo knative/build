@@ -154,7 +154,7 @@ func TestBasicFlagHandlingMissingFiles(t *testing.T) {
 	}
 	// No username / password files yields an error.
 
-	cfg := basicGitConfig{make(map[string]basicEntry), nil}
+	cfg := basicGitConfig{entries: make(map[string]basicEntry)}
 	if err := cfg.Set("not-found=https://github.com"); err == nil {
 		t.Error("Set(); got success, wanted error.")
 	}
@@ -173,25 +173,11 @@ func TestBasicFlagHandlingURLCollision(t *testing.T) {
 		t.Fatalf("ioutil.WriteFile(password) = %v", err)
 	}
 
-	cfg := basicGitConfig{make(map[string]basicEntry), nil}
+	cfg := basicGitConfig{entries: make(map[string]basicEntry)}
 	if err := cfg.Set("foo=https://github.com"); err != nil {
 		t.Fatalf("First Set() = %v", err)
 	}
 	if err := cfg.Set("bar=https://github.com"); err == nil {
-		t.Error("Second Set(); got success, wanted error.")
-	}
-}
-
-func TestBasicMalformedValueTooMany(t *testing.T) {
-	cfg := basicGitConfig{make(map[string]basicEntry), nil}
-	if err := cfg.Set("bar=baz=blah"); err == nil {
-		t.Error("Second Set(); got success, wanted error.")
-	}
-}
-
-func TestBasicMalformedValueTooFew(t *testing.T) {
-	cfg := basicGitConfig{make(map[string]basicEntry), nil}
-	if err := cfg.Set("bar"); err == nil {
 		t.Error("Second Set(); got success, wanted error.")
 	}
 }
@@ -349,7 +335,7 @@ func TestSSHFlagHandlingMissingFiles(t *testing.T) {
 	}
 	// No ssh-privatekey files yields an error.
 
-	cfg := sshGitConfig{make(map[string]sshEntry), nil}
+	cfg := sshGitConfig{entries: make(map[string]sshEntry)}
 	if err := cfg.Set("not-found=github.com"); err == nil {
 		t.Error("Set(); got success, wanted error.")
 	}
@@ -365,7 +351,7 @@ func TestSSHFlagHandlingURLCollision(t *testing.T) {
 		t.Fatalf("ioutil.WriteFile(ssh-privatekey) = %v", err)
 	}
 
-	cfg := sshGitConfig{make(map[string]sshEntry), nil}
+	cfg := sshGitConfig{entries: make(map[string]sshEntry)}
 	if err := cfg.Set("foo=github.com"); err != nil {
 		t.Fatalf("First Set() = %v", err)
 	}
@@ -374,16 +360,28 @@ func TestSSHFlagHandlingURLCollision(t *testing.T) {
 	}
 }
 
-func TestSSHMalformedValueTooMany(t *testing.T) {
-	cfg := sshGitConfig{make(map[string]sshEntry), nil}
-	if err := cfg.Set("bar=baz=blah"); err == nil {
-		t.Error("Second Set(); got success, wanted error.")
+func TestBasicMalformedValues(t *testing.T) {
+	tests := []string{
+		"bar=baz=blah",
+		"bar",
+	}
+	for _, test := range tests {
+		cfg := basicGitConfig{}
+		if err := cfg.Set(test); err == nil {
+			t.Errorf("Set(%v); got success, wanted error.", test)
+		}
 	}
 }
 
-func TestSSHMalformedValueTooFew(t *testing.T) {
-	cfg := sshGitConfig{make(map[string]sshEntry), nil}
-	if err := cfg.Set("bar"); err == nil {
-		t.Error("Second Set(); got success, wanted error.")
+func TestSshMalformedValues(t *testing.T) {
+	tests := []string{
+		"bar=baz=blah",
+		"bar",
+	}
+	for _, test := range tests {
+		cfg := sshGitConfig{}
+		if err := cfg.Set(test); err == nil {
+			t.Errorf("Set(%v); got success, wanted error.", test)
+		}
 	}
 }

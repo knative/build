@@ -36,10 +36,10 @@ var (
 )
 
 func flags(fs *flag.FlagSet) {
-	basicConfig = basicGitConfig{make(map[string]basicEntry), nil}
+	basicConfig = basicGitConfig{entries: make(map[string]basicEntry)}
 	fs.Var(&basicConfig, "basic-git", "List of secret=url pairs.")
 
-	sshConfig = sshGitConfig{make(map[string]sshEntry), nil}
+	sshConfig = sshGitConfig{entries: make(map[string]sshEntry)}
 	fs.Var(&sshConfig, "ssh-git", "List of secret=url pairs.")
 }
 
