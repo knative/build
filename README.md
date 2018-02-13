@@ -16,7 +16,7 @@ To see examples of `BuildTemplate`s in action and various ways of configuring
 them, take a look at [the tests dir](./tests/) to see examples of feaures such
 as:
 
-* [Building with Docker](./tests/docker-basic)
+* [Building with Docker](./tests/docker-build)
 * [Building from GitHub](./tests/git-source)
 
 ## Contributing
