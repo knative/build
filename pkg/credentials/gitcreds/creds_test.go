@@ -15,25 +15,28 @@ package gitcreds
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/google/build-crd/pkg/credentials"
 )
 
-func TestFlagHandling(t *testing.T) {
+func TestBasicFlagHandling(t *testing.T) {
 	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
 	dir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, "username"), []byte("bar"), 0777); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(dir, corev1.BasicAuthUsernameKey), []byte("bar"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(username) = %v", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, "password"), []byte("baz"), 0777); err != nil {
-		t.Fatalf("ioutil.WriteFile(username) = %v", err)
+	if err := ioutil.WriteFile(filepath.Join(dir, corev1.BasicAuthPasswordKey), []byte("baz"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(password) = %v", err)
 	}
 
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
@@ -76,27 +79,27 @@ func TestFlagHandling(t *testing.T) {
 	}
 }
 
-func TestFlagHandlingTwice(t *testing.T) {
+func TestBasicFlagHandlingTwice(t *testing.T) {
 	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
 	fooDir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(fooDir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", fooDir, err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(fooDir, "username"), []byte("asdf"), 0777); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(fooDir, corev1.BasicAuthUsernameKey), []byte("asdf"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(username) = %v", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(fooDir, "password"), []byte("blah"), 0777); err != nil {
-		t.Fatalf("ioutil.WriteFile(username) = %v", err)
+	if err := ioutil.WriteFile(filepath.Join(fooDir, corev1.BasicAuthPasswordKey), []byte("blah"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(password) = %v", err)
 	}
 	barDir := credentials.VolumeName("bar")
 	if err := os.MkdirAll(barDir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", barDir, err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(barDir, "username"), []byte("bleh"), 0777); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(barDir, corev1.BasicAuthUsernameKey), []byte("bleh"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(username) = %v", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(barDir, "password"), []byte("belch"), 0777); err != nil {
-		t.Fatalf("ioutil.WriteFile(username) = %v", err)
+	if err := ioutil.WriteFile(filepath.Join(barDir, corev1.BasicAuthPasswordKey), []byte("belch"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(password) = %v", err)
 	}
 
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
@@ -143,7 +146,7 @@ https://bleh:belch@gitlab.com
 	}
 }
 
-func TestFlagHandlingMissingFiles(t *testing.T) {
+func TestBasicFlagHandlingMissingFiles(t *testing.T) {
 	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
 	dir := credentials.VolumeName("not-found")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -151,26 +154,26 @@ func TestFlagHandlingMissingFiles(t *testing.T) {
 	}
 	// No username / password files yields an error.
 
-	cfg := basicGitConfig{make(map[string]basicEntry)}
+	cfg := basicGitConfig{make(map[string]basicEntry), nil}
 	if err := cfg.Set("not-found=https://github.com"); err == nil {
 		t.Error("Set(); got success, wanted error.")
 	}
 }
 
-func TestFlagHandlingURLCollision(t *testing.T) {
+func TestBasicFlagHandlingURLCollision(t *testing.T) {
 	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
 	dir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, "username"), []byte("bar"), 0777); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(dir, corev1.BasicAuthUsernameKey), []byte("bar"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(username) = %v", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, "password"), []byte("baz"), 0777); err != nil {
-		t.Fatalf("ioutil.WriteFile(username) = %v", err)
+	if err := ioutil.WriteFile(filepath.Join(dir, corev1.BasicAuthPasswordKey), []byte("baz"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(password) = %v", err)
 	}
 
-	cfg := basicGitConfig{make(map[string]basicEntry)}
+	cfg := basicGitConfig{make(map[string]basicEntry), nil}
 	if err := cfg.Set("foo=https://github.com"); err != nil {
 		t.Fatalf("First Set() = %v", err)
 	}
@@ -179,15 +182,207 @@ func TestFlagHandlingURLCollision(t *testing.T) {
 	}
 }
 
-func TestMalformedValueTooMany(t *testing.T) {
-	cfg := basicGitConfig{make(map[string]basicEntry)}
+func TestBasicMalformedValueTooMany(t *testing.T) {
+	cfg := basicGitConfig{make(map[string]basicEntry), nil}
 	if err := cfg.Set("bar=baz=blah"); err == nil {
 		t.Error("Second Set(); got success, wanted error.")
 	}
 }
 
-func TestMalformedValueTooFew(t *testing.T) {
-	cfg := basicGitConfig{make(map[string]basicEntry)}
+func TestBasicMalformedValueTooFew(t *testing.T) {
+	cfg := basicGitConfig{make(map[string]basicEntry), nil}
+	if err := cfg.Set("bar"); err == nil {
+		t.Error("Second Set(); got success, wanted error.")
+	}
+}
+
+func TestSSHFlagHandling(t *testing.T) {
+	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	dir := credentials.VolumeName("foo")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, corev1.SSHAuthPrivateKey), []byte("bar"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(ssh-privatekey) = %v", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, "known_hosts"), []byte("ssh-rsa blah"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(known_hosts) = %v", err)
+	}
+
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	flags(fs)
+	err := fs.Parse([]string{
+		"-ssh-git=foo=github.com",
+	})
+	if err != nil {
+		t.Fatalf("flag.CommandLine.Parse() = %v", err)
+	}
+
+	os.Setenv("HOME", credentials.VolumePath)
+	if err := NewBuilder().Write(); err != nil {
+		t.Fatalf("Write() = %v", err)
+	}
+
+	b, err := ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "config"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/config) = %v", err)
+	}
+
+	expectedSSHConfig := fmt.Sprintf(`Host github.com
+    HostName github.com
+    IdentityFile %s/.ssh/id_foo
+`, os.Getenv("HOME"))
+	if string(b) != expectedSSHConfig {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedSSHConfig)
+	}
+
+	b, err = ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "known_hosts"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/known_hosts) = %v", err)
+	}
+	expectedSSHKnownHosts := `ssh-rsa blah`
+	if string(b) != expectedSSHKnownHosts {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedSSHKnownHosts)
+	}
+
+	b, err = ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "id_foo"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/id_foo) = %v", err)
+	}
+
+	expectedIDFoo := `bar`
+	if string(b) != expectedIDFoo {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedIDFoo)
+	}
+}
+
+func TestSSHFlagHandlingTwice(t *testing.T) {
+	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	fooDir := credentials.VolumeName("foo")
+	if err := os.MkdirAll(fooDir, os.ModePerm); err != nil {
+		t.Fatalf("os.MkdirAll(%s) = %v", fooDir, err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(fooDir, corev1.SSHAuthPrivateKey), []byte("asdf"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(ssh-privatekey) = %v", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(fooDir, "known_hosts"), []byte("ssh-rsa aaaa"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(known_hosts) = %v", err)
+	}
+	barDir := credentials.VolumeName("bar")
+	if err := os.MkdirAll(barDir, os.ModePerm); err != nil {
+		t.Fatalf("os.MkdirAll(%s) = %v", barDir, err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(barDir, corev1.SSHAuthPrivateKey), []byte("bleh"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(ssh-privatekey) = %v", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(barDir, "known_hosts"), []byte("ssh-rsa bbbb"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(known_hosts) = %v", err)
+	}
+
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	flags(fs)
+	err := fs.Parse([]string{
+		"-ssh-git=foo=github.com",
+		"-ssh-git=bar=gitlab.com",
+	})
+	if err != nil {
+		t.Fatalf("flag.CommandLine.Parse() = %v", err)
+	}
+
+	os.Setenv("HOME", credentials.VolumePath)
+	if err := NewBuilder().Write(); err != nil {
+		t.Fatalf("Write() = %v", err)
+	}
+
+	b, err := ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "config"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/config) = %v", err)
+	}
+
+	expectedSSHConfig := fmt.Sprintf(`Host github.com
+    HostName github.com
+    IdentityFile %s/.ssh/id_foo
+Host gitlab.com
+    HostName gitlab.com
+    IdentityFile %s/.ssh/id_bar
+`, os.Getenv("HOME"), os.Getenv("HOME"))
+	if string(b) != expectedSSHConfig {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedSSHConfig)
+	}
+
+	b, err = ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "known_hosts"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/known_hosts) = %v", err)
+	}
+	expectedSSHKnownHosts := `ssh-rsa aaaa
+ssh-rsa bbbb`
+	if string(b) != expectedSSHKnownHosts {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedSSHKnownHosts)
+	}
+
+	b, err = ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "id_foo"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/id_foo) = %v", err)
+	}
+
+	expectedIDFoo := `asdf`
+	if string(b) != expectedIDFoo {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedIDFoo)
+	}
+
+	b, err = ioutil.ReadFile(filepath.Join(credentials.VolumePath, ".ssh", "id_bar"))
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile(.ssh/id_bar) = %v", err)
+	}
+
+	expectedIDBar := `bleh`
+	if string(b) != expectedIDBar {
+		t.Errorf("got: %v, wanted: %v", string(b), expectedIDBar)
+	}
+}
+
+func TestSSHFlagHandlingMissingFiles(t *testing.T) {
+	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	dir := credentials.VolumeName("not-found")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
+	}
+	// No ssh-privatekey files yields an error.
+
+	cfg := sshGitConfig{make(map[string]sshEntry), nil}
+	if err := cfg.Set("not-found=github.com"); err == nil {
+		t.Error("Set(); got success, wanted error.")
+	}
+}
+
+func TestSSHFlagHandlingURLCollision(t *testing.T) {
+	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	dir := credentials.VolumeName("foo")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, corev1.SSHAuthPrivateKey), []byte("bar"), 0777); err != nil {
+		t.Fatalf("ioutil.WriteFile(ssh-privatekey) = %v", err)
+	}
+
+	cfg := sshGitConfig{make(map[string]sshEntry), nil}
+	if err := cfg.Set("foo=github.com"); err != nil {
+		t.Fatalf("First Set() = %v", err)
+	}
+	if err := cfg.Set("bar=github.com"); err == nil {
+		t.Error("Second Set(); got success, wanted error.")
+	}
+}
+
+func TestSSHMalformedValueTooMany(t *testing.T) {
+	cfg := sshGitConfig{make(map[string]sshEntry), nil}
+	if err := cfg.Set("bar=baz=blah"); err == nil {
+		t.Error("Second Set(); got success, wanted error.")
+	}
+}
+
+func TestSSHMalformedValueTooFew(t *testing.T) {
+	cfg := sshGitConfig{make(map[string]sshEntry), nil}
 	if err := cfg.Set("bar"); err == nil {
 		t.Error("Second Set(); got success, wanted error.")
 	}

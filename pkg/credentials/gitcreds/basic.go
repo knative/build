@@ -33,6 +33,8 @@ import (
 // basicGitConfig implements flag.Value
 type basicGitConfig struct {
 	entries map[string]basicEntry
+	// The order we see things, for iterating over the above.
+	order []string
 }
 
 func (dc *basicGitConfig) String() string {
@@ -41,7 +43,8 @@ func (dc *basicGitConfig) String() string {
 		return ""
 	}
 	var urls []string
-	for k, v := range dc.entries {
+	for _, k := range dc.order {
+		v := dc.entries[k]
 		urls = append(urls, fmt.Sprintf("%s=%s", v.secret, k))
 	}
 	return strings.Join(urls, ",")
@@ -64,6 +67,7 @@ func (dc *basicGitConfig) Set(value string) error {
 		return err
 	}
 	dc.entries[url] = *e
+	dc.order = append(dc.order, url)
 	return nil
 }
 
@@ -72,7 +76,8 @@ func (dc *basicGitConfig) Write() error {
 	gitConfigs := []string{
 		"[credential]\n	helper = store\n",
 	}
-	for k, v := range dc.entries {
+	for _, k := range dc.order {
+		v := dc.entries[k]
 		gitConfigs = append(gitConfigs, v.configBlurb(k))
 	}
 	gitConfigContent := strings.Join(gitConfigs, "")
@@ -82,7 +87,8 @@ func (dc *basicGitConfig) Write() error {
 
 	gitCredentialsPath := filepath.Join(os.Getenv("HOME"), ".git-credentials")
 	var gitCredentials []string
-	for _, v := range dc.entries {
+	for _, k := range dc.order {
+		v := dc.entries[k]
 		gitCredentials = append(gitCredentials, v.authURL.String())
 	}
 	gitCredentials = append(gitCredentials, "") // Get a trailing newline

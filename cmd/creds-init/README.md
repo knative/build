@@ -5,11 +5,7 @@ a `Build`.  That process is outlined in detail here.
 
 ### Building on K8s-native secret types
 
-One of the fundamental differences between this proposal, and what's outlined
-above is the use of K8s-native (vs. custom) `Secret` "types" (thanks to @bparees
-for the pointer).
-
-In particular, the following types will be supported initially:
+The following types are supported:
 * `kubernetes.io/basic-auth`
 * `kubernetes.io/ssh-auth`
 
@@ -31,7 +27,9 @@ metadata:
     cloudbuild.dev/git-1: https://gitlab.com
     cloudbuild.dev/docker-0: https://gcr.io
 type: kubernetes.io/basic-auth
-...
+data:
+  username: <base64 encoded>
+  password: <base64 encoded>
 ```
 
 Or for SSH:
@@ -40,8 +38,13 @@ metadata:
   annotations:
     cloudbuild.dev/git-0: github.com
 type: kubernetes.io/ssh-auth
-...
+data:
+  ssh-privatekey: <base64 encoded>
+  # This is non-standard, but its use is encouraged to make this more secure.
+  # Omitting this results in the use of ssh-keyscan (see below).
+  known_hosts: <base64 encoded>
 ```
+
 
 ### Exposing the credential integration.
 
@@ -101,8 +104,8 @@ https://user2:pass2@url2.com
 
 ### Git `ssh-auth`
 
-Given hostnames, and private keys of the form: `url{n}.com`, and `key{n}`.  We
-will generate the following for Git:
+Given hostnames, private keys, and `known_hosts` of the form: `url{n}.com`,
+`key{n}`, and `known_hosts{n}`.  We will generate the following for Git:
 ```
 === ~/.ssh/id_key1 ===
 {contents of key1}
@@ -118,10 +121,14 @@ Host url2.com
     IdentityFile ~/.ssh/id_key2
 ...
 === ~/.ssh/known_hosts ===
-$(ssh-keyscan -H url1.com)
-$(ssh-keyscan -H url2.com)
+{contents of known_hosts1}
+{contents of known_hosts2}
 ...
 ```
+
+NOTE: Since `known_hosts` is a non-standard extension of
+`kubernetes.io/ssh-auth`, when it is not present this will be generated via
+`ssh-keygen url{n}.com ` instead.
 
 ### Least Privilege
 

@@ -16,5 +16,8 @@ go_test(
     srcs = ["creds_test.go"],
     embed = [":go_default_library"],
     importpath = "github.com/google/build-crd/pkg/credentials/dockercreds",
-    deps = ["//pkg/credentials:go_default_library"],
+    deps = [
+        "//pkg/credentials:go_default_library",
+        "//vendor/k8s.io/api/core/v1:go_default_library",
+    ],
 )
