@@ -1,7 +1,31 @@
 # Build CRD
 
-This repository implements a `Build` custom resource for Kubernetes, and a
-controller for making `Build`s work.
+This repository implements `Build` and `BuildTemplate` custom resources
+for Kubernetes, and a controller for making them work.
+
+## Quickstart
+
+To add this to your k8s cluster:
+
+1. [Check out the repository](#checking-out-the-repository)
+1. [Run the controller](#running-the-controller)
+
+### Defining `BuildTemplate`s
+
+To see examples of `BuildTemplate`s in action and various ways of configuring
+them, take a look at [the tests dir](./tests/) to see examples of feaures such
+as:
+
+* [Building with Docker](./tests/docker-basic)
+* [Building from GitHub](./tests/git-source)
+
+## Contributing
+
+To contribute to this project you should also take a look at:
+
+1. [Running integration tests](#running-integration-tests)
+1. [`CONTRIBUTING.MD`](./CONTRIBUTING.md)
+
 
 ## Checking out the repository
 
