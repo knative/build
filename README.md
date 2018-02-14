@@ -21,6 +21,7 @@ as:
 
 ## Terminology and Conventions
 
+* [Build Templates](./build-templates.md)
 * [Builders](./builder-contract.md)
 
 
