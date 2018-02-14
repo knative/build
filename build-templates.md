@@ -5,8 +5,8 @@ This document serves to define "Build Templates", and their capabilities.
 ## What is a Build Template?
 
 A `BuildTemplate` is one of the custom resources introduced by this project.
-It serves to encapsulate a shareable build process with some limited
-paramaterization capabilities.
+It serves to encapsulate a shareable [build](./builds.md) process with some
+limited paramaterization capabilities.
 
 ### Example Template
 
@@ -61,8 +61,8 @@ in the future for UI).  The `default` value enables a template to have a
 graduated complexity, where options are only overridden when the user strays
 from some set of sane defaults.
 
-`steps` and `volumes` are just like in a Build resource, but may contain
-references to parameters in the form: `${PARAMETER_NAME}`.
+`steps` and `volumes` are just like in a [Build resource](./builds.md), but may
+contain references to parameters in the form: `${PARAMETER_NAME}`.
 
 The `steps` of a template replace those of its Build.  The `volumes` of a
 template augment those of its Build.
