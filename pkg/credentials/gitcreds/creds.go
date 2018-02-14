@@ -32,11 +32,15 @@ const (
 
 var (
 	basicConfig basicGitConfig
+	sshConfig   sshGitConfig
 )
 
 func flags(fs *flag.FlagSet) {
-	basicConfig = basicGitConfig{make(map[string]basicEntry)}
+	basicConfig = basicGitConfig{entries: make(map[string]basicEntry)}
 	fs.Var(&basicConfig, "basic-git", "List of secret=url pairs.")
+
+	sshConfig = sshGitConfig{entries: make(map[string]sshEntry)}
+	fs.Var(&sshConfig, "ssh-git", "List of secret=url pairs.")
 }
 
 func init() {
@@ -55,7 +59,9 @@ func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (strin
 	case corev1.SecretTypeBasicAuth:
 		flagName = "basic-git"
 
-	// TODO(mattmoor): Support SSH
+	case corev1.SecretTypeSSHAuth:
+		flagName = "ssh-git"
+
 	default:
 		return "", false
 	}
@@ -69,5 +75,8 @@ func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (strin
 }
 
 func (dcb *GitConfigBuilder) Write() error {
-	return basicConfig.Write()
+	if err := basicConfig.Write(); err != nil {
+		return err
+	}
+	return sshConfig.Write()
 }

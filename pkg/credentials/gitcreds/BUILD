@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "basic.go",
         "creds.go",
+        "ssh.go",
     ],
     importpath = "github.com/google/build-crd/pkg/credentials/gitcreds",
     visibility = ["//visibility:public"],
@@ -19,5 +20,8 @@ go_test(
     srcs = ["creds_test.go"],
     embed = [":go_default_library"],
     importpath = "github.com/google/build-crd/pkg/credentials/gitcreds",
-    deps = ["//pkg/credentials:go_default_library"],
+    deps = [
+        "//pkg/credentials:go_default_library",
+        "//vendor/k8s.io/api/core/v1:go_default_library",
+    ],
 )
