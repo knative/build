@@ -19,6 +19,11 @@ as:
 * [Building with Docker](./tests/docker-build)
 * [Building from GitHub](./tests/git-source)
 
+## Terminology and Conventions
+
+* [Builders](./builder-contract.md)
+
+
 ## Contributing
 
 To contribute to this project you should also take a look at:
