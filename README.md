@@ -10,20 +10,12 @@ To add this to your k8s cluster:
 1. [Check out the repository](#checking-out-the-repository)
 1. [Run the controller](#running-the-controller)
 
-### Defining `BuildTemplate`s
-
-To see examples of `BuildTemplate`s in action and various ways of configuring
-them, take a look at [the tests dir](./tests/) to see examples of feaures such
-as:
-
-* [Building with Docker](./tests/docker-build)
-* [Building from GitHub](./tests/git-source)
-
 ## Terminology and Conventions
 
+* [Builds](./builds.md)
 * [Build Templates](./build-templates.md)
 * [Builders](./builder-contract.md)
-
+* [Authentication](./cmd/creds-init/README.md)
 
 ## Contributing
 
