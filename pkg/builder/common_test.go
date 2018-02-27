@@ -103,6 +103,11 @@ func TestApplyTemplate(t *testing.T) {
 					}},
 					Command:    []string{"cmd", "${FOO}"},
 					WorkingDir: "/dir/${FOO}/bar",
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "${FOO}",
+						MountPath: "path/to/${FOO}",
+						SubPath:   "sub/${FOO}/path",
+					}},
 				}},
 				Parameters: []v1alpha1.ParameterSpec{{
 					Name: "FOO",
@@ -120,6 +125,11 @@ func TestApplyTemplate(t *testing.T) {
 					}},
 					Command:    []string{"cmd", "world"},
 					WorkingDir: "/dir/world/bar",
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "world",
+						MountPath: "path/to/world",
+						SubPath:   "sub/world/path",
+					}},
 				}},
 				Template: &v1alpha1.TemplateInstantiationSpec{
 					Arguments: []v1alpha1.ArgumentSpec{{
