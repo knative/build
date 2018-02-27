@@ -68,6 +68,11 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) (*v1alpha1.B
 		for ic, c := range steps[i].Command {
 			steps[i].Command[ic] = applyReplacements(c)
 		}
+		for iv, v := range steps[i].VolumeMounts {
+			steps[i].VolumeMounts[iv].Name = applyReplacements(v.Name)
+			steps[i].VolumeMounts[iv].MountPath = applyReplacements(v.MountPath)
+			steps[i].VolumeMounts[iv].SubPath = applyReplacements(v.SubPath)
+		}
 	}
 
 	return build, nil
