@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	annotationPrefix = "cloudbuild.googleapis.com/docker-"
+	annotationPrefix = "build.dev/docker-"
 )
 
 var (

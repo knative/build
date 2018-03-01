@@ -430,7 +430,7 @@ func TestBasicFlowWithCredentials(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Annotations: map[string]string{
-					"cloudbuild.googleapis.com/docker-0": "https://gcr.io",
+					"build.dev/docker-0": "https://gcr.io",
 				},
 			},
 			Type: corev1.SecretTypeBasicAuth,

@@ -15,7 +15,7 @@ genrule(
     cmd = """
 DOCKER_REPO_OVERRIDE=$$(cat bazel-out/stable-status.txt | grep STABLE_DOCKER_REPO | cut -d' ' -f 2)
 cat > $(location build.yaml) <<EOF
-apiVersion: cloudbuild.googleapis.com/v1alpha1
+apiVersion: build.dev/v1alpha1
 kind: Build
 metadata:
   name: test-docker-build

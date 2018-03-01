@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	annotationPrefix = "cloudbuild.googleapis.com/git-"
+	annotationPrefix = "build.dev/git-"
 )
 
 var (

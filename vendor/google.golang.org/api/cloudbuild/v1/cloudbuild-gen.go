@@ -43,7 +43,7 @@ var _ = ctxhttp.Do
 const apiId = "cloudbuild:v1"
 const apiName = "cloudbuild"
 const apiVersion = "v1"
-const basePath = "https://cloudbuild.googleapis.com/"
+const basePath = "https://build.dev/"
 
 // OAuth2 scopes used by this API.
 const (

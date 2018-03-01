@@ -14,9 +14,9 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: buildtemplates.cloudbuild.googleapis.com
+  name: buildtemplates.build.dev
 spec:
-  group: cloudbuild.googleapis.com
+  group: build.dev
   version: v1alpha1
   names:
     kind: BuildTemplate
