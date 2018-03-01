@@ -249,11 +249,21 @@ func isDone(pod *corev1.Pod) (string, bool) {
 	case corev1.PodSucceeded:
 		return "", true
 	case corev1.PodFailed:
+		// First, try to surface an error about the actual build step that failed.
+		for _, status := range pod.Status.InitContainerStatuses {
+			term := status.State.Terminated
+			if term != nil && term.ExitCode != 0 {
+				return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
+					status.Name, term.ExitCode, status.ImageID,
+					pod.Namespace, pod.Name, status.Name), true
+			}
+		}
+		// Next, return the Pod's status message if it has one.
 		if pod.Status.Message != "" {
 			return pod.Status.Message, true
 		}
-		// TODO(mattmoor): Build a failure message for the Pod
-		return "Build failed for unspecified reasons.", true
+		// Lastly fall back on a generic error message.
+		return "build failed for unspecified reasons.", true
 	}
 	return "", false
 }

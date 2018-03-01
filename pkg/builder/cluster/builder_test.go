@@ -307,6 +307,112 @@ func TestFailureFlow(t *testing.T) {
 	})
 }
 
+func TestStepFailureFlow(t *testing.T) {
+	cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}})
+	builder := newBuilder(cs)
+	b, err := builder.BuildFromSpec(&v1alpha1.Build{
+		Spec: v1alpha1.BuildSpec{
+			Steps: []corev1.Container{{
+				Name:    "step-name",
+				Image:   "ubuntu:latest",
+				Command: []string{"false"},
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error creating builder.Build from Spec: %v", err)
+	}
+	op, err := b.Execute()
+	if err != nil {
+		t.Fatalf("Unexpected error executing builder.Build: %v", err)
+	}
+
+	var bs v1alpha1.BuildStatus
+	if err := op.Checkpoint(&bs); err != nil {
+		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
+	}
+	if buildercommon.IsDone(&bs) {
+		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
+	}
+	if bs.StartTime.IsZero() {
+		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	}
+	if !bs.CompletionTime.IsZero() {
+		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	}
+	op, err = builder.OperationFromStatus(&bs)
+	if err != nil {
+		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
+	}
+
+	checksComplete := buildtest.NewWait()
+	readyForUpdate := buildtest.NewWait()
+	go func() {
+		// Wait sufficiently long for Wait() to have been called and then
+		// signal to the main test thread that it should perform the update.
+		readyForUpdate.In(1 * time.Second)
+
+		defer checksComplete.Done()
+		status, err := op.Wait()
+		if err != nil {
+			t.Fatalf("Unexpected error waiting for builder.Operation: %v", err)
+		}
+
+		// Check that status came out how we expect.
+		if !buildercommon.IsDone(status) {
+			t.Errorf("IsDone(%v); wanted true, got false", status)
+		}
+		if status.Cluster.PodName != op.Name() {
+			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
+		}
+		if msg, failed := buildercommon.ErrorMessage(status); !failed ||
+			// We expect the error to contain the step name and exit code.
+			!strings.Contains(msg, `"step-name"`) || !strings.Contains(msg, "128") {
+			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedErrorMessage, msg)
+		}
+		if status.StartTime.IsZero() {
+			t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
+		}
+		if status.CompletionTime.IsZero() {
+			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
+		}
+	}()
+	// Wait until the test thread is ready for us to update things.
+	readyForUpdate.Wait()
+
+	// We should be able to fetch the Pod that b.Execute() created in our fake client.
+	podsclient := cs.CoreV1().Pods(namespace)
+	pod, err := podsclient.Get(op.Name(), metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Unexpected error fetching Pod: %v", err)
+	}
+	// Now modify it to look done.
+	pod.Status.Phase = corev1.PodFailed
+	pod.Status.InitContainerStatuses = []corev1.ContainerStatus{{
+		Name: "step-name",
+		State: corev1.ContainerState{
+			Terminated: &corev1.ContainerStateTerminated{
+				ExitCode: 128,
+			},
+		},
+		ImageID: "docker-pullable://ubuntu@sha256:deadbeef",
+	}}
+	pod.Status.Message = "don't expect this!"
+
+	pod, err = podsclient.Update(pod)
+	if err != nil {
+		t.Fatalf("Unexpected error updating Pod: %v", err)
+	}
+
+	// The informer doesn't seem to properly pick up this update via the fake,
+	// so trigger the update event manually.
+	builder.updatePodEvent(nil, pod)
+
+	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
+		t.Fatal("timed out in op.Wait()")
+	})
+}
+
 func TestBasicFlowWithCredentials(t *testing.T) {
 	name := "my-secret-identity"
 	cs := fakek8s.NewSimpleClientset(
