@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -49,7 +48,7 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 		status.Cluster = &v1alpha1.ClusterSpec{}
 	}
 	status.Cluster.Namespace = op.namespace
-	status.Cluster.JobName = op.Name()
+	status.Cluster.PodName = op.Name()
 	status.StartTime = op.startTime
 	status.SetCondition(&v1alpha1.BuildCondition{
 		Type:               v1alpha1.BuildComplete,
@@ -64,7 +63,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	errorCh := make(chan string)
 	defer close(errorCh)
 
-	// Ask the builder's watch loop to send a message on our channel when it sees our Job complete.
+	// Ask the builder's watch loop to send a message on our channel when it sees our Pod complete.
 	if err := op.builder.registerDoneCallback(op.namespace, op.name, errorCh); err != nil {
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		Builder: v1alpha1.ClusterBuildProvider,
 		Cluster: &v1alpha1.ClusterSpec{
 			Namespace: op.namespace,
-			JobName:   op.Name(),
+			PodName:   op.Name(),
 		},
 		StartTime:      op.startTime,
 		CompletionTime: metav1.Now(),
@@ -102,18 +101,18 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 
 type build struct {
 	builder *builder
-	body    *batchv1.Job
+	body    *corev1.Pod
 }
 
 func (b *build) Execute() (buildercommon.Operation, error) {
-	job, err := b.builder.kubeclient.BatchV1().Jobs(b.body.Namespace).Create(b.body)
+	pod, err := b.builder.kubeclient.CoreV1().Pods(b.body.Namespace).Create(b.body)
 	if err != nil {
 		return nil, err
 	}
 	return &operation{
 		builder:   b.builder,
-		namespace: job.Namespace,
-		name:      job.Name,
+		namespace: pod.Namespace,
+		name:      pod.Name,
 		startTime: metav1.Now(),
 	}, nil
 }
@@ -125,11 +124,11 @@ func NewBuilder(kubeclient kubernetes.Interface, kubeinformers kubeinformers.Sha
 		callbacks:  make(map[string]chan string),
 	}
 
-	jobInformer := kubeinformers.Batch().V1().Jobs()
-	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    b.addJobEvent,
-		UpdateFunc: b.updateJobEvent,
-		DeleteFunc: b.deleteJobEvent,
+	podInformer := kubeinformers.Core().V1().Pods()
+	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    b.addPodEvent,
+		UpdateFunc: b.updatePodEvent,
+		DeleteFunc: b.deletePodEvent,
 	})
 
 	return b
@@ -140,10 +139,10 @@ type builder struct {
 
 	// mux guards modifications to callbacks
 	mux sync.Mutex
-	// callbacks is keyed by Job names and stores the channel on which to
-	// send a completion notification when we see that Job complete.
+	// callbacks is keyed by Pod names and stores the channel on which to
+	// send a completion notification when we see that Pod complete.
 	// On success, an empty string is sent.
-	// On failure, the Message of the failure JobCondition is sent.
+	// On failure, the Message of the failure PodCondition is sent.
 	callbacks map[string]chan string
 }
 
@@ -182,7 +181,7 @@ func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercomm
 	return &operation{
 		builder:   b,
 		namespace: status.Cluster.Namespace,
-		name:      status.Cluster.JobName,
+		name:      status.Cluster.PodName,
 		startTime: status.StartTime,
 	}, nil
 }
@@ -192,7 +191,7 @@ func getKey(namespace, name string) string {
 }
 
 // registerDoneCallback directs the builders to send a completion notification on errorCh
-// when the named Job completes.  An empty message is sent on successful completion.
+// when the named Pod completes.  An empty message is sent on successful completion.
 func (b *builder) registerDoneCallback(namespace, name string, errorCh chan string) error {
 	b.mux.Lock()
 	defer b.mux.Unlock()
@@ -203,26 +202,26 @@ func (b *builder) registerDoneCallback(namespace, name string, errorCh chan stri
 	return nil
 }
 
-// addJobEvent handles the informer's AddFunc event for Jobs.
-func (b *builder) addJobEvent(obj interface{}) {
-	job := obj.(*batchv1.Job)
-	ownerRef := metav1.GetControllerOf(job)
+// addPodEvent handles the informer's AddFunc event for Pods.
+func (b *builder) addPodEvent(obj interface{}) {
+	pod := obj.(*corev1.Pod)
+	ownerRef := metav1.GetControllerOf(pod)
 
 	// If this object is not owned by a Build, we should not do anything more with it.
 	if ownerRef == nil || ownerRef.Kind != "Build" {
 		return
 	}
 
-	// We only take action on jobs that have completed, in some way.
-	msg, ok := isDone(job)
+	// We only take action on pods that have completed, in some way.
+	msg, ok := isDone(pod)
 	if !ok {
 		return
 	}
 
-	// Once we have a complete Job to act on, take the lock and see if anyone's watching.
+	// Once we have a complete Pod to act on, take the lock and see if anyone's watching.
 	b.mux.Lock()
 	defer b.mux.Unlock()
-	key := getKey(job.Namespace, job.Name)
+	key := getKey(pod.Namespace, pod.Name)
 	if ch, ok := b.callbacks[key]; ok {
 		// Send the person listening the message and remove this callback from our map.
 		ch <- msg
@@ -232,30 +231,29 @@ func (b *builder) addJobEvent(obj interface{}) {
 	}
 }
 
-// updateJobEvent handles the informer's UpdateFunc event for Jobs.
-func (b *builder) updateJobEvent(old, new interface{}) {
-	// Same as addJobEvent(new)
-	b.addJobEvent(new)
+// updatePodEvent handles the informer's UpdateFunc event for Pods.
+func (b *builder) updatePodEvent(old, new interface{}) {
+	// Same as addPodEvent(new)
+	b.addPodEvent(new)
 }
 
-// deleteJobEvent handles the informer's DeleteFunc event for Jobs.
-func (b *builder) deleteJobEvent(obj interface{}) {
-	// TODO(mattmoor): If a job gets deleted and someone's watching, we should propagate our
+// deletePodEvent handles the informer's DeleteFunc event for Pods.
+func (b *builder) deletePodEvent(obj interface{}) {
+	// TODO(mattmoor): If a pod gets deleted and someone's watching, we should propagate our
 	// own error message so that we don't leak a go routine waiting forever.
 	glog.Errorf("NYI: delete event for: %v", obj)
 }
 
-func isDone(job *batchv1.Job) (string, bool) {
-	for _, cond := range job.Status.Conditions {
-		if cond.Status != corev1.ConditionTrue {
-			continue
+func isDone(pod *corev1.Pod) (string, bool) {
+	switch pod.Status.Phase {
+	case corev1.PodSucceeded:
+		return "", true
+	case corev1.PodFailed:
+		if pod.Status.Message != "" {
+			return pod.Status.Message, true
 		}
-		switch cond.Type {
-		case batchv1.JobComplete:
-			return "", true
-		case batchv1.JobFailed:
-			return cond.Message, true
-		}
+		// TODO(mattmoor): Build a failure message for the Pod
+		return "Build failed for unspecified reasons.", true
 	}
 	return "", false
 }
