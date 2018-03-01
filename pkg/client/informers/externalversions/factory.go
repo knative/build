@@ -19,9 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	versioned "github.com/google/build-crd/pkg/client/clientset/versioned"
-	cloudbuild "github.com/google/build-crd/pkg/client/informers/externalversions/cloudbuild"
-	internalinterfaces "github.com/google/build-crd/pkg/client/informers/externalversions/internalinterfaces"
+	versioned "github.com/elafros/build-crd/pkg/client/clientset/versioned"
+	cloudbuild "github.com/elafros/build-crd/pkg/client/informers/externalversions/cloudbuild"
+	internalinterfaces "github.com/elafros/build-crd/pkg/client/informers/externalversions/internalinterfaces"
 	reflect "reflect"
 	sync "sync"
 	time "time"

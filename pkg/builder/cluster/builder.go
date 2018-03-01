@@ -26,9 +26,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
-	buildercommon "github.com/google/build-crd/pkg/builder"
-	"github.com/google/build-crd/pkg/builder/cluster/convert"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	buildercommon "github.com/elafros/build-crd/pkg/builder"
+	"github.com/elafros/build-crd/pkg/builder/cluster/convert"
 )
 
 type operation struct {

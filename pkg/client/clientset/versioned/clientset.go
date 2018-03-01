@@ -16,7 +16,7 @@ limitations under the License.
 package versioned
 
 import (
-	cloudbuildv1alpha1 "github.com/google/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1"
+	cloudbuildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1"
 
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"

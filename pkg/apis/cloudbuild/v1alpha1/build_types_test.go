@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/google/build-crd/pkg/buildtest"
+	"github.com/elafros/build-crd/pkg/buildtest"
 )
 
 const (

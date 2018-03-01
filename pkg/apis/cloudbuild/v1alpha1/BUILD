@@ -11,7 +11,7 @@ go_library(
         "register.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1",
+    importpath = "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/cloudbuild:go_default_library",
@@ -32,6 +32,6 @@ go_test(
         "@cloudbuilders//:bazel/cloudbuild.yaml",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1",
+    importpath = "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1",
     deps = ["//pkg/buildtest:go_default_library"],
 )

@@ -16,9 +16,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/google/build-crd/pkg/client/clientset/versioned"
-	cloudbuildv1alpha1 "github.com/google/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1"
-	fakecloudbuildv1alpha1 "github.com/google/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1/fake"
+	clientset "github.com/elafros/build-crd/pkg/client/clientset/versioned"
+	cloudbuildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1"
+	fakecloudbuildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1/fake"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

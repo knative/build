@@ -19,7 +19,7 @@ limitations under the License.
 package externalversions
 
 import (
-	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
 	"fmt"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

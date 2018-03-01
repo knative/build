@@ -20,8 +20,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
-	"github.com/google/build-crd/pkg/builder/validation"
+	"github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/elafros/build-crd/pkg/builder/validation"
 )
 
 var nestedPlaceholderRE = regexp.MustCompile(`\${[^}]+\$`)

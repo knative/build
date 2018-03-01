@@ -16,7 +16,7 @@ limitations under the License.
 package fake
 
 import (
-	cloudbuildv1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	cloudbuildv1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
