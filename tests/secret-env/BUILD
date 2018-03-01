@@ -13,6 +13,7 @@ go_binary(
     name = "secret-env",
     embed = [":go_default_library"],
     importpath = "github.com/google/build-crd/tests/secret-env",
+    pure = "on",
 )
 
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")

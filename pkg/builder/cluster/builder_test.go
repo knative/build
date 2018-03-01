@@ -22,7 +22,6 @@ import (
 
 	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
 
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -92,8 +91,8 @@ func TestBasicFlow(t *testing.T) {
 		if !buildercommon.IsDone(status) {
 			t.Errorf("IsDone(%v); wanted true, got false", status)
 		}
-		if status.Cluster.JobName != op.Name() {
-			t.Errorf("status.Cluster.JobName; wanted %q, got %q", op.Name(), status.Cluster.JobName)
+		if status.Cluster.PodName != op.Name() {
+			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); failed {
 			t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)
@@ -108,27 +107,22 @@ func TestBasicFlow(t *testing.T) {
 	// Wait until the test thread is ready for us to update things.
 	readyForUpdate.Wait()
 
-	// We should be able to fetch the Job that b.Execute() created in our fake client.
-	jobsclient := cs.BatchV1().Jobs(namespace)
-	job, err := jobsclient.Get(op.Name(), metav1.GetOptions{})
+	// We should be able to fetch the Pod that b.Execute() created in our fake client.
+	podsclient := cs.CoreV1().Pods(namespace)
+	pod, err := podsclient.Get(op.Name(), metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Unexpected error fetching Job: %v", err)
+		t.Fatalf("Unexpected error fetching Pod: %v", err)
 	}
 	// Now modify it to look done.
-	job.Status.Conditions = []batchv1.JobCondition{
-		{
-			Type:   batchv1.JobComplete,
-			Status: corev1.ConditionTrue,
-		},
-	}
-	job, err = jobsclient.Update(job)
+	pod.Status.Phase = corev1.PodSucceeded
+	pod, err = podsclient.Update(pod)
 	if err != nil {
-		t.Fatalf("Unexpected error updating Job: %v", err)
+		t.Fatalf("Unexpected error updating Pod: %v", err)
 	}
 
 	// The informer doesn't seem to properly pick up this update via the fake,
 	// so trigger the update event manually.
-	builder.updateJobEvent(nil, job)
+	builder.updatePodEvent(nil, pod)
 
 	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
 		t.Fatal("timed out in op.Wait()")
@@ -187,27 +181,22 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 	// Wait until the test thread is ready for us to update things.
 	readyForUpdate.Wait()
 
-	// We should be able to fetch the Job that b.Execute() created in our fake client.
-	jobsclient := cs.BatchV1().Jobs(namespace)
-	job, err := jobsclient.Get(op.Name(), metav1.GetOptions{})
+	// We should be able to fetch the Pod that b.Execute() created in our fake client.
+	podsclient := cs.CoreV1().Pods(namespace)
+	pod, err := podsclient.Get(op.Name(), metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Unexpected error fetching Job: %v", err)
+		t.Fatalf("Unexpected error fetching Pod: %v", err)
 	}
 	// Make a non-terminal modification
-	job.Status.Conditions = []batchv1.JobCondition{
-		{
-			Type:   batchv1.JobComplete,
-			Status: corev1.ConditionFalse,
-		},
-	}
-	job, err = jobsclient.Update(job)
+	pod.Status.Phase = corev1.PodRunning
+	pod, err = podsclient.Update(pod)
 	if err != nil {
-		t.Fatalf("Unexpected error updating Job: %v", err)
+		t.Fatalf("Unexpected error updating Pod: %v", err)
 	}
 
 	// The informer doesn't seem to properly pick up this update via the fake,
 	// so trigger the update event manually.
-	builder.updateJobEvent(nil, job)
+	builder.updatePodEvent(nil, pod)
 
 	// If we get a message from our Wait(), then we didn't properly ignore the
 	// benign update.  If we still haven't heard anything after 5 seconds, then
@@ -217,20 +206,15 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 	}, buildtest.WaitNop)
 
 	// Now make it look done.
-	job.Status.Conditions = []batchv1.JobCondition{
-		{
-			Type:   batchv1.JobComplete,
-			Status: corev1.ConditionTrue,
-		},
-	}
-	job, err = jobsclient.Update(job)
+	pod.Status.Phase = corev1.PodSucceeded
+	pod, err = podsclient.Update(pod)
 	if err != nil {
-		t.Fatalf("Unexpected error updating Job: %v", err)
+		t.Fatalf("Unexpected error updating Pod: %v", err)
 	}
 
 	// The informer doesn't seem to properly pick up this update via the fake,
 	// so trigger the update event manually.
-	builder.updateJobEvent(nil, job)
+	builder.updatePodEvent(nil, pod)
 
 	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
 		t.Fatal("timed out in op.Wait()")
@@ -284,8 +268,8 @@ func TestFailureFlow(t *testing.T) {
 		if !buildercommon.IsDone(status) {
 			t.Errorf("IsDone(%v); wanted true, got false", status)
 		}
-		if status.Cluster.JobName != op.Name() {
-			t.Errorf("status.Cluster.JobName; wanted %q, got %q", op.Name(), status.Cluster.JobName)
+		if status.Cluster.PodName != op.Name() {
+			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); !failed || msg != expectedErrorMessage {
 			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedErrorMessage, msg)
@@ -300,28 +284,23 @@ func TestFailureFlow(t *testing.T) {
 	// Wait until the test thread is ready for us to update things.
 	readyForUpdate.Wait()
 
-	// We should be able to fetch the Job that b.Execute() created in our fake client.
-	jobsclient := cs.BatchV1().Jobs(namespace)
-	job, err := jobsclient.Get(op.Name(), metav1.GetOptions{})
+	// We should be able to fetch the Pod that b.Execute() created in our fake client.
+	podsclient := cs.CoreV1().Pods(namespace)
+	pod, err := podsclient.Get(op.Name(), metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Unexpected error fetching Job: %v", err)
+		t.Fatalf("Unexpected error fetching Pod: %v", err)
 	}
 	// Now modify it to look done.
-	job.Status.Conditions = []batchv1.JobCondition{
-		{
-			Type:    batchv1.JobFailed,
-			Status:  corev1.ConditionTrue,
-			Message: expectedErrorMessage,
-		},
-	}
-	job, err = jobsclient.Update(job)
+	pod.Status.Phase = corev1.PodFailed
+	pod.Status.Message = expectedErrorMessage
+	pod, err = podsclient.Update(pod)
 	if err != nil {
-		t.Fatalf("Unexpected error updating Job: %v", err)
+		t.Fatalf("Unexpected error updating Pod: %v", err)
 	}
 
 	// The informer doesn't seem to properly pick up this update via the fake,
 	// so trigger the update event manually.
-	builder.updateJobEvent(nil, job)
+	builder.updatePodEvent(nil, pod)
 
 	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
 		t.Fatal("timed out in op.Wait()")
@@ -374,14 +353,14 @@ func TestBasicFlowWithCredentials(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	// We should be able to fetch the Job that b.Execute() created in our fake client.
-	jobsclient := cs.BatchV1().Jobs(namespace)
-	job, err := jobsclient.Get(op.Name(), metav1.GetOptions{})
+	// We should be able to fetch the Pod that b.Execute() created in our fake client.
+	podsclient := cs.CoreV1().Pods(namespace)
+	pod, err := podsclient.Get(op.Name(), metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Unexpected error fetching Job: %v", err)
+		t.Fatalf("Unexpected error fetching Pod: %v", err)
 	}
 
-	credInit := job.Spec.Template.Spec.InitContainers[0]
+	credInit := pod.Spec.InitContainers[0]
 	if got, want := len(credInit.Args), 1; got != want {
 		t.Errorf("len(CredInit.Args); got %v, want %v", got, want)
 	}

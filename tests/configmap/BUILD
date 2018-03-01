@@ -13,6 +13,7 @@ go_binary(
     name = "configmap",
     embed = [":go_default_library"],
     importpath = "github.com/google/build-crd/tests/configmap",
+    pure = "on",
 )
 
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")

@@ -21,7 +21,6 @@ import (
 	"reflect"
 	"regexp"
 
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -271,7 +270,7 @@ func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Inte
 	}, volumes, nil
 }
 
-func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*batchv1.Job, error) {
+func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Pod, error) {
 	build = build.DeepCopy()
 
 	cred, secrets, err := makeCredentialInitializer(build, kubeclient)
@@ -310,13 +309,12 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*batchv1.J
 		return nil, err
 	}
 
-	zero := int32(0)
-	return &batchv1.Job{
+	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			// We execute the build's job in the same namespace as where the build was
+			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			// Ensure our Job gets a unique name.
+			// Ensure our Pod gets a unique name.
 			GenerateName: fmt.Sprintf("%s-", build.Name),
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
@@ -327,19 +325,13 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*batchv1.J
 				}),
 			},
 		},
-		Spec: batchv1.JobSpec{
-			// Don't retry any failed builds.
-			BackoffLimit: &zero,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					// If the build fails, don't restart it.
-					RestartPolicy:      corev1.RestartPolicyNever,
-					InitContainers:     initContainers,
-					Containers:         []corev1.Container{nopContainer},
-					ServiceAccountName: build.Spec.ServiceAccountName,
-					Volumes:            volumes,
-				},
-			},
+		Spec: corev1.PodSpec{
+			// If the build fails, don't restart it.
+			RestartPolicy:      corev1.RestartPolicyNever,
+			InitContainers:     initContainers,
+			Containers:         []corev1.Container{nopContainer},
+			ServiceAccountName: build.Spec.ServiceAccountName,
+			Volumes:            volumes,
 		},
 	}, nil
 }
@@ -404,9 +396,8 @@ func filterImplicitVolumes(vs []corev1.Volume) []corev1.Volume {
 	return volumes
 }
 
-func ToCRD(job *batchv1.Job) (*v1alpha1.Build, error) {
-	job = job.DeepCopy()
-	podSpec := job.Spec.Template.Spec
+func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
+	podSpec := pod.Spec.DeepCopy()
 
 	for _, c := range podSpec.Containers {
 		if !reflect.DeepEqual(c, nopContainer) {
