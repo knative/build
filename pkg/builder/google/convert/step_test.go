@@ -22,7 +22,7 @@ import (
 	"google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/google/build-crd/pkg/buildtest"
+	"github.com/elafros/build-crd/pkg/buildtest"
 )
 
 const (

@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,8 +28,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
-	buildercommon "github.com/google/build-crd/pkg/builder"
-	"github.com/google/build-crd/pkg/buildtest"
+	buildercommon "github.com/elafros/build-crd/pkg/builder"
+	"github.com/elafros/build-crd/pkg/buildtest"
 
 	"testing"
 )

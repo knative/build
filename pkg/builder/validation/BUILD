@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["error.go"],
-    importpath = "github.com/google/build-crd/pkg/builder/validation",
+    importpath = "github.com/elafros/build-crd/pkg/builder/validation",
     visibility = ["//visibility:public"],
 )

@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	cloudbuild "github.com/google/build-crd/pkg/apis/cloudbuild"
+	cloudbuild "github.com/elafros/build-crd/pkg/apis/cloudbuild"
 )
 
 // SchemeGroupVersion is group version used to register these objects

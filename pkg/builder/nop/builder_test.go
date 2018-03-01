@@ -17,8 +17,8 @@ limitations under the License.
 package nop
 
 import (
-	v1alpha1 "github.com/google/build-crd/pkg/apis/cloudbuild/v1alpha1"
-	buildercommon "github.com/google/build-crd/pkg/builder"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	buildercommon "github.com/elafros/build-crd/pkg/builder"
 
 	"testing"
 )

@@ -22,7 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/google/build-crd/pkg/builder/validation"
+	"github.com/elafros/build-crd/pkg/builder/validation"
 )
 
 func ToEnvVarFromString(og string) (*corev1.EnvVar, error) {

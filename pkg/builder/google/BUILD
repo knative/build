@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["builder.go"],
-    importpath = "github.com/google/build-crd/pkg/builder/google",
+    importpath = "github.com/elafros/build-crd/pkg/builder/google",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
@@ -19,7 +19,7 @@ go_test(
     name = "go_default_test",
     srcs = ["builder_test.go"],
     embed = [":go_default_library"],
-    importpath = "github.com/google/build-crd/pkg/builder/google",
+    importpath = "github.com/elafros/build-crd/pkg/builder/google",
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
         "//pkg/builder:go_default_library",

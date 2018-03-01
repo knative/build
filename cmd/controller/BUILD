@@ -5,7 +5,7 @@ load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/google/build-crd/cmd/controller",
+    importpath = "github.com/elafros/build-crd/cmd/controller",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/builder:go_default_library",
@@ -31,7 +31,7 @@ go_library(
 go_binary(
     name = "controller",
     embed = [":go_default_library"],
-    importpath = "github.com/google/build-crd/cmd/controller",
+    importpath = "github.com/elafros/build-crd/cmd/controller",
     pure = "on",
     visibility = ["//visibility:public"],
 )

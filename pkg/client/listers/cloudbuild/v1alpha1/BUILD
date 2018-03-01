@@ -7,7 +7,7 @@ go_library(
         "buildtemplate.go",
         "expansion_generated.go",
     ],
-    importpath = "github.com/google/build-crd/pkg/client/listers/cloudbuild/v1alpha1",
+    importpath = "github.com/elafros/build-crd/pkg/client/listers/cloudbuild/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
