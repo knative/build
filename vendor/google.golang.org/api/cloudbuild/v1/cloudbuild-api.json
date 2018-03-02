@@ -548,7 +548,7 @@
     }
   },
   "version": "v1",
-  "baseUrl": "https://build.dev/",
+  "baseUrl": "https://cloudbuild.googleapis.com/",
   "servicePath": "",
   "description": "Builds container images in the cloud.",
   "kind": "discovery#restDescription",
@@ -1256,7 +1256,7 @@
       }
     }
   },
-  "rootUrl": "https://build.dev/",
+  "rootUrl": "https://cloudbuild.googleapis.com/",
   "ownerDomain": "google.com",
   "name": "cloudbuild",
   "batchPath": "batch",

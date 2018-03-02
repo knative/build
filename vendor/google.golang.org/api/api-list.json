@@ -643,7 +643,7 @@
    "version": "v1",
    "title": "Google Cloud Container Builder API",
    "description": "Builds container images in the cloud.",
-   "discoveryRestUrl": "https://build.dev/$discovery/rest?version=v1",
+   "discoveryRestUrl": "https://cloudbuild.googleapis.com/$discovery/rest?version=v1",
    "icons": {
     "x16": "https://www.gstatic.com/images/branding/product/1x/googleg_16dp.png",
     "x32": "https://www.gstatic.com/images/branding/product/1x/googleg_32dp.png"
