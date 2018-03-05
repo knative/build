@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/elafros/build-crd/pkg/builder/cluster/convert",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/builder/validation:go_default_library",
         "//pkg/credentials:go_default_library",
         "//pkg/credentials/dockercreds:go_default_library",
@@ -40,7 +40,7 @@ go_test(
     embed = [":go_default_library"],
     importpath = "github.com/elafros/build-crd/pkg/builder/cluster/convert",
     deps = [
-        "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/buildtest:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",

@@ -32,7 +32,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 	"github.com/elafros/build-crd/pkg/client/clientset/versioned/fake"
 	informers "github.com/elafros/build-crd/pkg/client/informers/externalversions"
 )

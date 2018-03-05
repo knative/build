@@ -7,10 +7,10 @@ go_library(
         "buildtemplate.go",
         "expansion_generated.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/client/listers/cloudbuild/v1alpha1",
+    importpath = "github.com/elafros/build-crd/pkg/client/listers/build/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/apis/build/v1alpha1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/api/errors:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/labels:go_default_library",
         "//vendor/k8s.io/client-go/tools/cache:go_default_library",

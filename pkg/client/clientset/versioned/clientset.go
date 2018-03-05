@@ -16,7 +16,7 @@ limitations under the License.
 package versioned
 
 import (
-	cloudbuildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1"
+	buildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/build/v1alpha1"
 
 	glog "github.com/golang/glog"
 	discovery "k8s.io/client-go/discovery"
@@ -26,27 +26,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	CloudbuildV1alpha1() cloudbuildv1alpha1.CloudbuildV1alpha1Interface
+	CloudbuildV1alpha1() buildv1alpha1.CloudbuildV1alpha1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Cloudbuild() cloudbuildv1alpha1.CloudbuildV1alpha1Interface
+	Cloudbuild() buildv1alpha1.CloudbuildV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	cloudbuildV1alpha1 *cloudbuildv1alpha1.CloudbuildV1alpha1Client
+	buildV1alpha1 *buildv1alpha1.CloudbuildV1alpha1Client
 }
 
 // CloudbuildV1alpha1 retrieves the CloudbuildV1alpha1Client
-func (c *Clientset) CloudbuildV1alpha1() cloudbuildv1alpha1.CloudbuildV1alpha1Interface {
-	return c.cloudbuildV1alpha1
+func (c *Clientset) CloudbuildV1alpha1() buildv1alpha1.CloudbuildV1alpha1Interface {
+	return c.buildV1alpha1
 }
 
 // Deprecated: Cloudbuild retrieves the default version of CloudbuildClient.
 // Please explicitly pick a version.
-func (c *Clientset) Cloudbuild() cloudbuildv1alpha1.CloudbuildV1alpha1Interface {
-	return c.cloudbuildV1alpha1
+func (c *Clientset) Cloudbuild() buildv1alpha1.CloudbuildV1alpha1Interface {
+	return c.buildV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,7 +65,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.cloudbuildV1alpha1, err = cloudbuildv1alpha1.NewForConfig(&configShallowCopy)
+	cs.buildV1alpha1, err = buildv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.cloudbuildV1alpha1 = cloudbuildv1alpha1.NewForConfigOrDie(c)
+	cs.buildV1alpha1 = buildv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -91,7 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.cloudbuildV1alpha1 = cloudbuildv1alpha1.New(c)
+	cs.buildV1alpha1 = buildv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

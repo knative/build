@@ -9,10 +9,10 @@ go_library(
         "doc.go",
         "generated_expansion.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1",
+    importpath = "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/build/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/client/clientset/versioned/scheme:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/runtime/serializer:go_default_library",

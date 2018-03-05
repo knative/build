@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 )
 
 // ApplyTemplate applies the values in the template to the build, and replaces

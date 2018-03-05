@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 	"github.com/elafros/build-crd/pkg/builder/validation"
 	"github.com/elafros/build-crd/pkg/credentials"
 	"github.com/elafros/build-crd/pkg/credentials/dockercreds"

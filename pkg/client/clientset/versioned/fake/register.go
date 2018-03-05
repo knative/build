@@ -16,7 +16,7 @@ limitations under the License.
 package fake
 
 import (
-	cloudbuildv1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	buildv1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -48,6 +48,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	cloudbuildv1alpha1.AddToScheme(scheme)
+	buildv1alpha1.AddToScheme(scheme)
 
 }

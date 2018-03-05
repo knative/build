@@ -19,12 +19,13 @@ limitations under the License.
 package externalversions
 
 import (
-	versioned "github.com/elafros/build-crd/pkg/client/clientset/versioned"
-	cloudbuild "github.com/elafros/build-crd/pkg/client/informers/externalversions/cloudbuild"
-	internalinterfaces "github.com/elafros/build-crd/pkg/client/informers/externalversions/internalinterfaces"
 	reflect "reflect"
 	sync "sync"
 	time "time"
+
+	versioned "github.com/elafros/build-crd/pkg/client/clientset/versioned"
+	build "github.com/elafros/build-crd/pkg/client/informers/externalversions/build"
+	internalinterfaces "github.com/elafros/build-crd/pkg/client/informers/externalversions/internalinterfaces"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -123,9 +124,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Cloudbuild() cloudbuild.Interface
+	Cloudbuild() build.Interface
 }
 
-func (f *sharedInformerFactory) Cloudbuild() cloudbuild.Interface {
-	return cloudbuild.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Cloudbuild() build.Interface {
+	return build.New(f, f.namespace, f.tweakListOptions)
 }

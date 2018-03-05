@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/elafros/build-crd/pkg/client/clientset/versioned",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/client/clientset/versioned/typed/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/client/clientset/versioned/typed/build/v1alpha1:go_default_library",
         "//vendor/github.com/golang/glog:go_default_library",
         "//vendor/k8s.io/client-go/discovery:go_default_library",
         "//vendor/k8s.io/client-go/rest:go_default_library",

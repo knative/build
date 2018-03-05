@@ -16,7 +16,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 	scheme "github.com/elafros/build-crd/pkg/client/clientset/versioned/scheme"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
