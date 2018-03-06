@@ -17,8 +17,8 @@ limitations under the License.
 package nop
 
 import (
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
-	buildercommon "github.com/elafros/build-crd/pkg/builder"
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	buildercommon "github.com/elafros/build/pkg/builder"
 
 	"testing"
 )

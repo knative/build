@@ -26,9 +26,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
-	buildercommon "github.com/elafros/build-crd/pkg/builder"
-	"github.com/elafros/build-crd/pkg/builder/cluster/convert"
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	buildercommon "github.com/elafros/build/pkg/builder"
+	"github.com/elafros/build/pkg/builder/cluster/convert"
 )
 
 type operation struct {

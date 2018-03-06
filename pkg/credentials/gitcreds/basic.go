@@ -26,7 +26,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/elafros/build-crd/pkg/credentials"
+	"github.com/elafros/build/pkg/credentials"
 )
 
 // As the flag is read, this status is populated.

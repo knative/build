@@ -19,8 +19,8 @@ limitations under the License.
 package cloudbuild
 
 import (
-	v1alpha1 "github.com/elafros/build-crd/pkg/client/informers/externalversions/build/v1alpha1"
-	internalinterfaces "github.com/elafros/build-crd/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/elafros/build/pkg/client/informers/externalversions/build/v1alpha1"
+	internalinterfaces "github.com/elafros/build/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

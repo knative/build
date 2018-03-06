@@ -8,7 +8,7 @@ go_library(
         "fake_buildtemplate.go",
         "fake_cloudbuild_client.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/build/v1alpha1/fake",
+    importpath = "github.com/elafros/build/pkg/client/clientset/versioned/typed/build/v1alpha1/fake",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",

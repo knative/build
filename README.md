@@ -28,7 +28,7 @@ To contribute to this project you should also take a look at:
 ## Checking out the repository
 
 To set the paths of the imports right, make sure you clone into the directory
-`${GOPATH}/src/github.com/elafros/build-crd`.  For example:
+`${GOPATH}/src/github.com/elafros/build`.  For example:
 
 ```shell
 # Set up GOPATH
@@ -36,11 +36,11 @@ $ export GOPATH=$(pwd)/go  # Choose your directory.
 $ mkdir -p ${GOPATH}
 
 # Grab the repo itself.
-$ go get github.com/elafros/build-crd
-$ cd ${GOPATH}/src/github.com/elafros/build-crd
+$ go get github.com/elafros/build
+$ cd ${GOPATH}/src/github.com/elafros/build
 
 # Optionally add your remote.
-$ git remote add ${USER} https://github.com/${USER}/build-crd
+$ git remote add ${USER} https://github.com/${USER}/build
 ```
 
 ## Running the Controller

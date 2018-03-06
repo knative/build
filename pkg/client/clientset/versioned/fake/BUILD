@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "register.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/client/clientset/versioned/fake",
+    importpath = "github.com/elafros/build/pkg/client/clientset/versioned/fake",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",

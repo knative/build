@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elafros/build-crd/pkg/builder"
-	"github.com/elafros/build-crd/pkg/builder/google"
-	"github.com/elafros/build-crd/pkg/builder/google/fakecloudbuild"
-	"github.com/elafros/build-crd/pkg/builder/nop"
+	"github.com/elafros/build/pkg/builder"
+	"github.com/elafros/build/pkg/builder/google"
+	"github.com/elafros/build/pkg/builder/google/fakecloudbuild"
+	"github.com/elafros/build/pkg/builder/nop"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,9 +32,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
-	"github.com/elafros/build-crd/pkg/client/clientset/versioned/fake"
-	informers "github.com/elafros/build-crd/pkg/client/informers/externalversions"
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	"github.com/elafros/build/pkg/client/clientset/versioned/fake"
+	informers "github.com/elafros/build/pkg/client/informers/externalversions"
 )
 
 const (

@@ -5,7 +5,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/elafros/build-crd/tests/custom-env",
+    importpath = "github.com/elafros/build/tests/custom-env",
     visibility = ["//visibility:private"],
     deps = ["//vendor/github.com/golang/glog:go_default_library"],
 )
@@ -13,7 +13,7 @@ go_library(
 go_binary(
     name = "custom-env",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build-crd/tests/custom-env",
+    importpath = "github.com/elafros/build/tests/custom-env",
     pure = "on",
     visibility = ["//visibility:public"],
 )
