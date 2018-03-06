@@ -23,9 +23,9 @@ annotations on the `Secret` objects, which will take the form:
 ```yaml
 metadata:
   annotations:
-    cloudbuild.dev/git-0: https://github.com
-    cloudbuild.dev/git-1: https://gitlab.com
-    cloudbuild.dev/docker-0: https://gcr.io
+    build.dev/git-0: https://github.com
+    build.dev/git-1: https://gitlab.com
+    build.dev/docker-0: https://gcr.io
 type: kubernetes.io/basic-auth
 data:
   username: <base64 encoded>
@@ -36,7 +36,7 @@ Or for SSH:
 ```yaml
 metadata:
   annotations:
-    cloudbuild.dev/git-0: github.com
+    build.dev/git-0: github.com
 type: kubernetes.io/ssh-auth
 data:
   ssh-privatekey: <base64 encoded>

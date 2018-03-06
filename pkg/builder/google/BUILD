@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/elafros/build-crd/pkg/builder/google",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/builder:go_default_library",
         "//pkg/builder/google/convert:go_default_library",
         "//vendor/google.golang.org/api/cloudbuild/v1:go_default_library",
@@ -21,7 +21,7 @@ go_test(
     embed = [":go_default_library"],
     importpath = "github.com/elafros/build-crd/pkg/builder/google",
     deps = [
-        "//pkg/apis/cloudbuild/v1alpha1:go_default_library",
+        "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/builder:go_default_library",
         "//pkg/builder/google/fakecloudbuild:go_default_library",
     ],

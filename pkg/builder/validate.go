@@ -20,7 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	"github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 	"github.com/elafros/build-crd/pkg/builder/validation"
 )
 

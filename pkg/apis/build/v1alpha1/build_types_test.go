@@ -22,9 +22,7 @@ import (
 	"github.com/elafros/build-crd/pkg/buildtest"
 )
 
-const (
-	bazelYAML = "cloudbuilders/bazel/cloudbuild.yaml"
-)
+const bazelYAML = "cloudbuilders/bazel/cloudbuild.yaml"
 
 func TestParsing(t *testing.T) {
 	var bs BuildSpec

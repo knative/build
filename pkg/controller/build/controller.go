@@ -38,12 +38,12 @@ import (
 	"github.com/elafros/build-crd/pkg/builder/validation"
 	"github.com/elafros/build-crd/pkg/controller"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/cloudbuild/v1alpha1"
+	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
 
 	clientset "github.com/elafros/build-crd/pkg/client/clientset/versioned"
 	buildscheme "github.com/elafros/build-crd/pkg/client/clientset/versioned/scheme"
 	informers "github.com/elafros/build-crd/pkg/client/informers/externalversions"
-	listers "github.com/elafros/build-crd/pkg/client/listers/cloudbuild/v1alpha1"
+	listers "github.com/elafros/build-crd/pkg/client/listers/build/v1alpha1"
 )
 
 const controllerAgentName = "build-controller"
