@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	cloudbuild_v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
-	versioned "github.com/elafros/build-crd/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/elafros/build-crd/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/elafros/build-crd/pkg/client/listers/build/v1alpha1"
+	cloudbuild_v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	versioned "github.com/elafros/build/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/elafros/build/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/elafros/build/pkg/client/listers/build/v1alpha1"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

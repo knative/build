@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["controller.go"],
-    importpath = "github.com/elafros/build-crd/pkg/controller",
+    importpath = "github.com/elafros/build/pkg/controller",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/builder:go_default_library",

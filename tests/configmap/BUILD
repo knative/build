@@ -5,14 +5,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/elafros/build-crd/tests/configmap",
+    importpath = "github.com/elafros/build/tests/configmap",
     deps = ["//vendor/github.com/golang/glog:go_default_library"],
 )
 
 go_binary(
     name = "configmap",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build-crd/tests/configmap",
+    importpath = "github.com/elafros/build/tests/configmap",
     pure = "on",
 )
 

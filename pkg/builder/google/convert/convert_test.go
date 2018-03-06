@@ -21,8 +21,8 @@ import (
 
 	"google.golang.org/api/cloudbuild/v1"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
-	"github.com/elafros/build-crd/pkg/buildtest"
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	"github.com/elafros/build/pkg/buildtest"
 )
 
 func TestCloudbuildYAMLs(t *testing.T) {

@@ -7,7 +7,7 @@ go_library(
         "interface.go",
         "validate.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/builder",
+    importpath = "github.com/elafros/build/pkg/builder",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
@@ -23,7 +23,7 @@ go_test(
         "validate_test.go",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build-crd/pkg/builder",
+    importpath = "github.com/elafros/build/pkg/builder",
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",

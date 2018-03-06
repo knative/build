@@ -9,7 +9,7 @@ go_library(
         "wait.go",
         "yaml.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/buildtest",
+    importpath = "github.com/elafros/build/pkg/buildtest",
     visibility = ["//visibility:public"],
     deps = ["//vendor/github.com/go-yaml/yaml:go_default_library"],
 )

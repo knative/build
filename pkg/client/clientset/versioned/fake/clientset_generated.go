@@ -16,9 +16,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/elafros/build-crd/pkg/client/clientset/versioned"
-	buildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/build/v1alpha1"
-	fakebuildv1alpha1 "github.com/elafros/build-crd/pkg/client/clientset/versioned/typed/build/v1alpha1/fake"
+	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
+	buildv1alpha1 "github.com/elafros/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
+	fakebuildv1alpha1 "github.com/elafros/build/pkg/client/clientset/versioned/typed/build/v1alpha1/fake"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

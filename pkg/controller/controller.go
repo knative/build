@@ -20,10 +20,10 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/elafros/build-crd/pkg/builder"
+	"github.com/elafros/build/pkg/builder"
 
-	clientset "github.com/elafros/build-crd/pkg/client/clientset/versioned"
-	informers "github.com/elafros/build-crd/pkg/client/informers/externalversions"
+	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
+	informers "github.com/elafros/build/pkg/client/informers/externalversions"
 )
 
 type Interface interface {

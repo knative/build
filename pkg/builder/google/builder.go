@@ -24,9 +24,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
-	buildercommon "github.com/elafros/build-crd/pkg/builder"
-	"github.com/elafros/build-crd/pkg/builder/google/convert"
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	buildercommon "github.com/elafros/build/pkg/builder"
+	"github.com/elafros/build/pkg/builder/google/convert"
 )
 
 type operation struct {

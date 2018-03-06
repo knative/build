@@ -34,16 +34,16 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/elafros/build-crd/pkg/builder"
-	"github.com/elafros/build-crd/pkg/builder/validation"
-	"github.com/elafros/build-crd/pkg/controller"
+	"github.com/elafros/build/pkg/builder"
+	"github.com/elafros/build/pkg/builder/validation"
+	"github.com/elafros/build/pkg/controller"
 
-	"github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
+	"github.com/elafros/build/pkg/apis/build/v1alpha1"
 
-	clientset "github.com/elafros/build-crd/pkg/client/clientset/versioned"
-	buildscheme "github.com/elafros/build-crd/pkg/client/clientset/versioned/scheme"
-	informers "github.com/elafros/build-crd/pkg/client/informers/externalversions"
-	listers "github.com/elafros/build-crd/pkg/client/listers/build/v1alpha1"
+	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
+	buildscheme "github.com/elafros/build/pkg/client/clientset/versioned/scheme"
+	informers "github.com/elafros/build/pkg/client/informers/externalversions"
+	listers "github.com/elafros/build/pkg/client/listers/build/v1alpha1"
 )
 
 const controllerAgentName = "build-controller"

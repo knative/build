@@ -7,7 +7,7 @@ go_library(
         "buildtemplate.go",
         "interface.go",
     ],
-    importpath = "github.com/elafros/build-crd/pkg/client/informers/externalversions/build/v1alpha1",
+    importpath = "github.com/elafros/build/pkg/client/informers/externalversions/build/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",

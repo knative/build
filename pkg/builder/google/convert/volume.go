@@ -21,7 +21,7 @@ import (
 
 	"google.golang.org/api/cloudbuild/v1"
 
-	"github.com/elafros/build-crd/pkg/builder/validation"
+	"github.com/elafros/build/pkg/builder/validation"
 )
 
 func ToVolumeMountFromVolume(og *cloudbuild.Volume) (*corev1.VolumeMount, error) {

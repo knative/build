@@ -19,7 +19,7 @@ package builder
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	v1alpha1 "github.com/elafros/build-crd/pkg/apis/build/v1alpha1"
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
 )
 
 // Operation defines the interface for interacting with an Operation of a particular BuildProvider.

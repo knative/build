@@ -19,7 +19,7 @@ limitations under the License.
 package internalinterfaces
 
 import (
-	versioned "github.com/elafros/build-crd/pkg/client/clientset/versioned"
+	versioned "github.com/elafros/build/pkg/client/clientset/versioned"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

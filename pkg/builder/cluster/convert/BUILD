@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["convert.go"],
-    importpath = "github.com/elafros/build-crd/pkg/builder/cluster/convert",
+    importpath = "github.com/elafros/build/pkg/builder/cluster/convert",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
@@ -38,7 +38,7 @@ go_test(
         "//testdata:workingdir.yaml",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build-crd/pkg/builder/cluster/convert",
+    importpath = "github.com/elafros/build/pkg/builder/cluster/convert",
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/buildtest:go_default_library",

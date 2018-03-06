@@ -2,7 +2,7 @@ package(default_visibility = ["//visibility:public"])
 
 load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_prefix")
 
-go_prefix("github.com/elafros/build-crd")
+go_prefix("github.com/elafros/build")
 
 gazelle(
     name = "gazelle",
