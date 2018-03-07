@@ -5,7 +5,20 @@ for Kubernetes, and a controller for making them work.
 
 ## Quickstart
 
-To add this to your k8s cluster:
+To add this to your k8s cluster, you have two options.
+
+### Latest Release
+
+You can install the latest release of the Build CRD by running:
+```shell
+kubectl create -f https://storage.googleapis.com/build-crd/latest/release.yaml
+```
+
+TODO:
+ * This is not yet public, so won't work.
+ * Talk about the release frequency and last-known-good versions?
+
+### DIY from HEAD
 
 1. [Check out the repository](#checking-out-the-repository)
 1. [Run the controller](#running-the-controller)
