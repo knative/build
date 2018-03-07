@@ -10,14 +10,21 @@ and [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 Kubernetes is emerging as the predominant (if not de facto) container
 orchestration layer.  It is also quickly becoming the foundational layer on top
-of which folks are building higher-level compute abstractions (PaaS, FaaS).
-However, many of these higher-level compute abstractions don't take containers
-(the atom of Kubernetes), many start from the user's source and have managed
-build processes.
+of which the ecosystem is building higher-level compute abstractions (PaaS,
+FaaS).  In order to increase developer velocity, these higher-level compute
+abstractions typically operate on source, not just containers, which must be
+built.  However, there is no common building block today for bridging these
+worlds.
 
 The aim of this project isn't to be a complete standalone product that folks use
 directly (e.g. as a CI/CD replacement), but a building block to facilitate the
-expression of builds to be run on-cluster.
+expression of Builds as part of a larger system.
+
+This repository provides an implementation of the Build CRD that runs Builds
+on-cluster (by default), because that is the lowest common denominator that we
+expect users to have available.  It is also possible to write `pkg/builder`s
+that delegates Builds to hosted services (e.g. Google Container Builder), but
+these are typically more restrictive.
 
 ## Getting Started
 
