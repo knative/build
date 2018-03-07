@@ -16,15 +16,16 @@ abstractions typically operate on source, not just containers, which must be
 built.  However, there is no common building block today for bridging these
 worlds.
 
+This repository provides an implementation of the Build [CRD](
+https://kubernetes.io/docs/concepts/api-extension/custom-resources/) that runs
+Builds on-cluster (by default), because that is the lowest common denominator
+that we expect users to have available.  It is also possible to write
+[pkg/builder](./pkg/builder) that delegates Builds to hosted services (e.g.
+Google Container Builder), but these are typically more restrictive.
+
 The aim of this project isn't to be a complete standalone product that folks use
 directly (e.g. as a CI/CD replacement), but a building block to facilitate the
-expression of Builds as part of a larger system.
-
-This repository provides an implementation of the Build CRD that runs Builds
-on-cluster (by default), because that is the lowest common denominator that we
-expect users to have available.  It is also possible to write `pkg/builder`s
-that delegates Builds to hosted services (e.g. Google Container Builder), but
-these are typically more restrictive.
+expression of Builds as part of larger systems.
 
 ## Getting Started
 
