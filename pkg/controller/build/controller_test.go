@@ -82,7 +82,7 @@ func (f *fixture) newController(b builder.Interface) (*Controller, informers.Sha
 
 func (f *fixture) updateIndex(i informers.SharedInformerFactory, bl []*v1alpha1.Build) {
 	for _, f := range bl {
-		i.Cloudbuild().V1alpha1().Builds().Informer().GetIndexer().Add(f)
+		i.Build().V1alpha1().Builds().Informer().GetIndexer().Add(f)
 	}
 }
 
@@ -140,7 +140,7 @@ func TestBasicFlows(t *testing.T) {
 			t.Errorf("error syncing build: %v", err)
 		}
 
-		buildClient := f.client.CloudbuildV1alpha1().Builds(build.Namespace)
+		buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
 		first, err := buildClient.Get(build.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Errorf("error fetching build: %v", err)

@@ -282,7 +282,7 @@
   revision = "53feefa2559fb8dfa8d81baad31be332c97d6c77"
 
 [[projects]]
-  branch = "master"
+  branch = "release-1.9"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1alpha1",
@@ -314,9 +314,10 @@
     "storage/v1alpha1",
     "storage/v1beta1"
   ]
-  revision = "57d7f151236665c12202a51c21bc939eb5d5ba91"
+  revision = "acf347b865f29325eb61f4cd2df11e86e073a5ee"
 
 [[projects]]
+  branch = "release-1.9"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -364,10 +365,10 @@
     "third_party/forked/golang/json",
     "third_party/forked/golang/reflect"
   ]
-  revision = "a463f34d125a31787d2be8b47bcf6370b0cf1bde"
+  revision = "19e3f5aa3adca672c153d324e6b7d82ff8935f03"
 
 [[projects]]
-  branch = "master"
+  branch = "release-6.0"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -517,10 +518,9 @@
     "util/integer",
     "util/workqueue"
   ]
-  revision = "18ec62fe90328a54f7ab513d5fedf3e8650c98b5"
+  revision = "9389c055a838d4f208b699b3c7c51b70f2368861"
 
 [[projects]]
-  branch = "master"
   name = "k8s.io/code-generator"
   packages = [
     "cmd/client-gen",
@@ -532,18 +532,13 @@
     "cmd/client-gen/path",
     "cmd/client-gen/types",
     "cmd/deepcopy-gen",
-    "cmd/deepcopy-gen/args",
     "cmd/defaulter-gen",
-    "cmd/defaulter-gen/args",
     "cmd/informer-gen",
-    "cmd/informer-gen/args",
     "cmd/informer-gen/generators",
     "cmd/lister-gen",
-    "cmd/lister-gen/args",
-    "cmd/lister-gen/generators",
-    "pkg/util"
+    "cmd/lister-gen/generators"
   ]
-  revision = "2a248ce75d2b247e5ca033ded85ad6a63e0f297e"
+  revision = "release-1.9"
 
 [[projects]]
   branch = "master"
@@ -571,6 +566,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "639e1c9db4d5a025f6d40a739b1daca950277b39578d1383e617e5a21566495a"
+  inputs-digest = "66b6d736044824fac4b81fbedba565ab9aa39893858a6ab1d02b0e105ae58e05"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -17,7 +17,6 @@ package fake
 
 import (
 	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,7 +27,7 @@ import (
 
 // FakeBuilds implements BuildInterface
 type FakeBuilds struct {
-	Fake *FakeCloudbuildV1alpha1
+	Fake *FakeBuildV1alpha1
 	ns   string
 }
 

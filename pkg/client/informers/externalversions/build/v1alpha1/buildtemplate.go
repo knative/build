@@ -19,12 +19,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	cloudbuild_v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	time "time"
+
+	build_v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
 	versioned "github.com/elafros/build/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/elafros/build/pkg/client/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/elafros/build/pkg/client/listers/build/v1alpha1"
-	time "time"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -61,16 +61,16 @@ func NewFilteredBuildTemplateInformer(client versioned.Interface, namespace stri
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CloudbuildV1alpha1().BuildTemplates(namespace).List(options)
+				return client.BuildV1alpha1().BuildTemplates(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CloudbuildV1alpha1().BuildTemplates(namespace).Watch(options)
+				return client.BuildV1alpha1().BuildTemplates(namespace).Watch(options)
 			},
 		},
-		&cloudbuild_v1alpha1.BuildTemplate{},
+		&build_v1alpha1.BuildTemplate{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *buildTemplateInformer) defaultInformer(client versioned.Interface, resy
 }
 
 func (f *buildTemplateInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&cloudbuild_v1alpha1.BuildTemplate{}, f.defaultInformer)
+	return f.factory.InformerFor(&build_v1alpha1.BuildTemplate{}, f.defaultInformer)
 }
 
 func (f *buildTemplateInformer) Lister() v1alpha1.BuildTemplateLister {

@@ -19,8 +19,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	time "time"
-
 	apps_v1beta2 "k8s.io/api/apps/v1beta2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +27,7 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 	v1beta2 "k8s.io/client-go/listers/apps/v1beta2"
 	cache "k8s.io/client-go/tools/cache"
+	time "time"
 )
 
 // DeploymentInformer provides access to a shared informer and lister for

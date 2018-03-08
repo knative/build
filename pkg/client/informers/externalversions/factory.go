@@ -26,7 +26,6 @@ import (
 	versioned "github.com/elafros/build/pkg/client/clientset/versioned"
 	build "github.com/elafros/build/pkg/client/informers/externalversions/build"
 	internalinterfaces "github.com/elafros/build/pkg/client/informers/externalversions/internalinterfaces"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -124,9 +123,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Cloudbuild() build.Interface
+	Build() build.Interface
 }
 
-func (f *sharedInformerFactory) Cloudbuild() build.Interface {
+func (f *sharedInformerFactory) Build() build.Interface {
 	return build.New(f, f.namespace, f.tweakListOptions)
 }
