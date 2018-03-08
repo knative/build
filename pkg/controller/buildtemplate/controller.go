@@ -91,7 +91,7 @@ func NewController(
 	buildInformerFactory informers.SharedInformerFactory) controller.Interface {
 
 	// obtain a reference to a shared index informer for the BuildTemplate type.
-	buildTemplateInformer := buildInformerFactory.Cloudbuild().V1alpha1().BuildTemplates()
+	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 
 	// Create event broadcaster
 	// Add build-controller types to the default Kubernetes Scheme so Events can be
@@ -277,7 +277,7 @@ func (c *Controller) syncHandler(key string) error {
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.BuildTemplate) (*v1alpha1.BuildTemplate, error) {
-	tmplClient := c.buildclientset.CloudbuildV1alpha1().BuildTemplates(u.Namespace)
+	tmplClient := c.buildclientset.BuildV1alpha1().BuildTemplates(u.Namespace)
 	newu, err := tmplClient.Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err

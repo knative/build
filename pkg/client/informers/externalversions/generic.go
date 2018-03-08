@@ -19,9 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
 	"fmt"
 
+	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -54,9 +54,9 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	switch resource {
 	// Group=build.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("builds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Cloudbuild().V1alpha1().Builds().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Build().V1alpha1().Builds().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("buildtemplates"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Cloudbuild().V1alpha1().BuildTemplates().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Build().V1alpha1().BuildTemplates().Informer()}, nil
 
 	}
 

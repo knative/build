@@ -18,7 +18,6 @@ package v1alpha1
 import (
 	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
 	scheme "github.com/elafros/build/pkg/client/clientset/versioned/scheme"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -51,7 +50,7 @@ type buildTemplates struct {
 }
 
 // newBuildTemplates returns a BuildTemplates
-func newBuildTemplates(c *CloudbuildV1alpha1Client, namespace string) *buildTemplates {
+func newBuildTemplates(c *BuildV1alpha1Client, namespace string) *buildTemplates {
 	return &buildTemplates{
 		client: c.RESTClient(),
 		ns:     namespace,

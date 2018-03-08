@@ -19,8 +19,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	time "time"
-
 	rbac_v1alpha1 "k8s.io/api/rbac/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +27,7 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 	v1alpha1 "k8s.io/client-go/listers/rbac/v1alpha1"
 	cache "k8s.io/client-go/tools/cache"
+	time "time"
 )
 
 // ClusterRoleInformer provides access to a shared informer and lister for

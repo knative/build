@@ -4,8 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "build.go",
+        "build_client.go",
         "buildtemplate.go",
-        "cloudbuild_client.go",
         "doc.go",
         "generated_expansion.go",
     ],
