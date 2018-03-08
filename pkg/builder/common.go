@@ -29,6 +29,7 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) (*v1alpha1.B
 	if tmpl == nil {
 		return build, nil
 	}
+	tmpl = tmpl.DeepCopy()
 	build.Spec.Steps = tmpl.Spec.Steps
 	build.Spec.Volumes = append(build.Spec.Volumes, tmpl.Spec.Volumes...)
 
