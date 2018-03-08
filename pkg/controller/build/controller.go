@@ -277,11 +277,10 @@ func (c *Controller) syncHandler(key string) error {
 			if build.Spec.Template != nil {
 				if build.Spec.Template.Name == "" {
 					build.Status.SetCondition(&v1alpha1.BuildCondition{
-						Type:               v1alpha1.BuildInvalid,
-						Status:             corev1.ConditionTrue,
-						Reason:             "MissingTemplateName",
-						Message:            "the build specifies a 'template' without a name.",
-						LastTransitionTime: metav1.Now(),
+						Type:    v1alpha1.BuildInvalid,
+						Status:  corev1.ConditionTrue,
+						Reason:  "MissingTemplateName",
+						Message: "the build specifies a 'template' without a name.",
 					})
 					if _, err := c.updateStatus(build); err != nil {
 						return err
@@ -308,11 +307,10 @@ func (c *Controller) syncHandler(key string) error {
 					return err
 				}
 				build.Status.SetCondition(&v1alpha1.BuildCondition{
-					Type:               v1alpha1.BuildInvalid,
-					Status:             corev1.ConditionTrue,
-					Reason:             verr.Reason,
-					Message:            verr.Message,
-					LastTransitionTime: metav1.Now(),
+					Type:    v1alpha1.BuildInvalid,
+					Status:  corev1.ConditionTrue,
+					Reason:  verr.Reason,
+					Message: verr.Message,
 				})
 				if _, err := c.updateStatus(build); err != nil {
 					return err
@@ -331,11 +329,10 @@ func (c *Controller) syncHandler(key string) error {
 			op, err := b.Execute()
 			if err != nil {
 				build.Status.SetCondition(&v1alpha1.BuildCondition{
-					Type:               v1alpha1.BuildFailed,
-					Status:             corev1.ConditionTrue,
-					Reason:             "BuildExecuteFailed",
-					Message:            err.Error(),
-					LastTransitionTime: metav1.Now(),
+					Type:    v1alpha1.BuildFailed,
+					Status:  corev1.ConditionTrue,
+					Reason:  "BuildExecuteFailed",
+					Message: err.Error(),
 				})
 				if _, err := c.updateStatus(build); err != nil {
 					return err

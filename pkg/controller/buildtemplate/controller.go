@@ -261,11 +261,10 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 		tmpl.Status.SetCondition(&v1alpha1.BuildTemplateCondition{
-			Type:               v1alpha1.BuildTemplateInvalid,
-			Status:             corev1.ConditionTrue,
-			Reason:             verr.Reason,
-			Message:            verr.Message,
-			LastTransitionTime: metav1.Now(),
+			Type:    v1alpha1.BuildTemplateInvalid,
+			Status:  corev1.ConditionTrue,
+			Reason:  verr.Reason,
+			Message: verr.Message,
 		})
 		if _, err := c.updateStatus(tmpl); err != nil {
 			return err
