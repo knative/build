@@ -324,6 +324,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 					Kind:    "Build",
 				}),
 			},
+			Annotations: map[string]string{
+				"sidecar.istio.io/inject": "false",
+			},
 		},
 		Spec: corev1.PodSpec{
 			// If the build fails, don't restart it.
