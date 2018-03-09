@@ -532,13 +532,18 @@
     "cmd/client-gen/path",
     "cmd/client-gen/types",
     "cmd/deepcopy-gen",
+    "cmd/deepcopy-gen/args",
     "cmd/defaulter-gen",
+    "cmd/defaulter-gen/args",
     "cmd/informer-gen",
+    "cmd/informer-gen/args",
     "cmd/informer-gen/generators",
     "cmd/lister-gen",
-    "cmd/lister-gen/generators"
+    "cmd/lister-gen/args",
+    "cmd/lister-gen/generators",
+    "pkg/util"
   ]
-  revision = "release-1.9"
+  revision = "3c1fe2637f4efce271f1e6f50e039b2a0467c60c"
 
 [[projects]]
   branch = "master"
@@ -566,6 +571,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "66b6d736044824fac4b81fbedba565ab9aa39893858a6ab1d02b0e105ae58e05"
+  inputs-digest = "9409e6a6a60982a4c603be9903a22db872773dca36876d8e3f238b4993e425e4"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -39,8 +39,9 @@ required = [
   branch = "release-1.9"
 
 [[constraint]]
+  # Must match WORKSPACE!
   name = "k8s.io/code-generator"
-  revision = "release-1.9"
+  revision = "3c1fe2637f4efce271f1e6f50e039b2a0467c60c"
 
 [[constraint]]
   name = "k8s.io/client-go"
