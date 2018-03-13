@@ -82,6 +82,7 @@ const (
 	credsInit = "credential-initializer"
 	// Names for source containers
 	gitSource    = "git-source"
+	gcsSource    = "gcs-source"
 	customSource = "custom-source"
 )
 
@@ -92,6 +93,8 @@ var (
 	// The container with Git that we use to implement the Git source step.
 	gitImage = flag.String("git-image", "override-with-git:latest",
 		"The container image containing our Git binary.")
+	gcsFetcherImage = flag.String("gcs-fetcher-image", "override-with-gcs:latest",
+		"The container image containing our GCS fetcher binary.")
 )
 
 var (
@@ -99,6 +102,7 @@ var (
 	// name given to the first step.  This is fragile, but predominantly for testing.
 	containerToSourceMap = map[string]func(corev1.Container) (*v1alpha1.SourceSpec, error){
 		gitSource:    containerToGit,
+		gcsSource:    containerToGCS,
 		customSource: containerToCustom,
 	}
 	// Used to recover the type of reference we checked out.
@@ -184,6 +188,50 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	default:
 		return nil, fmt.Errorf("Unable to determine type of commitish: %v", commitish)
 	}
+}
+
+func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
+	if gcs.Location == "" {
+		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
+	}
+	if gcs.Type != v1alpha1.GCSArchive && gcs.Type != v1alpha1.GCSManifest {
+		return nil, validation.NewError("InvalidType", "gcs sources are expected to specify type as Archive or Manifest, got: %v", gcs)
+	}
+
+	c := &corev1.Container{
+		Name:  gcsSource,
+		Image: *gcsFetcherImage,
+	}
+	switch gcs.Type {
+	case v1alpha1.GCSArchive:
+		c.Args = []string{"--zipfile", gcs.Location}
+	case v1alpha1.GCSManifest:
+		c.Args = []string{"--manifest", gcs.Location}
+	}
+
+	return c, nil
+}
+
+func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
+	for i, a := range source.Args {
+		if a == "--zipfile" && i < len(source.Args) {
+			return &v1alpha1.SourceSpec{
+				GCS: &v1alpha1.GCSSourceSpec{
+					Type:     v1alpha1.GCSArchive,
+					Location: source.Args[i+1],
+				},
+			}, nil
+		}
+		if a == "--manifest" && i < len(source.Args) {
+			return &v1alpha1.SourceSpec{
+				GCS: &v1alpha1.GCSSourceSpec{
+					Type:     v1alpha1.GCSManifest,
+					Location: source.Args[i+1],
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("Unable to determine type of gcs source: %v", source)
 }
 
 func customToContainer(source *corev1.Container) (*corev1.Container, error) {

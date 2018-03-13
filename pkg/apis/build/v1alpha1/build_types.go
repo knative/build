@@ -74,9 +74,11 @@ type ArgumentSpec struct {
 // SourceSpec defines the input to the Build
 type SourceSpec struct {
 	Git    *GitSourceSpec    `json:"git,omitempty"`
+	GCS    *GCSSourceSpec    `json:"gcs,omitempty"`
 	Custom *corev1.Container `json:"custom,omitempty"`
 }
 
+// GitSourceSpec describes a Git repo source input to the Build.
 type GitSourceSpec struct {
 	Url string `json:"url"`
 
@@ -88,6 +90,18 @@ type GitSourceSpec struct {
 
 	// TODO(mattmoor): authn/z
 }
+
+// GCSSourceSpec describes source input to the Build in the form of an archive,
+// or a source manifest describing files to fetch.
+type GCSSourceSpec struct {
+	Type     string `json:"type,omitempty"` // one of "Archive" or "Manifest"
+	Location string `json:"location,omitempty"`
+}
+
+const (
+	GCSArchive  = "Archive"
+	GCSManifest = "Manifest"
+)
 
 type BuildProvider string
 
