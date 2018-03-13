@@ -94,13 +94,15 @@ type GitSourceSpec struct {
 // GCSSourceSpec describes source input to the Build in the form of an archive,
 // or a source manifest describing files to fetch.
 type GCSSourceSpec struct {
-	Type     string `json:"type,omitempty"` // one of "Archive" or "Manifest"
-	Location string `json:"location,omitempty"`
+	Type     GCSSourceType `json:"type,omitempty"`
+	Location string        `json:"location,omitempty"`
 }
 
+type GCSSourceType string
+
 const (
-	GCSArchive  = "Archive"
-	GCSManifest = "Manifest"
+	GCSArchive  = GCSSourceType("Archive")
+	GCSManifest = GCSSourceType("Manifest")
 )
 
 type BuildProvider string

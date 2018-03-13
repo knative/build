@@ -194,10 +194,6 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
-	if gcs.Type != v1alpha1.GCSArchive && gcs.Type != v1alpha1.GCSManifest {
-		return nil, validation.NewError("InvalidType", "gcs sources are expected to specify type as Archive or Manifest, got: %v", gcs)
-	}
-
 	c := &corev1.Container{
 		Name:  gcsSource,
 		Image: *gcsFetcherImage,
@@ -207,6 +203,8 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
 		c.Args = []string{"--zipfile", gcs.Location}
 	case v1alpha1.GCSManifest:
 		c.Args = []string{"--manifest", gcs.Location}
+	default:
+		return nil, validation.NewError("InvalidType", "gcs sources are expected to specify type as Archive or Manifest, got: %v", gcs)
 	}
 
 	return c, nil
