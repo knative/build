@@ -746,14 +746,14 @@ func (gf *gcsFetcher) fetch(ctx context.Context) error {
 func parseBucketObject(filename string) (bucket, object string, generation int64, err error) {
 	switch {
 	case strings.HasPrefix(filename, "https://storage.googleapis.com/") || strings.HasPrefix(filename, "http://storage.googleapis.com/"):
-		// filename looks like "https://storage.googleapis.com/staging.jasonco-prime.appspot.com/3aa080e5e72a610b06033dbfee288483d87cfd61"
+		// filename looks like "https://storage.googleapis.com/staging.my-project.appspot.com/3aa080e5e72a610b06033dbfee288483d87cfd61"
 		if parts := strings.Split(filename, "/"); len(parts) >= 5 {
 			bucket := parts[3]
 			object := strings.Join(parts[4:], "/")
 			return bucket, object, 0, nil
 		}
 	case strings.HasPrefix(filename, "gs://"):
-		// filename looks like "gs://jc-upload-tests/manifest-20171004T175409.json"
+		// filename looks like "gs://my-bucket/manifest-20171004T175409.json"
 		if parts := strings.Split(filename, "/"); len(parts) >= 4 {
 			bucket := parts[2]
 			object := strings.Join(parts[3:], "/")
