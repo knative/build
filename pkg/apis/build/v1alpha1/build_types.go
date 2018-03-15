@@ -101,8 +101,8 @@ type GCSSourceSpec struct {
 type GCSSourceType string
 
 const (
-	GCSArchive  = GCSSourceType("Archive")
-	GCSManifest = GCSSourceType("Manifest")
+	GCSArchive  GCSSourceType = "Archive"
+	GCSManifest GCSSourceType = "Manifest"
 )
 
 type BuildProvider string
