@@ -25,6 +25,8 @@ go_test(
         "//testdata:custom-source.yaml",
         "//testdata:env.yaml",
         "//testdata:env-valuefrom.yaml",
+        "//testdata:gcs-archive.yaml",
+        "//testdata:gcs-manifest.yaml",
         "//testdata:git-branch.yaml",
         "//testdata:git-branch-github.yaml",
         "//testdata:git-commit.yaml",

@@ -253,6 +253,8 @@ func sourceToContainer(source *v1alpha1.SourceSpec) (*corev1.Container, error) {
 		return nil, nil
 	case source.Git != nil:
 		return gitToContainer(source.Git)
+	case source.GCS != nil:
+		return gcsToContainer(source.GCS)
 	case source.Custom != nil:
 		return customToContainer(source.Custom)
 	default:
