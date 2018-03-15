@@ -19,12 +19,20 @@ package controller
 import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/elafros/build/pkg/builder"
 
 	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
+	buildscheme "github.com/elafros/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/elafros/build/pkg/client/informers/externalversions"
 )
+
+func init() {
+	// Add build types to the default Kubernetes Scheme so Events can be
+	// logged for build types.
+	buildscheme.AddToScheme(scheme.Scheme)
+}
 
 type Interface interface {
 	Run(threadiness int, stopCh <-chan struct{}) error
