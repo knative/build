@@ -14,7 +14,7 @@
 source:
   gcs:
     type: Manifest
-    location: gs://bucket/my/stuff.json#12345
+    location: gs://bucket/my/stuff.json
 steps:
 - name: helloworld
   image: gcr.io/google-containers/busybox

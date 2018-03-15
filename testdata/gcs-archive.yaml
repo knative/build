@@ -14,7 +14,7 @@
 source:
   gcs:
     type: Archive
-    location: gs://bucket/my/stuff.tar.gz#12345
+    location: gs://bucket/my/stuff.tar.gz
 steps:
 - name: helloworld
   image: gcr.io/google-containers/busybox

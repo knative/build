@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -198,11 +199,28 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
 		Name:  gcsSource,
 		Image: *gcsFetcherImage,
 	}
+
+	// TODO(jasonhall): This is copied with pkg/builder/google/convert/source.go
+	// If this is still necessary long-term it should be moved to a shared
+	// library instead.
+	loc := gcs.Location
+	if !strings.HasPrefix(loc, "gs://") {
+		return nil, validation.NewError("UnsupportedSource", `GCS source must begin with "gs://", got %q`, loc)
+	}
+	parts := strings.SplitN(strings.TrimPrefix(loc, "gs://"), "/", 2)
+	if len(parts) < 2 {
+		return nil, validation.NewError("MalformedLocation", "GCS source must specify bucket and object, got %q", loc)
+	}
+	bucket := parts[0]
+	parts = strings.SplitN(parts[1], "#", 2)
+	object := parts[0]
+
+	// TODO(jasonhall): Support generation in the fetcher.
 	switch gcs.Type {
 	case v1alpha1.GCSArchive:
-		c.Args = []string{"--zipfile", gcs.Location}
+		c.Args = []string{"--bucket", bucket, "--zipfile", object}
 	case v1alpha1.GCSManifest:
-		c.Args = []string{"--manifest", gcs.Location}
+		c.Args = []string{"--bucket", bucket, "--manifest", object}
 	default:
 		return nil, validation.NewError("InvalidType", "gcs sources are expected to specify type as Archive or Manifest, got: %v", gcs)
 	}
@@ -211,12 +229,18 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
 }
 
 func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
+	// This requires that the --bucket arg is defined before --zipfile or --manifest.
+	// TODO(jasonhall): Don't split out bucket/object at all, just pass Location directly.
+	var bucket string
 	for i, a := range source.Args {
+		if a == "--bucket" && i < len(source.Args) {
+			bucket = source.Args[i+1]
+		}
 		if a == "--zipfile" && i < len(source.Args) {
 			return &v1alpha1.SourceSpec{
 				GCS: &v1alpha1.GCSSourceSpec{
 					Type:     v1alpha1.GCSArchive,
-					Location: source.Args[i+1],
+					Location: fmt.Sprintf("gs://%s/%s", bucket, source.Args[i+1]),
 				},
 			}, nil
 		}
@@ -224,7 +248,7 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 			return &v1alpha1.SourceSpec{
 				GCS: &v1alpha1.GCSSourceSpec{
 					Type:     v1alpha1.GCSManifest,
-					Location: source.Args[i+1],
+					Location: fmt.Sprintf("gs://%s/%s", bucket, source.Args[i+1]),
 				},
 			}, nil
 		}
