@@ -41,7 +41,6 @@ import (
 	"github.com/elafros/build/pkg/apis/build/v1alpha1"
 
 	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
-	buildscheme "github.com/elafros/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/elafros/build/pkg/client/informers/externalversions"
 	listers "github.com/elafros/build/pkg/client/listers/build/v1alpha1"
 )
@@ -94,9 +93,6 @@ func NewController(
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 
 	// Create event broadcaster
-	// Add build-controller types to the default Kubernetes Scheme so Events can be
-	// logged for build-controller types.
-	buildscheme.AddToScheme(scheme.Scheme)
 	glog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
