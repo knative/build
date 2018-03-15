@@ -11,27 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apps/v1beta1
-kind: Deployment
+apiVersion: build.dev/v1alpha1
+kind: Build
 metadata:
-  name: build-controller
-  namespace: build-system
+  name: test-gcs-archive
+  labels:
+    expect: complete
 spec:
-  replicas: 1
+  source:
+    gcs:
+      type: Archive
+      location: gs://build-crd-tests/rules_docker-master.zip
   template:
-    metadata:
-      labels:
-        app: build-controller
-    spec:
-      serviceAccountName: build-controller
-      containers:
-      - name: build-controller
-        image: build-controller:latest
-        args: [
-          "-builder", "cluster",
-          "-logtostderr",
-          "-stderrthreshold", "INFO",
-          "-creds-image", "creds-image:latest",
-          "-git-image", "git-image:latest",
-          "-gcs-fetcher-image", "gcs-fetcher:latest",
-        ]
+    name: dump-workspace-template

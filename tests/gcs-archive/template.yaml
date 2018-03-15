@@ -11,27 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apps/v1beta1
-kind: Deployment
+apiVersion: build.dev/v1alpha1
+kind: BuildTemplate
 metadata:
-  name: build-controller
-  namespace: build-system
+  name: dump-workspace-template
 spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: build-controller
-    spec:
-      serviceAccountName: build-controller
-      containers:
-      - name: build-controller
-        image: build-controller:latest
-        args: [
-          "-builder", "cluster",
-          "-logtostderr",
-          "-stderrthreshold", "INFO",
-          "-creds-image", "creds-image:latest",
-          "-git-image", "git-image:latest",
-          "-gcs-fetcher-image", "gcs-fetcher:latest",
-        ]
+  steps:
+  - name: dump-workspace
+    image: ubuntu:latest
+    args: ["cat", "WORKSPACE"]
