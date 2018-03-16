@@ -82,6 +82,7 @@ const (
 	credsInit = "credential-initializer"
 	// Names for source containers
 	gitSource    = "git-source"
+	gcsSource    = "gcs-source"
 	customSource = "custom-source"
 )
 
@@ -92,6 +93,8 @@ var (
 	// The container with Git that we use to implement the Git source step.
 	gitImage = flag.String("git-image", "override-with-git:latest",
 		"The container image containing our Git binary.")
+	gcsFetcherImage = flag.String("gcs-fetcher-image", "override-with-gcs:latest",
+		"The container image containing our GCS fetcher binary.")
 )
 
 var (
@@ -99,6 +102,7 @@ var (
 	// name given to the first step.  This is fragile, but predominantly for testing.
 	containerToSourceMap = map[string]func(corev1.Container) (*v1alpha1.SourceSpec, error){
 		gitSource:    containerToGit,
+		gcsSource:    containerToGCS,
 		customSource: containerToCustom,
 	}
 	// Used to recover the type of reference we checked out.
@@ -186,6 +190,35 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	}
 }
 
+func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
+	if gcs.Location == "" {
+		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
+	}
+	return &corev1.Container{
+		Name:  gcsSource,
+		Image: *gcsFetcherImage,
+		Args:  []string{"--type", string(gcs.Type), "--location", gcs.Location},
+	}, nil
+}
+
+func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
+	var sourceType, location string
+	for i, a := range source.Args {
+		if a == "--type" && i < len(source.Args) {
+			sourceType = source.Args[i+1]
+		}
+		if a == "--location" && i < len(source.Args) {
+			location = source.Args[i+1]
+		}
+	}
+	return &v1alpha1.SourceSpec{
+		GCS: &v1alpha1.GCSSourceSpec{
+			Type:     v1alpha1.GCSSourceType(sourceType),
+			Location: location,
+		},
+	}, nil
+}
+
 func customToContainer(source *corev1.Container) (*corev1.Container, error) {
 	if source.Name != "" {
 		return nil, validation.NewError("OmitName", "custom source containers are expected to omit Name, got: %v", source.Name)
@@ -207,6 +240,8 @@ func sourceToContainer(source *v1alpha1.SourceSpec) (*corev1.Container, error) {
 		return nil, nil
 	case source.Git != nil:
 		return gitToContainer(source.Git)
+	case source.GCS != nil:
+		return gcsToContainer(source.GCS)
 	case source.Custom != nil:
 		return customToContainer(source.Custom)
 	default:

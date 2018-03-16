@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"google.golang.org/api/cloudbuild/v1"
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
@@ -73,6 +73,14 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 				RepoSource: scm,
 			}
 
+		case u.Source.GCS != nil:
+			ss, err := ToStorageSourceFromGCS(u.Source.GCS)
+			if err != nil {
+				return nil, err
+			}
+			bld.Source = &cloudbuild.Source{
+				StorageSource: ss,
+			}
 		case u.Source.Custom != nil:
 			step, err := ToStepFromContainer(u.Source.Custom)
 			if err != nil {
@@ -124,13 +132,20 @@ func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 	}
 	steps := u.Steps
 	switch {
-	case u.Source != nil && u.Source.RepoSource != nil:
-		scm, err := ToGitFromRepoSource(u.Source.RepoSource)
-		if err != nil {
-			return nil, err
-		}
-		bld.Source = &v1alpha1.SourceSpec{
-			Git: scm,
+	case u.Source != nil:
+		switch {
+		case u.Source.RepoSource != nil:
+			scm, err := ToGitFromRepoSource(u.Source.RepoSource)
+			if err != nil {
+				return nil, err
+			}
+			bld.Source = &v1alpha1.SourceSpec{
+				Git: scm,
+			}
+		case u.Source.StorageSource != nil:
+			bld.Source = &v1alpha1.SourceSpec{
+				GCS: ToGCSFromStorageSource(u.Source.StorageSource),
+			}
 		}
 	case steps[0].Id == customSource:
 		c, err := ToContainerFromStep(steps[0])

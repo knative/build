@@ -19,10 +19,9 @@ package convert
 import (
 	"testing"
 
-	"google.golang.org/api/cloudbuild/v1"
-
 	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
 	"github.com/elafros/build/pkg/buildtest"
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 )
 
 func TestCloudbuildYAMLs(t *testing.T) {
@@ -94,6 +93,8 @@ func TestSupportedCRDs(t *testing.T) {
 		"buildcrd/testdata/git-branch.yaml",
 		"buildcrd/testdata/git-tag.yaml",
 		"buildcrd/testdata/git-commit.yaml",
+
+		"buildcrd/testdata/gcs-archive.yaml",
 	}
 
 	for _, in := range inputs {
@@ -136,6 +137,9 @@ func TestUnsupportedCRDs(t *testing.T) {
 
 		// GCB doesn't support any Git but CSR
 		"buildcrd/testdata/git-branch-github.yaml",
+
+		// GCB doesn't support source manifests.
+		"buildcrd/testdata/gcs-manifest.yaml",
 	}
 
 	for _, in := range inputs {
