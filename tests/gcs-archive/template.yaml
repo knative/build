@@ -14,9 +14,9 @@
 apiVersion: build.dev/v1alpha1
 kind: BuildTemplate
 metadata:
-  name: dump-workspace-template
+  name: list-files-template
 spec:
   steps:
-  - name: dump-workspace
+  - name: list-files
     image: ubuntu:latest
-    args: ["cat", "WORKSPACE"]
+    args: ["ls"]

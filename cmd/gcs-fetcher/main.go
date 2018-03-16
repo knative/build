@@ -49,8 +49,9 @@ const (
 )
 
 var (
-	sourceType  = flag.String("type", "", "Type of source; Archive or Manifest")
-	location    = flag.String("location", "", "Location in GCS of the object; must start with gs://")
+	sourceType = flag.String("type", "", "Type of source; Archive or Manifest")
+	location   = flag.String("location", "", "Location in GCS of the object; must start with gs://")
+
 	destDir     = flag.String("dest_dir", "", "The root where to write the files.")
 	workerCount = flag.Int("workers", defaultWorkers, "The number of files to fetch in parallel.")
 	verbose     = flag.Bool("verbose", false, "If true, additional output is logged.")

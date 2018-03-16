@@ -20,6 +20,7 @@ go_binary(
     name = "gcs-fetcher",
     embed = [":go_default_library"],
     importpath = "github.com/elafros/build/cmd/gcs-fetcher",
+    pure = "on",
     visibility = ["//visibility:public"],
 )
 

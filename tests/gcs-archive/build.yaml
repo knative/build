@@ -23,4 +23,4 @@ spec:
       type: Archive
       location: gs://build-crd-tests/rules_docker-master.zip
   template:
-    name: dump-workspace-template
+    name: list-files-template
