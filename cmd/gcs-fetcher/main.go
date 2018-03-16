@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -91,6 +90,7 @@ type sizeBytes int64
 type sourceInfo struct {
 	SourceURL string `json:"sourceUrl"`
 	Sha1Sum   string `json:"sha1Sum"`
+	// TODO(jasonhall): FileMode
 }
 
 type fileMap map[string]sourceInfo
@@ -229,7 +229,7 @@ func (gf *gcsFetcher) recordFailure(j job, started time.Time, gcsTimeout time.Du
 		if isLast {
 			retryMsg = ", will no longer retry"
 		}
-		log.Printf("Failed to fetch %s%s: %v", formatGCSName(j.bucket, j.object, j.generation), retryMsg, err)
+		glog.Infof("Failed to fetch %s%s: %v", formatGCSName(j.bucket, j.object, j.generation), retryMsg, err)
 	}
 }
 
@@ -248,7 +248,7 @@ func (gf *gcsFetcher) recordSuccess(j job, started time.Time, size sizeBytes, fi
 	if attempt.duration > 0 {
 		mibps = (float64(report.size) / 1024 / 1024) / attempt.duration.Seconds()
 	}
-	log.Printf("Fetched %s (%dB in %v, %.2fMiB/s)", formatGCSName(j.bucket, j.object, j.generation), report.size, attempt.duration, mibps)
+	glog.Infof("Fetched %s (%dB in %v, %.2fMiB/s)", formatGCSName(j.bucket, j.object, j.generation), report.size, attempt.duration, mibps)
 }
 
 // fetchObject is responsible for trying (and retrying) to fetch a single file
@@ -309,8 +309,9 @@ func (gf *gcsFetcher) fetchObject(ctx context.Context, j job) *jobReport {
 		}
 
 		// TODO(jasonco): make the posix attributes match the source
-		// This will only work if the original upload from gcloud sends the posix
-		// attributes to GCS. For now, we'll just give the user full access.
+		// This will only work if the original upload sends the posix
+		// attributes to GCS. For now, we'll just give the user full
+		// access.
 		mode := os.FileMode(0555)
 		if err := gf.os.chmod(finalname, mode); err != nil {
 			e := fmt.Errorf("chmod %q to %v: %v", finalname, mode, err)
@@ -401,7 +402,7 @@ func (gf *gcsFetcher) fetchObjectOnce(ctx context.Context, j job, dest string, b
 		return result
 	}
 
-	// TODO(jasonco): verify the sha1sum before declaring success
+	// TODO(jasonhall): verify the sha1sum before declaring success
 	// if j.SHA1Sum != "" {
 	//   sha := string(h.Sum(nil))
 	//   if sha != sha1sum {
@@ -431,7 +432,7 @@ func (gf *gcsFetcher) doWork(ctx context.Context, todo <-chan job, results chan<
 	for j := range todo {
 		report := gf.fetchObject(ctx, j)
 		if *verbose {
-			log.Printf("Report: %#v", report)
+			glog.Infof("Report: %#v", report)
 		}
 		results <- *report
 	}
@@ -500,7 +501,7 @@ func (gf *gcsFetcher) processJobs(ctx context.Context, jobs []job) stats {
 
 	if failed {
 		stats.success = false
-		log.Fatal("Failed to download at least one file. Cannot continue.")
+		glog.Fatal("Failed to download at least one file. Cannot continue.")
 	}
 
 	stats.duration = time.Since(started)
@@ -534,7 +535,7 @@ func (gf *gcsFetcher) timeout(filename string, retrynum int) time.Duration {
 // assembling the list of jobs to process (i.e., files to download).
 func (gf *gcsFetcher) fetchFromManifest(ctx context.Context) error {
 	started := time.Now()
-	log.Printf("Fetching manifest %s.", formatGCSName(gf.bucket, gf.object, gf.generation))
+	glog.Infof("Fetching manifest %s.", formatGCSName(gf.bucket, gf.object, gf.generation))
 
 	// Download the manifest file from GCS.
 	j := job{
@@ -577,7 +578,7 @@ func (gf *gcsFetcher) fetchFromManifest(ctx context.Context) error {
 		jobs = append(jobs, j)
 	}
 
-	log.Printf("Processing %v files.", len(jobs))
+	glog.Infof("Processing %v files.", len(jobs))
 	stats := gf.processJobs(ctx, jobs)
 
 	// Final cleanup of failed downloads. We won't miss any files; these vestiges
@@ -585,7 +586,7 @@ func (gf *gcsFetcher) fetchFromManifest(ctx context.Context) error {
 	// circuit breaker and die. However, we won't wait for these remaining
 	// go routines to finish because out goal is to get done as fast as possible!
 	if err := gf.os.removeAll(gf.stagingDir); err != nil {
-		log.Printf("Failed to remove staging dir %v, continuing: %v", gf.stagingDir, err)
+		glog.Infof("Failed to remove staging dir %v, continuing: %v", gf.stagingDir, err)
 	}
 
 	// Emit final stats.
@@ -599,30 +600,30 @@ func (gf *gcsFetcher) fetchFromManifest(ctx context.Context) error {
 	if !stats.success {
 		status = "FAILURE"
 	}
-	log.Printf("******************************************************")
-	log.Printf("Status:                      %s", status)
-	log.Printf("Started:                     %s", started.Format(time.RFC3339))
-	log.Printf("Completed:                   %s", time.Now().Format(time.RFC3339))
-	log.Printf("Requested workers: %6d", gf.workerCount)
-	log.Printf("Actual workers:    %6d", stats.workers)
-	log.Printf("Total files:       %6d", stats.files)
-	log.Printf("Total retries:     %6d", stats.retries)
+	glog.Infof("******************************************************")
+	glog.Infof("Status:                      %s", status)
+	glog.Infof("Started:                     %s", started.Format(time.RFC3339))
+	glog.Infof("Completed:                   %s", time.Now().Format(time.RFC3339))
+	glog.Infof("Requested workers: %6d", gf.workerCount)
+	glog.Infof("Actual workers:    %6d", stats.workers)
+	glog.Infof("Total files:       %6d", stats.files)
+	glog.Infof("Total retries:     %6d", stats.retries)
 	if gf.timeoutGCS {
-		log.Printf("GCS timeouts:      %6d", stats.gcsTimeouts)
+		glog.Infof("GCS timeouts:      %6d", stats.gcsTimeouts)
 	}
-	log.Printf("MiB downloaded:    %9.2f MiB", mib)
-	log.Printf("MiB/s throughput:  %9.2f MiB/s", mibps)
+	glog.Infof("MiB downloaded:    %9.2f MiB", mib)
+	glog.Infof("MiB/s throughput:  %9.2f MiB/s", mibps)
 
-	log.Printf("Time for manifest: %9.2f ms", float64(manifestDuration)/float64(time.Millisecond))
-	log.Printf("Total time:        %9.2f s", time.Since(started).Seconds())
-	log.Printf("******************************************************")
+	glog.Infof("Time for manifest: %9.2f ms", float64(manifestDuration)/float64(time.Millisecond))
+	glog.Infof("Total time:        %9.2f s", time.Since(started).Seconds())
+	glog.Infof("******************************************************")
 
 	if len(stats.errs) > 0 {
-		log.Printf("Errors (%d):", len(stats.errs))
+		glog.Infof("Errors (%d):", len(stats.errs))
 		for err := range stats.errs {
-			log.Print(err)
+			glog.Info(err)
 		}
-		log.Printf("******************************************************")
+		glog.Infof("******************************************************")
 		return fmt.Errorf("file fetching failed")
 	}
 	return nil
@@ -656,7 +657,7 @@ func (gf *gcsFetcher) copyFileFromZip(file *zip.File) error {
 // responsible to fetch the zip file and unzip it into the destination folder.
 func (gf *gcsFetcher) fetchFromZip(ctx context.Context) error {
 	started := time.Now()
-	log.Printf("Fetching archive %s.", formatGCSName(gf.bucket, gf.object, gf.generation))
+	glog.Infof("Fetching archive %s.", formatGCSName(gf.bucket, gf.object, gf.generation))
 
 	// Download the archive from GCS.
 	j := job{
@@ -694,13 +695,13 @@ func (gf *gcsFetcher) fetchFromZip(ctx context.Context) error {
 
 	// Remove the zip file (best effort only, no harm if this fails).
 	if err := os.RemoveAll(zipfile); err != nil {
-		log.Printf("Failed to remove zipfile %s, continuing: %v", zipfile, err)
+		glog.Infof("Failed to remove zipfile %s, continuing: %v", zipfile, err)
 	}
 
 	// Final cleanup of staging directory, which is only a temporary staging
 	// location for downloading the zipfile in this case.
 	if err := gf.os.removeAll(gf.stagingDir); err != nil {
-		log.Printf("Failed to remove staging dir %q, continuing: %v", gf.stagingDir, err)
+		glog.Infof("Failed to remove staging dir %q, continuing: %v", gf.stagingDir, err)
 	}
 
 	mib := float64(report.size) / 1024 / 1024
@@ -709,17 +710,17 @@ func (gf *gcsFetcher) fetchFromZip(ctx context.Context) error {
 	if zipfileDuration > 0 {
 		mibps = mib / zipfileDuration.Seconds()
 	}
-	log.Printf("******************************************************")
-	log.Printf("Status:                      SUCCESS")
-	log.Printf("Started:                     %s", started.Format(time.RFC3339))
-	log.Printf("Completed:                   %s", time.Now().Format(time.RFC3339))
-	log.Printf("Total files:       %6d", numFiles)
-	log.Printf("MiB downloaded:    %9.2f MiB", mib)
-	log.Printf("MiB/s throughput:  %9.2f MiB/s", mibps)
-	log.Printf("Time for zipfile:  %9.2f s", zipfileDuration.Seconds())
-	log.Printf("Time to unzip:     %9.2f s", unzipDuration.Seconds())
-	log.Printf("Total time:        %9.2f s", time.Since(started).Seconds())
-	log.Printf("******************************************************")
+	glog.Infof("******************************************************")
+	glog.Infof("Status:                      SUCCESS")
+	glog.Infof("Started:                     %s", started.Format(time.RFC3339))
+	glog.Infof("Completed:                   %s", time.Now().Format(time.RFC3339))
+	glog.Infof("Total files:       %6d", numFiles)
+	glog.Infof("MiB downloaded:    %9.2f MiB", mib)
+	glog.Infof("MiB/s throughput:  %9.2f MiB/s", mibps)
+	glog.Infof("Time for zipfile:  %9.2f s", zipfileDuration.Seconds())
+	glog.Infof("Time to unzip:     %9.2f s", unzipDuration.Seconds())
+	glog.Infof("Total time:        %9.2f s", time.Since(started).Seconds())
+	glog.Infof("******************************************************")
 	return nil
 }
 
@@ -800,19 +801,19 @@ func main() {
 	ctx := context.Background()
 	hc, err := buildHTTPClient(ctx)
 	if err != nil {
-		log.Print(err)
+		glog.Info(err)
 		os.Exit(2)
 	}
 
 	client, err := storage.NewClient(ctx, option.WithHTTPClient(hc), option.WithUserAgent(userAgent))
 	if err != nil {
-		log.Printf("Failed to create new GCS client: %v", err)
+		glog.Infof("Failed to create new GCS client: %v", err)
 		os.Exit(2)
 	}
 
 	bucket, object, generation, err := parseBucketObject(*location)
 	if err != nil {
-		glog.Fatalf("Failed to parse -location: %v", err)
+		glog.Fatalf("Failed to parse --location: %v", err)
 	}
 
 	gcs := &gcsFetcher{
@@ -830,7 +831,7 @@ func main() {
 		backoff:     *backoff,
 	}
 	if err := gcs.fetch(ctx); err != nil {
-		log.Print(err)
+		glog.Info(err)
 		os.Exit(2)
 	}
 }
