@@ -14,6 +14,7 @@ go_binary(
     name = "gcs-archive",
     embed = [":go_default_library"],
     importpath = "github.com/elafros/build/cmd/gcs-archive",
+    pure = "on",
     visibility = ["//visibility:public"],
 )
 
