@@ -16,6 +16,7 @@ k8s_objects(
         "//tests/template-args:test",
         "//tests/unnamed-steps:test",
         "//tests/docker-build:test",
+        "//tests/gcs-archive:test",
 
         # Expected to be invalid.
         "//tests/template-duplicate-volume:test",
