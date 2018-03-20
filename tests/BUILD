@@ -23,6 +23,7 @@ k8s_objects(
 
         # Expected to fail.
         "//tests/fail:test",
+        "//tests/panic:test",
     ],
 )
 

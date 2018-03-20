@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,15 @@ import (
 	"github.com/elafros/build/pkg/credentials"
 	"github.com/elafros/build/pkg/credentials/dockercreds"
 	"github.com/elafros/build/pkg/credentials/gitcreds"
+)
+
+const (
+	// Prefix to add to the name of the init containers
+	namedInitContainerPrefix = "build-step"
+	// Prefix to add to the name of the init containers that are not named in the config
+	unnamedInitContainerPrefix = "build-step-unnamed"
+	// A label with the following is added to the pod to identify the pods belonging to a build
+	buildNameLabelKey = "build-name"
 )
 
 // These are effectively const, but Go doesn't have such an annotation.
@@ -330,7 +340,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			step.WorkingDir = "/workspace"
 		}
 		if step.Name == "" {
-			step.Name = fmt.Sprintf("unnamed-step-%d", i)
+			step.Name = fmt.Sprintf("%v-%d", unnamedInitContainerPrefix, i)
+		} else if !strings.HasPrefix(step.Name, namedInitContainerPrefix) {
+			step.Name = fmt.Sprintf("%v-%v", namedInitContainerPrefix, step.Name)
 		}
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
@@ -361,6 +373,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			},
 			Annotations: map[string]string{
 				"sidecar.istio.io/inject": "false",
+			},
+			Labels: map[string]string{
+				buildNameLabelKey: build.Name,
 			},
 		},
 		Spec: corev1.PodSpec{
