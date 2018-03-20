@@ -36,8 +36,12 @@ import (
 
 const (
 	// Prefix to add to the name of the init containers
+	// IMPORTANT: Changing this value without changing fluentd collection configuration
+	// will break log collection for init containers.
 	namedInitContainerPrefix = "build-step"
 	// Prefix to add to the name of the init containers that are not named in the config
+	// IMPORTANT: Changing this value without changing fluentd collection configuration
+	// will break log collection for init containers.
 	unnamedInitContainerPrefix = "build-step-unnamed"
 	// A label with the following is added to the pod to identify the pods belonging to a build
 	buildNameLabelKey = "build-name"

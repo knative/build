@@ -7,7 +7,6 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/elafros/build/tests/panic",
     visibility = ["//visibility:private"],
-    deps = ["//vendor/github.com/golang/glog:go_default_library"],
 )
 
 go_binary(
