@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,9 +79,16 @@ func validateVolumes(vs []corev1.Volume) error {
 }
 
 const (
+	// Prefixes to add to the name of the init containers.
+	// IMPORTANT: Changing these values without changing fluentd collection configuration
+	// will break log collection for init containers.
+	initContainerPrefix        = "build-step-"
+	unnamedInitContainerPrefix = "build-step-unnamed-"
+	// A label with the following is added to the pod to identify the pods belonging to a build.
+	buildNameLabelKey = "build-name"
 	// Name of the credential initialization container.
 	credsInit = "credential-initializer"
-	// Names for source containers
+	// Names for source containers.
 	gitSource    = "git-source"
 	gcsSource    = "gcs-source"
 	customSource = "custom-source"
@@ -330,7 +338,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			step.WorkingDir = "/workspace"
 		}
 		if step.Name == "" {
-			step.Name = fmt.Sprintf("unnamed-step-%d", i)
+			step.Name = fmt.Sprintf("%v%d", unnamedInitContainerPrefix, i)
+		} else {
+			step.Name = fmt.Sprintf("%v%v", initContainerPrefix, step.Name)
 		}
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
@@ -361,6 +371,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			},
 			Annotations: map[string]string{
 				"sidecar.istio.io/inject": "false",
+			},
+			Labels: map[string]string{
+				buildNameLabelKey: build.Name,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -450,6 +463,12 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		}
 		step.Env = filterImplicitEnvVars(step.Env)
 		step.VolumeMounts = filterImplicitVolumeMounts(step.VolumeMounts)
+		// Strip the init container prefix that is added automatically.
+		if strings.HasPrefix(step.Name, unnamedInitContainerPrefix) {
+			step.Name = ""
+		} else {
+			step.Name = strings.TrimPrefix(step.Name, initContainerPrefix)
+		}
 		steps = append(steps, step)
 	}
 	volumes := filterImplicitVolumes(podSpec.Volumes)
