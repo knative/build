@@ -79,22 +79,19 @@ func validateVolumes(vs []corev1.Volume) error {
 }
 
 const (
-	// Prefix to add to the name of the init containers.
-	// IMPORTANT: Changing this value without changing fluentd collection configuration
+	// Prefixes to add to the name of the init containers.
+	// IMPORTANT: Changing these values without changing fluentd collection configuration
 	// will break log collection for init containers.
-	initContPrefix = "build-step-"
-	// Prefix to add to the name of the init containers that are not named in the config.
-	// IMPORTANT: Changing this value without changing fluentd collection configuration
-	// will break log collection for init containers.
-	unnamedInitContPrefix = "build-step-unnamed-"
-	// A label with the following is added to the pod to identify the pods belonging to a build
+	initContainerPrefix        = "build-step-"
+	unnamedInitContainerPrefix = "build-step-unnamed-"
+	// A label with the following is added to the pod to identify the pods belonging to a build.
 	buildNameLabelKey = "build-name"
 	// Name of the credential initialization container.
-	credsInit = initContPrefix + "credential-initializer"
+	credsInit = "credential-initializer"
 	// Names for source containers.
-	gitSource    = initContPrefix + "git-source"
-	gcsSource    = initContPrefix + "gcs-source"
-	customSource = initContPrefix + "custom-source"
+	gitSource    = "git-source"
+	gcsSource    = "gcs-source"
+	customSource = "custom-source"
 )
 
 var (
@@ -341,9 +338,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			step.WorkingDir = "/workspace"
 		}
 		if step.Name == "" {
-			step.Name = fmt.Sprintf("%v%d", unnamedInitContPrefix, i)
-		} else if !strings.HasPrefix(step.Name, initContPrefix) {
-			step.Name = fmt.Sprintf("%v%v", initContPrefix, step.Name)
+			step.Name = fmt.Sprintf("%v%d", unnamedInitContainerPrefix, i)
+		} else {
+			step.Name = fmt.Sprintf("%v%v", initContainerPrefix, step.Name)
 		}
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
@@ -466,6 +463,12 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		}
 		step.Env = filterImplicitEnvVars(step.Env)
 		step.VolumeMounts = filterImplicitVolumeMounts(step.VolumeMounts)
+		// Strip the init container prefix that is added automatically.
+		if strings.HasPrefix(step.Name, unnamedInitContainerPrefix) {
+			step.Name = ""
+		} else {
+			step.Name = strings.TrimPrefix(step.Name, initContainerPrefix)
+		}
 		steps = append(steps, step)
 	}
 	volumes := filterImplicitVolumes(podSpec.Volumes)
