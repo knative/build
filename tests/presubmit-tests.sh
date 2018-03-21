@@ -54,8 +54,11 @@ fi
 
 # Tests to be performed.
 
-header "Testing //pkg"
-bazel test //pkg/...
+# Step 1: Build relevant packages to ensure nothing is broken.
+header "Building phase"
+bazel build //cmd/... //pkg/...
 
-header "Building //cmd"
-bazel build //cmd/...
+# Step 2: Run tests.
+header "Testing phase"
+bazel test //cmd/... //pkg/...
+
