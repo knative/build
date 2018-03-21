@@ -34,19 +34,6 @@ import (
 	"github.com/elafros/build/pkg/credentials/gitcreds"
 )
 
-const (
-	// Prefix to add to the name of the init containers
-	// IMPORTANT: Changing this value without changing fluentd collection configuration
-	// will break log collection for init containers.
-	namedInitContainerPrefix = "build-step"
-	// Prefix to add to the name of the init containers that are not named in the config
-	// IMPORTANT: Changing this value without changing fluentd collection configuration
-	// will break log collection for init containers.
-	unnamedInitContainerPrefix = "build-step-unnamed"
-	// A label with the following is added to the pod to identify the pods belonging to a build
-	buildNameLabelKey = "build-name"
-)
-
 // These are effectively const, but Go doesn't have such an annotation.
 var (
 	emptyVolumeSource = corev1.VolumeSource{
@@ -92,12 +79,22 @@ func validateVolumes(vs []corev1.Volume) error {
 }
 
 const (
+	// Prefix to add to the name of the init containers.
+	// IMPORTANT: Changing this value without changing fluentd collection configuration
+	// will break log collection for init containers.
+	initContPrefix = "build-step-"
+	// Prefix to add to the name of the init containers that are not named in the config.
+	// IMPORTANT: Changing this value without changing fluentd collection configuration
+	// will break log collection for init containers.
+	unnamedInitContPrefix = "build-step-unnamed-"
+	// A label with the following is added to the pod to identify the pods belonging to a build
+	buildNameLabelKey = "build-name"
 	// Name of the credential initialization container.
-	credsInit = "credential-initializer"
-	// Names for source containers
-	gitSource    = "git-source"
-	gcsSource    = "gcs-source"
-	customSource = "custom-source"
+	credsInit = initContPrefix + "credential-initializer"
+	// Names for source containers.
+	gitSource    = initContPrefix + "git-source"
+	gcsSource    = initContPrefix + "gcs-source"
+	customSource = initContPrefix + "custom-source"
 )
 
 var (
@@ -344,9 +341,9 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			step.WorkingDir = "/workspace"
 		}
 		if step.Name == "" {
-			step.Name = fmt.Sprintf("%v-%d", unnamedInitContainerPrefix, i)
-		} else if !strings.HasPrefix(step.Name, namedInitContainerPrefix) {
-			step.Name = fmt.Sprintf("%v-%v", namedInitContainerPrefix, step.Name)
+			step.Name = fmt.Sprintf("%v%d", unnamedInitContPrefix, i)
+		} else if !strings.HasPrefix(step.Name, initContPrefix) {
+			step.Name = fmt.Sprintf("%v%v", initContPrefix, step.Name)
 		}
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
