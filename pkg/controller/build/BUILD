@@ -33,7 +33,6 @@ go_test(
     name = "go_default_test",
     srcs = ["controller_test.go"],
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/pkg/controller/build",
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/builder:go_default_library",

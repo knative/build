@@ -12,7 +12,6 @@ go_library(
 go_binary(
     name = "secret-env",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/tests/secret-env",
     pure = "on",
 )
 

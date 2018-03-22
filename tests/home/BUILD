@@ -13,7 +13,6 @@ go_library(
 go_binary(
     name = "home",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/tests/home",
     pure = "on",
     visibility = ["//visibility:public"],
 )

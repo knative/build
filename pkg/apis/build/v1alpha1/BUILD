@@ -32,6 +32,5 @@ go_test(
         "@cloudbuilders//:bazel/cloudbuild.yaml",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/pkg/apis/build/v1alpha1",
     deps = ["//pkg/buildtest:go_default_library"],
 )
