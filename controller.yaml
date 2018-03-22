@@ -33,5 +33,4 @@ spec:
           "-stderrthreshold", "INFO",
           "-creds-image", "creds-image:latest",
           "-git-image", "git-image:latest",
-          "-gcs-fetcher-image", "gcs-fetcher:latest",
         ]
