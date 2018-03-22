@@ -101,7 +101,7 @@ var (
 	// The container with Git that we use to implement the Git source step.
 	gitImage = flag.String("git-image", "override-with-git:latest",
 		"The container image containing our Git binary.")
-	gcsFetcherImage = flag.String("gcs-fetcher-image", "override-with-gcs:latest",
+	gcsFetcherImage = flag.String("gcs-fetcher-image", "gcr.io/cloud-builders/gcs-fetcher:latest",
 		"The container image containing our GCS fetcher binary.")
 )
 

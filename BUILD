@@ -17,7 +17,6 @@ k8s_object(
         "build-controller:latest": "//cmd/controller:image",
         "creds-image:latest": "//cmd/creds-init:image",
         "git-image:latest": "//cmd/git-init:image",
-        "gcs-fetcher:latest": "//cmd/gcs-fetcher:image",
     },
     template = "controller.yaml",
 )
