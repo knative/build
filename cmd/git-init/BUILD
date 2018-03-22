@@ -13,7 +13,6 @@ go_library(
 go_binary(
     name = "git-init",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/cmd/git-init",
     visibility = ["//visibility:public"],
 )
 

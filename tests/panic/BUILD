@@ -12,7 +12,6 @@ go_library(
 go_binary(
     name = "panic",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/tests/panic",
     pure = "on",
     visibility = ["//visibility:public"],
 )

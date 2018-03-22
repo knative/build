@@ -31,7 +31,6 @@ go_library(
 go_binary(
     name = "controller",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/cmd/controller",
     pure = "on",
     visibility = ["//visibility:public"],
 )

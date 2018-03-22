@@ -16,6 +16,5 @@ go_test(
     name = "go_default_test",
     srcs = ["mergo_test.go"],
     embed = [":go_default_library"],
-    importpath = "github.com/imdario/mergo",
     deps = ["//vendor/gopkg.in/yaml.v1:go_default_library"],
 )

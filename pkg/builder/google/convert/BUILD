@@ -62,7 +62,6 @@ go_test(
         "@cloudbuilders//:yarn/cloudbuild.yaml",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/pkg/builder/google/convert",
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
         "//pkg/buildtest:go_default_library",

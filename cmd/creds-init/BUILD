@@ -18,7 +18,6 @@ go_library(
 go_binary(
     name = "creds-init",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/cmd/creds-init",
     visibility = ["//visibility:public"],
 )
 

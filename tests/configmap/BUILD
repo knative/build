@@ -12,7 +12,6 @@ go_library(
 go_binary(
     name = "configmap",
     embed = [":go_default_library"],
-    importpath = "github.com/elafros/build/tests/configmap",
     pure = "on",
 )
 
