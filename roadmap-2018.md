@@ -19,25 +19,27 @@ In more detail:
 
 ## Detection
 
-In many cases, users shouldn't have to know explicitly which version of a build
-template they're using; they have source, and they want to build and a
-container image. In the middle of that, before building, is **detection**.
+Users shouldn't have to know explicitly which version of a build template
+they're using; they have source, they want to build and a container image.
+In the middle of that, before building, is **detection**.
 
 How this works in real life is a hard problem, that a lot of smart people have
 spent a lot of their smarts working on it. How that fits into the Build
 resource, or whether it's a higher-level concept "above" Builds remains to be
 seen.
 
-In either case, the heuristics used to detect what build should be run should
-be open-sourced, and whatever decision the detection logic arrives at should be
-visible to end users, and should be understandable and repeatable.
+In any case, these are our criteria for detection:
+
+  * Detection heuristics must be open sourced
+  * Users must have visibility into what detection decision was made and why
+  * Detection should be an understandable, repeatable process
 
 ## Community
 
 BuildTemplates are designed to be shared. We should cultivate a repo of common
-templates, and the builder images they rely on, both as working examples of how
-to produce a good build template, and to encourage users to contribute their
-own.
+templates, and the builder images they rely on. These can serve as working
+examples of how to produce a good build template, and to encourage users to
+contribute their own.
 
 Templates should, as much as possible, take advantage of some of the conceptual
 advances we've made with FTL-like layer caching techniques, [remote image
@@ -56,7 +58,7 @@ and that repository should be discoverable and useful to end users.
 
 ## Workflow
 
-Today, a Build express a list of step containers to run in order, to
+Today, a Build expresses a list of step containers to run in order, to
 completion. We believe this covers many common build use cases, but some users
 will inevitably want to layer on more complex build workflows, and we should
 try to enable that.
