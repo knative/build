@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -6,12 +6,7 @@ go_library(
         "uritemplates.go",
         "utils.go",
     ],
+    importmap = "buildcrd/vendor/google.golang.org/api/googleapi/internal/uritemplates",
     importpath = "google.golang.org/api/googleapi/internal/uritemplates",
     visibility = ["//vendor/google.golang.org/api/googleapi:__subpackages__"],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = ["uritemplates_test.go"],
-    embed = [":go_default_library"],
 )
