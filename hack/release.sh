@@ -43,7 +43,7 @@ header "TEST PHASE"
 
 header "BUILD PHASE"
 
-# Build should not try to push anything, use a bogus value for cluster.
+# Build should not try to deploy anything, use a bogus value for cluster.
 export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 
 # Set the repository to the official one:
