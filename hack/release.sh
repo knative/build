@@ -15,19 +15,36 @@
 # limitations under the License.
 
 set -o errexit
-set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
-OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
+readonly ELAFROS_ROOT=$(dirname ${BASH_SOURCE})/..
+readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
+readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
+
+function header() {
+  echo "*************************************************"
+  echo "** $1"
+  echo "*************************************************"
+}
 
 function cleanup() {
   export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
+  export K8S_CLUSTER_OVERRIDE="${OG_K8S_CLUSTER}"
   bazel clean --expunge || true
 }
 
-cd ${SCRIPT_ROOT}
+cd ${ELAFROS_ROOT}
 trap cleanup EXIT
+
+header "TEST PHASE"
+
+# Run tests.
+./tests/presubmit-tests.sh
+
+header "BUILD PHASE"
+
+# Build should not try to push anything, use a bogus value for cluster.
+export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 
 # Set the repository to the official one:
 export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
