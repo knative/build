@@ -32,18 +32,16 @@ required = [
 
 [[constraint]]
   name = "k8s.io/api"
-  branch = "release-1.10"
+  version = "kubernetes-1.10.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  branch = "release-1.10"
+  version = "kubernetes-1.10.0"
 
 [[constraint]]
-  # Must match WORKSPACE!
   name = "k8s.io/code-generator"
-  revision = "0bb431833bd68f0e569ac8d4ed8f3f2472f8d044"
+  version = "kubernetes-1.10.0"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  branch = "release-7.0"  # Matches 1.10
-  
+  version = "kubernetes-1.10.0"
