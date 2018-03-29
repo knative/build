@@ -17,7 +17,7 @@
 set -o errexit
 set -o pipefail
 
-readonly ELAFROS_ROOT=$(dirname ${BASH_SOURCE})/..
+readonly BUILD_ROOT=$(dirname ${BASH_SOURCE})/..
 readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
 readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
 
@@ -33,7 +33,7 @@ function cleanup() {
   bazel clean --expunge || true
 }
 
-cd ${ELAFROS_ROOT}
+cd ${BUILD_ROOT}
 trap cleanup EXIT
 
 header "TEST PHASE"
