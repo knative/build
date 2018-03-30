@@ -33,8 +33,8 @@ readonly E2E_CLUSTER_ZONE=us-east1-d
 readonly E2E_CLUSTER_NODES=2
 readonly E2E_CLUSTER_MACHINE=n1-standard-2
 readonly GKE_VERSION=v1.9.4-gke.1
-# TODO(adrcunha): Use an exclusive docker repo?
-readonly E2E_DOCKER_BASE=gcr.io/elafros-e2e-tests
+readonly E2E_DOCKER_BASE=gcr.io/build-crd-testing
+readonly TEST_RESULT_FILE=/tmp/buildcrd-e2e-result
 
 # Unique identifier for this test execution
 # uuidgen is not available in kubekins images
@@ -125,13 +125,15 @@ if [[ -z $1 ]]; then
   # DOCKER_REPO_OVERRIDE is not touched because when running locally it must
   # be a writeable docker repo.
   export K8S_CLUSTER_OVERRIDE=
+  # Assume test failed (see more details at the end of this script).
+  echo -n "1"> ${TEST_RESULT_FILE}
   kubetest "${CLUSTER_CREATION_ARGS[@]}" \
     --up \
     --down \
     --extract "${GKE_VERSION}" \
     --test-cmd "${SCRIPT_CANONICAL_PATH}" \
     --test-cmd-args --run-tests
-  exit
+  exit $(cat ${TEST_RESULT_FILE})
 fi
 
 # --run-tests passed as first argument, run the tests.
@@ -164,6 +166,14 @@ if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
   bazel run //:everything.delete  # ignore if not running
 fi
+if (( IS_PROW )); then
+  echo "Authenticating to GCR"
+  # kubekins-e2e images lack docker-credential-gcr, install it manually.
+  # TODO(adrcunha): Remove this step once docker-credential-gcr is available.
+  gcloud components install docker-credential-gcr
+  docker-credential-gcr configure-docker
+  echo "Successfully authenticated"
+fi
 
 bazel run //:everything.apply
 # Make sure that are no builds or build templates in the current namespace.
@@ -176,5 +186,12 @@ header "Running tests"
 
 bazel run //tests:all_tests.apply
 test_result=$?
+
+# kubetest teardown might fail and thus incorrectly report failure of the
+# script, even if the tests pass.
+# Store the real test result to return it later, ignoring any teardown failure
+# in kubetest.
+# TODO(adrcunha): Get rid of this workaround.
+echo -n "${test_result}"> ${TEST_RESULT_FILE}
 
 exit ${test_result}
