@@ -21,14 +21,21 @@
 set -o errexit
 set -o pipefail
 
-SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
-OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
+# Useful environment variables
+readonly BUILDCRD_ROOT=$(dirname ${BASH_SOURCE})/..
+[[ $USER == "prow" ]] && IS_PROW=1 || IS_PROW=0
+readonly IS_PROW
 
-set -o nounset
+# Save *_OVERRIDE variables in case a cleanup is required.
+readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
+
+function restore_env() {
+  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
+}
 
 function cleanup() {
   header "Cleanup (teardown)"
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
+  restore_env
   # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
   bazel clean --expunge || true
 }
@@ -39,13 +46,13 @@ function header() {
   echo "================================================="
 }
 
-cd ${SCRIPT_ROOT}
+cd ${BUILDCRD_ROOT}
 
 # Set the required env vars to dummy values to satisfy bazel.
 export DOCKER_REPO_OVERRIDE=REPO_NOT_SET
 
 # For local runs, cleanup before and after the tests.
-if [[ ! $USER == "prow" ]]; then
+if (( ! IS_PROW )); then
   trap cleanup EXIT
   header "Cleanup (setup)"
   # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
@@ -58,7 +65,13 @@ fi
 header "Building phase"
 bazel build //cmd/... //pkg/...
 
-# Step 2: Run tests.
+# Step 2: Run unit tests.
 header "Testing phase"
 bazel test //cmd/... //pkg/...
 
+# Step 3: Run end-to-end tests.
+if (( ! IS_PROW )); then
+  # Restore environment variables, as they are needed when running locally.
+  restore_env
+fi
+./tests/e2e-tests.sh
