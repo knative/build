@@ -46,6 +46,11 @@ header "BUILD PHASE"
 # Build should not try to deploy anything, use a bogus value for cluster.
 export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 
+# If this is a prow job, authenticate against GCR.
+if [[ $USER == "prow" ]]; then
+  docker login -u _json_key -p "$(cat /etc/service-account/service-account.json)" https://gcr.io
+fi
+
 # Set the repository to the official one:
 export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
 bazel clean --expunge
