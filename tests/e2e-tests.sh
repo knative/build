@@ -29,11 +29,11 @@
 # $DOCKER_REPO_OVERRIDE must point to a valid writable docker repo.
 
 # Test cluster parameters and location of generated test images
+readonly E2E_CLUSTER_NAME=ela-e2e-cluster
 readonly E2E_CLUSTER_ZONE=us-east1-d
 readonly E2E_CLUSTER_NODES=2
 readonly E2E_CLUSTER_MACHINE=n1-standard-2
 readonly GKE_VERSION=v1.9.4-gke.1
-readonly E2E_DOCKER_BASE=gcr.io/build-crd-testing
 readonly TEST_RESULT_FILE=/tmp/buildcrd-e2e-result
 
 # Unique identifier for this test execution
@@ -109,17 +109,17 @@ if [[ -z $1 ]]; then
     --provider=gke
     --deployment=gke
     --gcp-node-image=cos
-    --cluster=ela-e2e-cluster
+    --cluster="${E2E_CLUSTER_NAME}"
     --gcp-zone="${E2E_CLUSTER_ZONE}"
     --gcp-network=ela-e2e-net
     --gke-environment=prod
   )
   if (( ! IS_PROW )); then
-    if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-      : ${DOCKER_REPO_OVERRIDE:?"DOCKER_REPO_OVERRIDE must be set to  writeable docker repo."}
-      return 1
-    fi
     CLUSTER_CREATION_ARGS+=(--gcp-project=${PROJECT_ID:?"PROJECT_ID must be set to the GCP project where the tests are run."})
+  else
+    # On prow, set bogus SSH keys for kubetest, we're not using them.
+    touch $HOME/.ssh/google_compute_engine.pub
+    touch $HOME/.ssh/google_compute_engine
   fi
   # Clear user and cluster variables, so they'll be set to the test cluster.
   # DOCKER_REPO_OVERRIDE is not touched because when running locally it must
@@ -148,7 +148,7 @@ fi
 readonly USING_EXISTING_CLUSTER
 
 if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-  export DOCKER_REPO_OVERRIDE=${E2E_DOCKER_BASE}/ela-images-e2e-${UUID}
+  export DOCKER_REPO_OVERRIDE=gcr.io/$(gcloud config get-value project)
 fi
 
 # Build and start the controller.
