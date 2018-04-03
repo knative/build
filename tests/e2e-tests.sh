@@ -88,6 +88,10 @@ function delete_build_images() {
   gcloud -q container images delete ${all_images}
 }
 
+function exit_if_test_failed() {
+  [[ $? -ne 0 ]] && exit 1
+}
+
 # Script entry point.
 
 cd ${BUILD_ROOT}
@@ -140,10 +144,22 @@ fi
 
 # Set the required variables if necessary.
 
+if [[ -z ${K8S_USER_OVERRIDE} ]]; then
+  export K8S_USER_OVERRIDE=$(gcloud config get-value core/account)
+fi
+
 USING_EXISTING_CLUSTER=1
 if [[ -z ${K8S_CLUSTER_OVERRIDE} ]]; then
   USING_EXISTING_CLUSTER=0
   export K8S_CLUSTER_OVERRIDE=$(kubectl config current-context)
+  # Fresh new test cluster, set cluster-admin.
+  # Get the password of the admin and use it, as the service account (or the user)
+  # might not have the necessary permission.
+  passwd=$(gcloud container clusters describe ${E2E_CLUSTER_NAME} --zone=${E2E_CLUSTER_ZONE} | \
+      grep password | cut -d' ' -f4)
+  kubectl --username=admin --password=$passwd create clusterrolebinding cluster-admin-binding \
+      --clusterrole=cluster-admin \
+      --user=${K8S_USER_OVERRIDE}
 fi
 readonly USING_EXISTING_CLUSTER
 
@@ -185,13 +201,13 @@ kubectl delete buildtemplates --all
 header "Running tests"
 
 bazel run //tests:all_tests.apply
-test_result=$?
+exit_if_test_failed
 
 # kubetest teardown might fail and thus incorrectly report failure of the
 # script, even if the tests pass.
-# Store the real test result to return it later, ignoring any teardown failure
-# in kubetest.
+# We store the real test result to return it later, ignoring any teardown
+# failure in kubetest.
 # TODO(adrcunha): Get rid of this workaround.
-echo -n "${test_result}"> ${TEST_RESULT_FILE}
+echo -n "0"> ${TEST_RESULT_FILE}
 
-exit ${test_result}
+exit 0
