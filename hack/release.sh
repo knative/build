@@ -43,14 +43,29 @@ header "TEST PHASE"
 
 header "BUILD PHASE"
 
+# Set the repository to the official one:
+export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
 # Build should not try to deploy anything, use a bogus value for cluster.
 export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 
-# Set the repository to the official one:
-export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
+# If this is a prow job, authenticate against GCR.
+if [[ $USER == "prow" ]]; then
+  echo "Authenticating to GCR"
+  # kubekins-e2e images lack docker-credential-gcr, install it manually.
+  # TODO(adrcunha): Remove this step once docker-credential-gcr is available.
+  gcloud components install docker-credential-gcr
+  docker-credential-gcr configure-docker
+  echo "Successfully authenticated"
+fi
+
+echo "Cleaning up"
 bazel clean --expunge
+echo "Building build-crd"
 bazel run :everything > release.yaml
 
+echo "Publishing release.yaml"
 gsutil cp release.yaml gs://build-crd/latest/release.yaml
+
+echo "New release published successfully"
 
 # TODO(mattmoor): Create other aliases?

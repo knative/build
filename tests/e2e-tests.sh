@@ -29,12 +29,12 @@
 # $DOCKER_REPO_OVERRIDE must point to a valid writable docker repo.
 
 # Test cluster parameters and location of generated test images
+readonly E2E_CLUSTER_NAME=ela-e2e-cluster
 readonly E2E_CLUSTER_ZONE=us-east1-d
 readonly E2E_CLUSTER_NODES=2
 readonly E2E_CLUSTER_MACHINE=n1-standard-2
 readonly GKE_VERSION=v1.9.4-gke.1
-# TODO(adrcunha): Use an exclusive docker repo?
-readonly E2E_DOCKER_BASE=gcr.io/elafros-e2e-tests
+readonly TEST_RESULT_FILE=/tmp/buildcrd-e2e-result
 
 # Unique identifier for this test execution
 # uuidgen is not available in kubekins images
@@ -88,6 +88,10 @@ function delete_build_images() {
   gcloud -q container images delete ${all_images}
 }
 
+function exit_if_test_failed() {
+  [[ $? -ne 0 ]] && exit 1
+}
+
 # Script entry point.
 
 cd ${BUILD_ROOT}
@@ -109,44 +113,58 @@ if [[ -z $1 ]]; then
     --provider=gke
     --deployment=gke
     --gcp-node-image=cos
-    --cluster=ela-e2e-cluster
+    --cluster="${E2E_CLUSTER_NAME}"
     --gcp-zone="${E2E_CLUSTER_ZONE}"
     --gcp-network=ela-e2e-net
     --gke-environment=prod
   )
   if (( ! IS_PROW )); then
-    if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-      : ${DOCKER_REPO_OVERRIDE:?"DOCKER_REPO_OVERRIDE must be set to  writeable docker repo."}
-      return 1
-    fi
     CLUSTER_CREATION_ARGS+=(--gcp-project=${PROJECT_ID:?"PROJECT_ID must be set to the GCP project where the tests are run."})
+  else
+    # On prow, set bogus SSH keys for kubetest, we're not using them.
+    touch $HOME/.ssh/google_compute_engine.pub
+    touch $HOME/.ssh/google_compute_engine
   fi
   # Clear user and cluster variables, so they'll be set to the test cluster.
   # DOCKER_REPO_OVERRIDE is not touched because when running locally it must
   # be a writeable docker repo.
   export K8S_CLUSTER_OVERRIDE=
+  # Assume test failed (see more details at the end of this script).
+  echo -n "1"> ${TEST_RESULT_FILE}
   kubetest "${CLUSTER_CREATION_ARGS[@]}" \
     --up \
     --down \
     --extract "${GKE_VERSION}" \
     --test-cmd "${SCRIPT_CANONICAL_PATH}" \
     --test-cmd-args --run-tests
-  exit
+  exit $(cat ${TEST_RESULT_FILE})
 fi
 
 # --run-tests passed as first argument, run the tests.
 
 # Set the required variables if necessary.
 
+if [[ -z ${K8S_USER_OVERRIDE} ]]; then
+  export K8S_USER_OVERRIDE=$(gcloud config get-value core/account)
+fi
+
 USING_EXISTING_CLUSTER=1
 if [[ -z ${K8S_CLUSTER_OVERRIDE} ]]; then
   USING_EXISTING_CLUSTER=0
   export K8S_CLUSTER_OVERRIDE=$(kubectl config current-context)
+  # Fresh new test cluster, set cluster-admin.
+  # Get the password of the admin and use it, as the service account (or the user)
+  # might not have the necessary permission.
+  passwd=$(gcloud container clusters describe ${E2E_CLUSTER_NAME} --zone=${E2E_CLUSTER_ZONE} | \
+      grep password | cut -d' ' -f4)
+  kubectl --username=admin --password=$passwd create clusterrolebinding cluster-admin-binding \
+      --clusterrole=cluster-admin \
+      --user=${K8S_USER_OVERRIDE}
 fi
 readonly USING_EXISTING_CLUSTER
 
 if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-  export DOCKER_REPO_OVERRIDE=${E2E_DOCKER_BASE}/ela-images-e2e-${UUID}
+  export DOCKER_REPO_OVERRIDE=gcr.io/$(gcloud config get-value project)
 fi
 
 # Build and start the controller.
@@ -164,6 +182,14 @@ if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
   bazel run //:everything.delete  # ignore if not running
 fi
+if (( IS_PROW )); then
+  echo "Authenticating to GCR"
+  # kubekins-e2e images lack docker-credential-gcr, install it manually.
+  # TODO(adrcunha): Remove this step once docker-credential-gcr is available.
+  gcloud components install docker-credential-gcr
+  docker-credential-gcr configure-docker
+  echo "Successfully authenticated"
+fi
 
 bazel run //:everything.apply
 # Make sure that are no builds or build templates in the current namespace.
@@ -175,6 +201,13 @@ kubectl delete buildtemplates --all
 header "Running tests"
 
 bazel run //tests:all_tests.apply
-test_result=$?
+exit_if_test_failed
 
-exit ${test_result}
+# kubetest teardown might fail and thus incorrectly report failure of the
+# script, even if the tests pass.
+# We store the real test result to return it later, ignoring any teardown
+# failure in kubetest.
+# TODO(adrcunha): Get rid of this workaround.
+echo -n "0"> ${TEST_RESULT_FILE}
+
+exit 0
