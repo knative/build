@@ -175,7 +175,7 @@ echo "================================================="
 echo "* Cluster is ${K8S_CLUSTER_OVERRIDE}"
 echo "* Docker is ${DOCKER_REPO_OVERRIDE}"
 echo "*** Project info ***"
-gcloud compute project-info
+gcloud compute project-info describe
 
 header "Building and starting the controller"
 trap teardown EXIT
