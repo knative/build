@@ -20,7 +20,7 @@ metadata:
 spec:
   steps:
   - name: test
-    image: test:latest
+    image: github.com/elafros/build/tests/custom-env
     env:
     - name: MY_VAR1
       value: foo
