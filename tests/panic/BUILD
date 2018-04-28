@@ -28,7 +28,7 @@ load("@k8s_object//:defaults.bzl", "k8s_object")
 k8s_object(
     name = "test",
     images = {
-        "test:latest": ":test-image",
+        "github.com/elafros/build/tests/panic": ":test-image",
     },
     template = "test.yaml",
 )

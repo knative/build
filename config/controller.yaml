@@ -26,11 +26,11 @@ spec:
       serviceAccountName: build-controller
       containers:
       - name: build-controller
-        image: build-controller:latest
+        image: github.com/elafros/build/cmd/controller
         args: [
           "-builder", "cluster",
           "-logtostderr",
           "-stderrthreshold", "INFO",
-          "-creds-image", "creds-image:latest",
-          "-git-image", "git-image:latest",
+          "-creds-image", "github.com/elafros/build/cmd/creds-init",
+          "-git-image", "github.com/elafros/build/cmd/git-init",
         ]

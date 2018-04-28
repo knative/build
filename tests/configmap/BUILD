@@ -32,7 +32,7 @@ k8s_object(
 k8s_object(
     name = "build",
     images = {
-        "test:latest": ":test-image",
+        "github.com/elafros/build/tests/configmap": ":test-image",
     },
     template = "build.yaml",
 )

@@ -5,9 +5,9 @@ load("@k8s_object//:defaults.bzl", "k8s_object")
 k8s_object(
     name = "controller",
     images = {
-        "build-controller:latest": "//cmd/controller:image",
-        "creds-image:latest": "//cmd/creds-init:image",
-        "git-image:latest": "//cmd/git-init:image",
+        "github.com/elafros/build/cmd/controller": "//cmd/controller:image",
+        "github.com/elafros/build/cmd/creds-init": "//cmd/creds-init:image",
+        "github.com/elafros/build/cmd/git-init": "//cmd/git-init:image",
     },
     template = "controller.yaml",
 )

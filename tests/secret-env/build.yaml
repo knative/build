@@ -20,7 +20,7 @@ metadata:
 spec:
   steps:
   - name: secret
-    image: test:latest
+    image: github.com/elafros/build/tests/secret-env
     env:
     - name: SECRET_PASSWORD
       valueFrom:
