@@ -18,6 +18,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"os"
 	"os/exec"
 
 	"github.com/golang/glog"
@@ -40,6 +41,16 @@ func runOrFail(cmd string, args ...string) {
 
 func main() {
 	flag.Parse()
+
+	// HACK HACK HACK
+	// Git seems to ignore $HOME/.ssh and look in /root/.ssh for unknown reasons.
+	// As a workaround, symlink /root/.ssh to where we expect the $HOME to land.
+	// This means SSH auth only works for our built-in git support, and not
+	// custom steps.
+	err := os.Symlink("/builder/home/.ssh", "/root/.ssh")
+	if err != nil {
+		glog.Fatalf("Unexpected error creating symlink: %v", err)
+	}
 
 	runOrFail("git", "init")
 	runOrFail("git", "remote", "add", "origin", *url)
