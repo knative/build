@@ -36,6 +36,7 @@ type operation struct {
 	namespace string
 	name      string
 	startTime metav1.Time
+	statuses  []corev1.ContainerStatus
 }
 
 func (op *operation) Name() string {
@@ -50,6 +51,10 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.Cluster.Namespace = op.namespace
 	status.Cluster.PodName = op.Name()
 	status.StartTime = op.startTime
+	status.StepStates = nil
+	for _, s := range op.statuses {
+		status.StepStates = append(status.StepStates, s.State)
+	}
 	status.SetCondition(&v1alpha1.BuildCondition{
 		Type:   v1alpha1.BuildComplete,
 		Status: corev1.ConditionFalse,
@@ -59,17 +64,22 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 }
 
 func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
-	errorCh := make(chan string)
-	defer close(errorCh)
+	podCh := make(chan *corev1.Pod)
+	defer close(podCh)
 
 	// Ask the builder's watch loop to send a message on our channel when it sees our Pod complete.
-	if err := op.builder.registerDoneCallback(op.namespace, op.name, errorCh); err != nil {
+	if err := op.builder.registerDoneCallback(op.namespace, op.name, podCh); err != nil {
 		return nil, err
 	}
 
 	glog.Infof("Waiting for %q", op.Name())
-	// This gets an empty string, when no error was found.
-	msg := <-errorCh
+	pod := <-podCh
+	op.statuses = pod.Status.InitContainerStatuses
+
+	states := []corev1.ContainerState{}
+	for _, status := range pod.Status.InitContainerStatuses {
+		states = append(states, status.State)
+	}
 
 	bs := &v1alpha1.BuildStatus{
 		Builder: v1alpha1.ClusterBuildProvider,
@@ -79,8 +89,10 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		},
 		StartTime:      op.startTime,
 		CompletionTime: metav1.Now(),
+		StepStates:     states,
 	}
-	if msg != "" {
+	if pod.Status.Phase == corev1.PodFailed {
+		msg := getFailureMessage(pod)
 		bs.RemoveCondition(v1alpha1.BuildComplete)
 		bs.SetCondition(&v1alpha1.BuildCondition{
 			Type:    v1alpha1.BuildFailed,
@@ -111,6 +123,7 @@ func (b *build) Execute() (buildercommon.Operation, error) {
 		namespace: pod.Namespace,
 		name:      pod.Name,
 		startTime: metav1.Now(),
+		statuses:  pod.Status.InitContainerStatuses,
 	}, nil
 }
 
@@ -118,7 +131,7 @@ func (b *build) Execute() (buildercommon.Operation, error) {
 func NewBuilder(kubeclient kubernetes.Interface, kubeinformers kubeinformers.SharedInformerFactory) buildercommon.Interface {
 	b := &builder{
 		kubeclient: kubeclient,
-		callbacks:  make(map[string]chan string),
+		callbacks:  make(map[string]chan *corev1.Pod),
 	}
 
 	podInformer := kubeinformers.Core().V1().Pods()
@@ -140,7 +153,7 @@ type builder struct {
 	// send a completion notification when we see that Pod complete.
 	// On success, an empty string is sent.
 	// On failure, the Message of the failure PodCondition is sent.
-	callbacks map[string]chan string
+	callbacks map[string]chan *corev1.Pod
 }
 
 func (b *builder) Builder() v1alpha1.BuildProvider {
@@ -175,11 +188,16 @@ func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercomm
 	if status.Cluster == nil {
 		return nil, fmt.Errorf("status.cluster cannot be empty: %v", status)
 	}
+	var statuses []corev1.ContainerStatus
+	for _, state := range status.StepStates {
+		statuses = append(statuses, corev1.ContainerStatus{State: state})
+	}
 	return &operation{
 		builder:   b,
 		namespace: status.Cluster.Namespace,
 		name:      status.Cluster.PodName,
 		startTime: status.StartTime,
+		statuses:  statuses,
 	}, nil
 }
 
@@ -187,15 +205,16 @@ func getKey(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
-// registerDoneCallback directs the builders to send a completion notification on errorCh
+// registerDoneCallback directs the builders to send a completion notification on podCh
 // when the named Pod completes.  An empty message is sent on successful completion.
-func (b *builder) registerDoneCallback(namespace, name string, errorCh chan string) error {
+func (b *builder) registerDoneCallback(namespace, name string, podCh chan *corev1.Pod) error {
 	b.mux.Lock()
 	defer b.mux.Unlock()
-	if _, ok := b.callbacks[getKey(namespace, name)]; ok {
-		return fmt.Errorf("another process is already waiting on %v", getKey(namespace, name))
+	k := getKey(namespace, name)
+	if _, ok := b.callbacks[k]; ok {
+		return fmt.Errorf("another process is already waiting on %q", k)
 	}
-	b.callbacks[getKey(namespace, name)] = errorCh
+	b.callbacks[k] = podCh
 	return nil
 }
 
@@ -210,8 +229,7 @@ func (b *builder) addPodEvent(obj interface{}) {
 	}
 
 	// We only take action on pods that have completed, in some way.
-	msg, ok := isDone(pod)
-	if !ok {
+	if !isDone(pod) {
 		return
 	}
 
@@ -221,7 +239,7 @@ func (b *builder) addPodEvent(obj interface{}) {
 	key := getKey(pod.Namespace, pod.Name)
 	if ch, ok := b.callbacks[key]; ok {
 		// Send the person listening the message and remove this callback from our map.
-		ch <- msg
+		ch <- pod
 		delete(b.callbacks, key)
 	} else {
 		glog.Errorf("Saw %q complete, but nothing was watching for it!", key)
@@ -241,26 +259,25 @@ func (b *builder) deletePodEvent(obj interface{}) {
 	glog.Errorf("NYI: delete event for: %v", obj)
 }
 
-func isDone(pod *corev1.Pod) (string, bool) {
-	switch pod.Status.Phase {
-	case corev1.PodSucceeded:
-		return "", true
-	case corev1.PodFailed:
-		// First, try to surface an error about the actual build step that failed.
-		for _, status := range pod.Status.InitContainerStatuses {
-			term := status.State.Terminated
-			if term != nil && term.ExitCode != 0 {
-				return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
-					status.Name, term.ExitCode, status.ImageID,
-					pod.Namespace, pod.Name, status.Name), true
-			}
+func isDone(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodSucceeded ||
+		pod.Status.Phase == corev1.PodFailed
+}
+
+func getFailureMessage(pod *corev1.Pod) string {
+	// First, try to surface an error about the actual build step that failed.
+	for _, status := range pod.Status.InitContainerStatuses {
+		term := status.State.Terminated
+		if term != nil && term.ExitCode != 0 {
+			return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
+				status.Name, term.ExitCode, status.ImageID,
+				pod.Namespace, pod.Name, status.Name)
 		}
-		// Next, return the Pod's status message if it has one.
-		if pod.Status.Message != "" {
-			return pod.Status.Message, true
-		}
-		// Lastly fall back on a generic error message.
-		return "build failed for unspecified reasons.", true
 	}
-	return "", false
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+	// Lastly fall back on a generic error message.
+	return "build failed for unspecified reasons."
 }

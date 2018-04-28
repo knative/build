@@ -37,6 +37,7 @@ import (
 const (
 	namespace            = ""
 	expectedErrorMessage = "stuff broke"
+	expectedErrorReason  = "it was bad"
 )
 
 func newBuilder(cs kubernetes.Interface) *builder {
@@ -280,6 +281,11 @@ func TestFailureFlow(t *testing.T) {
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
 		}
+		if len(status.StepStates) != 1 {
+			t.Errorf("StepStates contained %d states, want 1: %+v", len(status.StepStates), status.StepStates)
+		} else if status.StepStates[0].Terminated.Reason != expectedErrorReason {
+			t.Errorf("StepStates[0] reason got %q, want %q", status.StepStates[0].Terminated.Reason, expectedErrorReason)
+		}
 	}()
 	// Wait until the test thread is ready for us to update things.
 	readyForUpdate.Wait()
@@ -293,6 +299,13 @@ func TestFailureFlow(t *testing.T) {
 	// Now modify it to look done.
 	pod.Status.Phase = corev1.PodFailed
 	pod.Status.Message = expectedErrorMessage
+	pod.Status.InitContainerStatuses = []corev1.ContainerStatus{{
+		State: corev1.ContainerState{
+			Terminated: &corev1.ContainerStateTerminated{
+				Reason: expectedErrorReason,
+			},
+		},
+	}}
 	pod, err = podsclient.Update(pod)
 	if err != nil {
 		t.Fatalf("Unexpected error updating Pod: %v", err)
@@ -360,21 +373,21 @@ func TestStepFailureFlow(t *testing.T) {
 
 		// Check that status came out how we expect.
 		if !buildercommon.IsDone(status) {
-			t.Errorf("IsDone(%v); wanted true, got false", status)
+			t.Errorf("IsDone(%v); got false, want true", status)
 		}
 		if status.Cluster.PodName != op.Name() {
-			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
+			t.Errorf("status.Cluster.PodName; got %q, want %q", status.Cluster.PodName, op.Name())
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); !failed ||
 			// We expect the error to contain the step name and exit code.
 			!strings.Contains(msg, `"step-name"`) || !strings.Contains(msg, "128") {
-			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedErrorMessage, msg)
+			t.Errorf("ErrorMessage(%v); got %q, want %q", status, msg, expectedErrorMessage)
 		}
 		if status.StartTime.IsZero() {
-			t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
+			t.Errorf("status.StartTime; got %v, want non-zero", status.StartTime)
 		}
 		if status.CompletionTime.IsZero() {
-			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
+			t.Errorf("status.CompletionTime; got %v, want non-zero", status.CompletionTime)
 		}
 	}()
 	// Wait until the test thread is ready for us to update things.
