@@ -12,9 +12,11 @@ k8s_object(
     template = "controller.yaml",
 )
 
+# This file is named a-namespace.yaml so that it comes first alphabetically
+# when run through `kubectl apply`.
 k8s_object(
     name = "namespace",
-    template = "namespace.yaml",
+    template = "a-namespace.yaml",
 )
 
 k8s_object(
