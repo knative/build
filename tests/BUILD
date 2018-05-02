@@ -14,6 +14,7 @@ k8s_objects(
         "//tests/template-volume:test",
         "//tests/custom-source:test",
         "//tests/template-args:test",
+        "//tests/template-env-merge:test",
         "//tests/unnamed-steps:test",
         "//tests/docker-build:test",
         "//tests/gcs-archive:test",

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/elafros/build/pkg/apis/build/v1alpha1"
 )
 
@@ -76,5 +78,34 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) (*v1alpha1.B
 		}
 	}
 
+	if buildTmpl := build.Spec.Template; buildTmpl != nil && len(buildTmpl.Env) > 0 {
+		// Apply variable expansion to the build's overriden
+		// environment variables
+		for i, e := range buildTmpl.Env {
+			buildTmpl.Env[i].Value = applyReplacements(e.Value)
+		}
+
+		for i := range steps {
+			steps[i].Env = applyEnvOverride(steps[i].Env, buildTmpl.Env)
+		}
+	}
+
 	return build, nil
+}
+
+func applyEnvOverride(src, override []corev1.EnvVar) []corev1.EnvVar {
+	result := make([]corev1.EnvVar, 0, len(src)+len(override))
+	overrides := make(map[string]bool)
+
+	for _, env := range override {
+		overrides[env.Name] = true
+	}
+
+	for _, env := range src {
+		if _, present := overrides[env.Name]; !present {
+			result = append(result, env)
+		}
+	}
+
+	return append(result, override...)
 }
