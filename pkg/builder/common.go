@@ -37,8 +37,8 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) (*v1alpha1.B
 	replacements := map[string]string{}
 	if tmpl != nil {
 		for _, p := range tmpl.Spec.Parameters {
-			if p.Default != "" {
-				replacements[p.Name] = p.Default
+			if p.Default != nil {
+				replacements[p.Name] = *p.Default
 			}
 		}
 	}

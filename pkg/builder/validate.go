@@ -102,7 +102,7 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplat
 	if tmpl != nil {
 		tmplParams := map[string]string{} // value is the param description.
 		for _, p := range tmpl.Spec.Parameters {
-			if p.Default == "" {
+			if p.Default == nil {
 				tmplParams[p.Name] = p.Description
 			}
 		}
