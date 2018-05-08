@@ -26,6 +26,9 @@ import (
 )
 
 func TestApplyTemplate(t *testing.T) {
+	world := "world"
+	defaultStr := "default"
+	empty := ""
 	for i, c := range []struct {
 		build *v1alpha1.Build
 		tmpl  *v1alpha1.BuildTemplate
@@ -253,7 +256,7 @@ func TestApplyTemplate(t *testing.T) {
 				}},
 				Parameters: []v1alpha1.ParameterSpec{{
 					Name:    "FOO",
-					Default: "world",
+					Default: &world,
 				}},
 			},
 		},
@@ -268,6 +271,43 @@ func TestApplyTemplate(t *testing.T) {
 					}},
 					Command:    []string{"cmd", "world"},
 					WorkingDir: "/dir/world/bar",
+				}},
+			},
+		},
+	}, {
+		// Parameter with empty default value.
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "hello ${FOO}",
+					Args: []string{"hello", "to the ${FOO}"},
+					Env: []corev1.EnvVar{{
+						Name:  "FOO",
+						Value: "is ${FOO}",
+					}},
+					Command:    []string{"cmd", "${FOO}"},
+					WorkingDir: "/dir/${FOO}/bar",
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name:    "FOO",
+					Default: &empty,
+				}},
+			},
+		},
+		want: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name: "hello ",
+					Args: []string{"hello", "to the "},
+					Env: []corev1.EnvVar{{
+						Name:  "FOO",
+						Value: "is ",
+					}},
+					Command:    []string{"cmd", ""},
+					WorkingDir: "/dir//bar",
 				}},
 			},
 		},
@@ -297,7 +337,7 @@ func TestApplyTemplate(t *testing.T) {
 				}},
 				Parameters: []v1alpha1.ParameterSpec{{
 					Name:    "FOO",
-					Default: "default",
+					Default: &defaultStr,
 				}},
 			},
 		},

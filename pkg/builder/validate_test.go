@@ -25,6 +25,8 @@ import (
 )
 
 func TestValidateBuild(t *testing.T) {
+	hasDefault := "has-default"
+	empty := ""
 	tests := []struct {
 		build  *v1alpha1.Build
 		tmpl   *v1alpha1.BuildTemplate
@@ -223,7 +225,24 @@ func TestValidateBuild(t *testing.T) {
 					Name: "foo",
 				}, {
 					Name:    "bar",
-					Default: "has-default",
+					Default: &hasDefault,
+				}},
+			},
+		},
+	}, {
+		// valid, since unsatisfied parameter has an empty default.
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "empty-default",
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name:    "foo",
+					Default: &empty,
 				}},
 			},
 		},
@@ -245,6 +264,7 @@ func TestValidateBuild(t *testing.T) {
 }
 
 func TestValidateTemplate(t *testing.T) {
+	hasDefault := "has-default"
 	tests := []struct {
 		tmpl   *v1alpha1.BuildTemplate
 		reason string // if "", expect success.
@@ -326,7 +346,7 @@ func TestValidateTemplate(t *testing.T) {
 					Name: "FOO",
 				}, {
 					Name:    "BAR",
-					Default: "has-default",
+					Default: &hasDefault,
 				}},
 			},
 		},
