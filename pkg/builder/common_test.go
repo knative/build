@@ -502,6 +502,43 @@ func TestApplyTemplate(t *testing.T) {
 				},
 			},
 		},
+	}, {
+		// A build's template initiation spec contains
+		// env vars
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Env: []corev1.EnvVar{{
+						Name:  "SOME_ENV_VAR",
+						Value: "foo",
+					}},
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "hello",
+				}},
+			},
+		},
+		want: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name: "hello",
+					Env: []corev1.EnvVar{{
+						Name:  "SOME_ENV_VAR",
+						Value: "foo",
+					}},
+				}},
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Env: []corev1.EnvVar{{
+						Name:  "SOME_ENV_VAR",
+						Value: "foo",
+					}},
+				},
+			},
+		},
 	}} {
 		wantErr := c.want == nil
 		got, err := ApplyTemplate(c.build, c.tmpl)
