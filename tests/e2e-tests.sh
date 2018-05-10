@@ -174,8 +174,6 @@ fi
 echo "================================================="
 echo "* Cluster is ${K8S_CLUSTER_OVERRIDE}"
 echo "* Docker is ${DOCKER_REPO_OVERRIDE}"
-echo "*** Project info ***"
-gcloud compute project-info describe
 
 header "Building and starting the controller"
 trap teardown EXIT
@@ -196,6 +194,7 @@ if (( IS_PROW )); then
 fi
 
 bazel run //:everything.apply
+exit_if_test_failed
 # Make sure that are no builds or build templates in the current namespace.
 kubectl delete builds --all
 kubectl delete buildtemplates --all
@@ -206,6 +205,20 @@ header "Running tests"
 
 bazel run //tests:all_tests.apply
 exit_if_test_failed
+tests_finished=0
+for i in {1..60}; do
+  finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
+  if [[ ! "$finished" == *"False"* ]]; then
+    tests_finished=1
+    break
+  fi
+  sleep 5
+done
+if (( ! $tests_finished )); then
+  echo "ERROR: tests failed or timed out"
+  kubectl get builds -o=custom-columns-file=./tests/columns.txt
+  exit 1
+fi
 
 # kubetest teardown might fail and thus incorrectly report failure of the
 # script, even if the tests pass.
