@@ -26,7 +26,7 @@ import (
 )
 
 func TestFlagHandling(t *testing.T) {
-	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	credentials.VolumePath, _ = ioutil.TempDir("", "")
 	dir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
@@ -65,7 +65,7 @@ func TestFlagHandling(t *testing.T) {
 }
 
 func TestFlagHandlingTwice(t *testing.T) {
-	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	credentials.VolumePath, _ = ioutil.TempDir("", "")
 	fooDir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(fooDir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", fooDir, err)
@@ -115,7 +115,7 @@ func TestFlagHandlingTwice(t *testing.T) {
 }
 
 func TestFlagHandlingMissingFiles(t *testing.T) {
-	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	credentials.VolumePath, _ = ioutil.TempDir("", "")
 	dir := credentials.VolumeName("not-found")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
@@ -129,7 +129,7 @@ func TestFlagHandlingMissingFiles(t *testing.T) {
 }
 
 func TestFlagHandlingURLCollision(t *testing.T) {
-	credentials.VolumePath = os.Getenv("TEST_TMPDIR")
+	credentials.VolumePath, _ = ioutil.TempDir("", "")
 	dir := credentials.VolumeName("foo")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatalf("os.MkdirAll(%s) = %v", dir, err)
