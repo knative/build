@@ -31,16 +31,11 @@ $ git remote add ${USER} https://github.com/${USER}/build
 
 ### One-time setup
 
-To tell Bazel where to publish images, and to which cluster to deploy:
+To tell `ko` where to publish images, and to which cluster to deploy:
 
 ```shell
 # You can put these definitions in .bashrc, so this is one-time setup.
-export DOCKER_REPO_OVERRIDE=us.gcr.io/project
-# See: kubectl config get-contexts
-export K8S_CLUSTER_OVERRIDE=cluster-name
-
-# Forces Bazel to pick up these changes (don't put in .bashrc)
-bazel clean
+export KO_DOCKER_REPO=us.gcr.io/project
 ```
 
 Note that this expects your Docker authorization is [properly configured](
@@ -51,14 +46,14 @@ https://github.com/bazelbuild/rules_docker#authentication).
 You can stand up a version of this controller on-cluster with:
 ```shell
 # This will register the CRD and deploy the controller to start acting on them.
-bazel run //config:everything.create
+ko apply -f config/
 ```
 
 ### Iterating
 
 As you make changes to the code, you can redeploy your controller with:
 ```shell
-bazel run //config:controller.replace
+ko apply -f config/controller.yaml
 ```
 
 **Two things of note:**
@@ -67,17 +62,11 @@ bazel run //config:controller.replace
 1. If your type definitions have changed, you should:
    `./hack/update-codegen.sh`.
 
-If only internal dependencies have changed, and you want to avoid the `dep`
-portion of `./hack/update-deps.sh`, you can just run `Gazelle` with:
-```shell
-bazel run //:gazelle -- -proto=disable
-```
-
 ### Cleanup
 
 You can clean up everything with:
 ```shell
-bazel run //config:everything.delete
+ko delete -f config/
 ```
 
 ## Running Integration Tests
@@ -87,14 +76,14 @@ To run integration tests, run the following steps:
 ```shell
 # First, have the version of the system that you want to test up.
 # e.g. to change between builders, alter the flag in controller.yaml
-bazel run //config:everything.apply
+ko apply -f config/
 
 # Next, make sure that you have no builds or build templates in your current namespace:
 kubectl delete builds --all
 kubectl delete buildtemplates --all
 
 # Launch the test suite (this can be cleaned up with //tests:all_tests.delete)
-bazel run //tests:all_tests.apply
+ko apply -R -f tests/
 ```
 
 You can track the progress of your builds with this command, which will also

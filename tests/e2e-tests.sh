@@ -46,9 +46,7 @@ readonly IS_PROW
 readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
 readonly BUILD_ROOT="$(dirname ${SCRIPT_CANONICAL_PATH})/.."
 
-# Save *_OVERRIDE variables in case a bazel cleanup if required.
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
-readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
+readonly OG_DOCKER_REPO="${KO_DOCKER_REPO}"
 
 function header() {
   echo "================================================="
@@ -56,27 +54,24 @@ function header() {
   echo "================================================="
 }
 
-function cleanup_bazel() {
-  header "Cleaning up Bazel"
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
-  export K8S_CLUSTER_OVERRIDE="${OG_K8S_CLUSTER}"
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-  bazel clean --expunge
+function restore_env() {
+  header "Restoring environment"
+  export KO_DOCKER_REPO="${OG_DOCKER_REPO}"
 }
 
 function teardown() {
   header "Tearing down test environment"
   # Free resources in GCP project.
   if (( ! USING_EXISTING_CLUSTER )); then
-    bazel run //tests:all_tests.delete
-    bazel run //:everything.delete
+    ko delete -R -f tests
+    ko delete -f config/
   fi
 
   # Delete images when using prow.
   if (( IS_PROW )); then
     delete_build_images
   else
-    cleanup_bazel
+    restore_env
   fi
 }
 
@@ -180,11 +175,9 @@ gcloud compute project-info describe
 header "Building and starting the controller"
 trap teardown EXIT
 
-# --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-bazel clean --expunge
 if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
-  bazel run //:everything.delete  # ignore if not running
+  ko delete -f config/
 fi
 if (( IS_PROW )); then
   echo "Authenticating to GCR"
@@ -195,7 +188,7 @@ if (( IS_PROW )); then
   echo "Successfully authenticated"
 fi
 
-bazel run //:everything.apply
+ko apply -f config/
 # Make sure that are no builds or build templates in the current namespace.
 kubectl delete builds --all
 kubectl delete buildtemplates --all
@@ -204,7 +197,7 @@ kubectl delete buildtemplates --all
 
 header "Running tests"
 
-bazel run //tests:all_tests.apply
+ko apply -R -f tests/
 exit_if_test_failed
 
 # kubetest teardown might fail and thus incorrectly report failure of the
