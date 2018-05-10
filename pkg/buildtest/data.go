@@ -19,13 +19,10 @@ package buildtest
 import (
 	"encoding/json"
 	"io/ioutil"
-	"os"
-	"path"
 )
 
 func Data(relpath string) ([]byte, error) {
-	p := path.Join(os.Getenv("TEST_SRCDIR"), relpath)
-	b, err := ioutil.ReadFile(p)
+	b, err := ioutil.ReadFile(relpath)
 	if err != nil {
 		return nil, err
 	}

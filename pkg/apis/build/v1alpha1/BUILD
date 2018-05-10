@@ -28,9 +28,7 @@ go_test(
         "build_template_types_test.go",
         "build_types_test.go",
     ],
-    data = [
-        "@cloudbuilders//:bazel/cloudbuild.yaml",
-    ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = ["//pkg/buildtest:go_default_library"],
 )

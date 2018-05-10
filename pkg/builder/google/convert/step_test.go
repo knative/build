@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	bazelYAML = "cloudbuilders/bazel/cloudbuild.yaml"
+	bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"
 )
 
 func TestBadSteps(t *testing.T) {

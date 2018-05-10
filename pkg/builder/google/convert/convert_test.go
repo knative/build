@@ -26,23 +26,23 @@ import (
 
 func TestCloudbuildYAMLs(t *testing.T) {
 	inputs := []string{
-		"cloudbuilders/bazel/cloudbuild.yaml",
-		"cloudbuilders/dotnet/cloudbuild.yaml",
-		"cloudbuilders/gcloud/cloudbuild.yaml",
-		"cloudbuilders/git/cloudbuild.yaml",
-		"cloudbuilders/go/cloudbuild.yaml",
-		"cloudbuilders/golang-project/cloudbuild.yaml",
-		"cloudbuilders/gsutil/cloudbuild.yaml",
-		"cloudbuilders/kubectl/cloudbuild.yaml",
-		"cloudbuilders/wget/cloudbuild.yaml",
-		"cloudbuilders/yarn/cloudbuild.yaml",
-		"cloudbuilders/mvn/cloudbuild.yaml",
-		"cloudbuilders/npm/cloudbuild.yaml",
+		"testdata/cloudbuilders/bazel/cloudbuild.yaml",
+		"testdata/cloudbuilders/dotnet/cloudbuild.yaml",
+		"testdata/cloudbuilders/gcloud/cloudbuild.yaml",
+		"testdata/cloudbuilders/git/cloudbuild.yaml",
+		"testdata/cloudbuilders/go/cloudbuild.yaml",
+		"testdata/cloudbuilders/golang-project/cloudbuild.yaml",
+		"testdata/cloudbuilders/gsutil/cloudbuild.yaml",
+		"testdata/cloudbuilders/kubectl/cloudbuild.yaml",
+		"testdata/cloudbuilders/wget/cloudbuild.yaml",
+		"testdata/cloudbuilders/yarn/cloudbuild.yaml",
+		"testdata/cloudbuilders/mvn/cloudbuild.yaml",
+		"testdata/cloudbuilders/npm/cloudbuild.yaml",
 
 		// These contain wait_for:
-		//"cloudbuilders/docker/cloudbuild.yaml",
-		//"cloudbuilders/gradle/cloudbuild.yaml",
-		//"cloudbuilders/javac/cloudbuild.yaml",
+		//"testdata/cloudbuilders/docker/cloudbuild.yaml",
+		//"testdata/cloudbuilders/gradle/cloudbuild.yaml",
+		//"testdata/cloudbuilders/javac/cloudbuild.yaml",
 	}
 
 	for _, in := range inputs {
@@ -75,26 +75,26 @@ func TestCloudbuildYAMLs(t *testing.T) {
 
 func TestSupportedCRDs(t *testing.T) {
 	inputs := []string{
-		"buildcrd/testdata/helloworld.yaml",
-		"buildcrd/testdata/two-step.yaml",
-		"buildcrd/testdata/env.yaml",
-		"buildcrd/testdata/workingdir.yaml",
+		"testdata/helloworld.yaml",
+		"testdata/two-step.yaml",
+		"testdata/env.yaml",
+		"testdata/workingdir.yaml",
 
 		// GCB doesn't model privilege.
 		// NOTE: we cannot roundtrip this, but it should work as translated on GCB.
-		// "buildcrd/testdata/security-context.yaml",
+		// "testdata/security-context.yaml",
 
 		// GCB doesn't support the resource stanza.
 		// TODO(mattmoor): Perform a lossy translation to machine type?
-		// "buildcrd/testdata/resources.yaml",
+		// "testdata/resources.yaml",
 
-		"buildcrd/testdata/custom-source.yaml",
+		"testdata/custom-source.yaml",
 
-		"buildcrd/testdata/git-branch.yaml",
-		"buildcrd/testdata/git-tag.yaml",
-		"buildcrd/testdata/git-commit.yaml",
+		"testdata/git-branch.yaml",
+		"testdata/git-tag.yaml",
+		"testdata/git-commit.yaml",
 
-		"buildcrd/testdata/gcs-archive.yaml",
+		"testdata/gcs-archive.yaml",
 	}
 
 	for _, in := range inputs {
@@ -127,19 +127,19 @@ func TestSupportedCRDs(t *testing.T) {
 func TestUnsupportedCRDs(t *testing.T) {
 	inputs := []string{
 		// Downward API is not supported.
-		"buildcrd/testdata/env-valuefrom.yaml",
+		"testdata/env-valuefrom.yaml",
 
 		// GCB doesn't support other volume types.
-		"buildcrd/testdata/volumes.yaml",
+		"testdata/volumes.yaml",
 
 		// GCB doesn't support refs.
-		"buildcrd/testdata/git-ref.yaml",
+		"testdata/git-ref.yaml",
 
 		// GCB doesn't support any Git but CSR
-		"buildcrd/testdata/git-branch-github.yaml",
+		"testdata/git-branch-github.yaml",
 
 		// GCB doesn't support source manifests.
-		"buildcrd/testdata/gcs-manifest.yaml",
+		"testdata/gcs-manifest.yaml",
 	}
 
 	for _, in := range inputs {
@@ -156,7 +156,7 @@ func TestUnsupportedCRDs(t *testing.T) {
 
 func TestSupportedCRDsOneWay(t *testing.T) {
 	inputs := []string{
-		"buildcrd/testdata/docker-build.yaml",
+		"testdata/docker-build.yaml",
 	}
 
 	for _, in := range inputs {
