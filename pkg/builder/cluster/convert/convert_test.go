@@ -37,24 +37,24 @@ func read2CRD(f string) (*v1alpha1.Build, error) {
 
 func TestParsing(t *testing.T) {
 	inputs := []string{
-		"buildcrd/testdata/helloworld.yaml",
-		"buildcrd/testdata/two-step.yaml",
-		"buildcrd/testdata/env.yaml",
-		"buildcrd/testdata/env-valuefrom.yaml",
-		"buildcrd/testdata/workingdir.yaml",
-		"buildcrd/testdata/resources.yaml",
-		"buildcrd/testdata/security-context.yaml",
-		"buildcrd/testdata/volumes.yaml",
-		"buildcrd/testdata/custom-source.yaml",
+		"testdata/helloworld.yaml",
+		"testdata/two-step.yaml",
+		"testdata/env.yaml",
+		"testdata/env-valuefrom.yaml",
+		"testdata/workingdir.yaml",
+		"testdata/resources.yaml",
+		"testdata/security-context.yaml",
+		"testdata/volumes.yaml",
+		"testdata/custom-source.yaml",
 
-		"buildcrd/testdata/git-branch.yaml",
-		"buildcrd/testdata/git-branch-github.yaml",
-		"buildcrd/testdata/git-tag.yaml",
-		"buildcrd/testdata/git-commit.yaml",
-		"buildcrd/testdata/git-ref.yaml",
+		"testdata/git-branch.yaml",
+		"testdata/git-branch-github.yaml",
+		"testdata/git-tag.yaml",
+		"testdata/git-commit.yaml",
+		"testdata/git-ref.yaml",
 
-		"buildcrd/testdata/gcs-archive.yaml",
-		"buildcrd/testdata/gcs-manifest.yaml",
+		"testdata/gcs-archive.yaml",
+		"testdata/gcs-manifest.yaml",
 	}
 
 	for _, in := range inputs {
