@@ -92,6 +92,12 @@ function exit_if_test_failed() {
   [[ $? -ne 0 ]] && exit 1
 }
 
+function dump_tests_status() {
+  # If formatting fail for any reason, use yaml as a fall back.
+  kubectl get builds -o=custom-columns-file=./tests/columns.txt || \
+    kubectl get builds -oyaml
+}
+
 # Script entry point.
 
 cd ${BUILD_ROOT}
@@ -218,7 +224,7 @@ for i in {1..60}; do
 done
 if (( ! tests_finished )); then
   echo "ERROR: tests timed out"
-  kubectl get builds -o=custom-columns-file=./tests/columns.txt
+  dump_tests_status
   exit 1
 fi
 
@@ -236,7 +242,7 @@ for expected_status in complete failed invalid; do
 done
 if (( ! tests_passed )); then
   echo "ERROR: one or more tests failed"
-  kubectl get builds -o=custom-columns-file=./tests/columns.txt
+  dump_tests_status
   exit 1
 fi
 
