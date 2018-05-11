@@ -27,17 +27,15 @@ readonly BUILDCRD_ROOT=$(dirname ${BASH_SOURCE})/..
 readonly IS_PROW
 
 # Save *_OVERRIDE variables in case a cleanup is required.
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
+readonly OG_DOCKER_REPO="${KO_DOCKER_REPO}"
 
 function restore_env() {
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
+  export KO_DOCKER_REPO="${OG_DOCKER_REPO}"
 }
 
 function cleanup() {
   header "Cleanup (teardown)"
   restore_env
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-  bazel clean --expunge || true
 }
 
 function header() {
@@ -48,26 +46,20 @@ function header() {
 
 cd ${BUILDCRD_ROOT}
 
-# Set the required env vars to dummy values to satisfy bazel.
-export DOCKER_REPO_OVERRIDE=REPO_NOT_SET
-
 # For local runs, cleanup before and after the tests.
 if (( ! IS_PROW )); then
   trap cleanup EXIT
   header "Cleanup (setup)"
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-  bazel clean --expunge
 fi
 
 # Tests to be performed.
 
 # Step 1: Build relevant packages to ensure nothing is broken.
 header "Building phase"
-bazel build //cmd/... //pkg/...
+go build ./...
 
 # Step 2: Run unit tests.
 header "Testing phase"
-bazel test //cmd/... //pkg/...
 go test ./...
 
 # Step 3: Run end-to-end tests.

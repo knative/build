@@ -26,7 +26,7 @@
 # Calling this script without arguments will create a new cluster in
 # project $PROJECT_ID, start the controller, run the tests and delete
 # the cluster.
-# $DOCKER_REPO_OVERRIDE must point to a valid writable docker repo.
+# $KO_DOCKER_REPO must point to a valid writable docker repo.
 
 # Test cluster parameters and location of generated test images
 readonly E2E_CLUSTER_NAME=buildcrd-e2e-cluster
@@ -46,9 +46,11 @@ readonly IS_PROW
 readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
 readonly BUILD_ROOT="$(dirname ${SCRIPT_CANONICAL_PATH})/.."
 
-# Save *_OVERRIDE variables in case a bazel cleanup if required.
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
-readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
+# Save state to restore when complete
+readonly OG_DOCKER_REPO="${KO_DOCKER_REPO}"
+readonly OG_K8S_CONTEXT=$(kubectl config current-context || true)
+
+go get -u github.com/google/go-containerregistry/cmd/ko
 
 function header() {
   echo "================================================="
@@ -56,34 +58,30 @@ function header() {
   echo "================================================="
 }
 
-function cleanup_bazel() {
-  header "Cleaning up Bazel"
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
-  export K8S_CLUSTER_OVERRIDE="${OG_K8S_CLUSTER}"
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-  bazel clean --expunge
+function cleanup_env() {
+  header "Restoring Environment"
+  export KO_DOCKER_REPO="${OG_DOCKER_REPO}"
+  kubectl config use-context "${OG_K8S_CLUSTER}" || true
 }
 
 function teardown() {
   header "Tearing down test environment"
   # Free resources in GCP project.
-  if (( ! USING_EXISTING_CLUSTER )); then
-    bazel run //tests:all_tests.delete
-    bazel run //:everything.delete
-  fi
+  ko delete --ignore-not-found=true -R -f tests/
+  ko delete --ignore-not-found=true -f config/
 
   # Delete images when using prow.
   if (( IS_PROW )); then
     delete_build_images
   else
-    cleanup_bazel
+    cleanup_env
   fi
 }
 
 function delete_build_images() {
   local all_images=""
   for image in build-controller creds-image git-image test ; do
-    all_images="${all_images} ${DOCKER_REPO_OVERRIDE}/${image}"
+    all_images="${all_images} ${KO_DOCKER_REPO}/${image}"
   done
   gcloud -q container images delete ${all_images}
 }
@@ -131,10 +129,6 @@ if [[ -z $1 ]]; then
     touch $HOME/.ssh/google_compute_engine.pub
     touch $HOME/.ssh/google_compute_engine
   fi
-  # Clear user and cluster variables, so they'll be set to the test cluster.
-  # DOCKER_REPO_OVERRIDE is not touched because when running locally it must
-  # be a writeable docker repo.
-  export K8S_CLUSTER_OVERRIDE=
   # Assume test failed (see more details at the end of this script).
   echo -n "1"> ${TEST_RESULT_FILE}
   kubetest "${CLUSTER_CREATION_ARGS[@]}" \
@@ -150,46 +144,31 @@ fi
 
 # Set the required variables if necessary.
 
-if [[ -z ${K8S_USER_OVERRIDE} ]]; then
-  export K8S_USER_OVERRIDE=$(gcloud config get-value core/account)
+if [[ -z ${KO_DOCKER_REPO} ]]; then
+  export KO_DOCKER_REPO=gcr.io/$(gcloud config get-value project)
 fi
 
-USING_EXISTING_CLUSTER=1
-if [[ -z ${K8S_CLUSTER_OVERRIDE} ]]; then
-  USING_EXISTING_CLUSTER=0
-  export K8S_CLUSTER_OVERRIDE=$(kubectl config current-context)
-  # Fresh new test cluster, set cluster-admin.
-  # Get the password of the admin and use it, as the service account (or the user)
-  # might not have the necessary permission.
-  passwd=$(gcloud container clusters describe ${E2E_CLUSTER_NAME} --zone=${E2E_CLUSTER_ZONE} | \
-      grep password | cut -d' ' -f4)
-  kubectl --username=admin --password=$passwd create clusterrolebinding cluster-admin-binding \
-      --clusterrole=cluster-admin \
-      --user=${K8S_USER_OVERRIDE}
-  # Make sure we're in the default namespace
-  kubectl config set-context $K8S_CLUSTER_OVERRIDE --namespace=default
-fi
-readonly USING_EXISTING_CLUSTER
-
-if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-  export DOCKER_REPO_OVERRIDE=gcr.io/$(gcloud config get-value project)
-fi
+# Fresh new test cluster, set cluster-admin.
+# Get the password of the admin and use it, as the service account (or the user)
+# might not have the necessary permission.
+passwd=$(gcloud container clusters describe ${E2E_CLUSTER_NAME} --zone=${E2E_CLUSTER_ZONE} | \
+    grep password | cut -d' ' -f4)
+kubectl --username=admin --password=$passwd create clusterrolebinding cluster-admin-binding \
+    --clusterrole=cluster-admin \
+    --user=${K8S_USER_OVERRIDE}
 
 # Build and start the controller.
 
 echo "================================================="
-echo "* Cluster is ${K8S_CLUSTER_OVERRIDE}"
-echo "* Docker is ${DOCKER_REPO_OVERRIDE}"
+echo "* Cluster is $(kubectl config current-context)"
+echo "* Docker is ${KO_DOCKER_REPO}"
 
 header "Building and starting the controller"
 trap teardown EXIT
 
-# --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-bazel clean --expunge
-if (( USING_EXISTING_CLUSTER )); then
-  echo "Deleting any previous controller instance"
-  bazel run //:everything.delete  # ignore if not running
-fi
+echo "Deleting any previous controller instance"
+ko delete --ignore-not-found=true -f config/
+
 if (( IS_PROW )); then
   echo "Authenticating to GCR"
   # kubekins-e2e images lack docker-credential-gcr, install it manually.
@@ -199,7 +178,7 @@ if (( IS_PROW )); then
   echo "Successfully authenticated"
 fi
 
-bazel run //:everything.apply
+ko apply -f config/
 exit_if_test_failed
 # Make sure that are no builds or build templates in the current namespace.
 kubectl delete builds --all
@@ -209,7 +188,7 @@ kubectl delete buildtemplates --all
 
 header "Running tests"
 
-bazel run //tests:all_tests.apply
+ko apply -R -f tests/
 exit_if_test_failed
 
 # Wait for tests to finish.
