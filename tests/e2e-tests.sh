@@ -29,7 +29,7 @@
 # $DOCKER_REPO_OVERRIDE must point to a valid writable docker repo.
 
 # Test cluster parameters and location of generated test images
-readonly E2E_CLUSTER_NAME=ela-e2e-cluster
+readonly E2E_CLUSTER_NAME=buildcrd-e2e-cluster
 readonly E2E_CLUSTER_ZONE=us-central1-a
 readonly E2E_CLUSTER_NODES=2
 readonly E2E_CLUSTER_MACHINE=n1-standard-2
@@ -90,6 +90,12 @@ function delete_build_images() {
 
 function exit_if_test_failed() {
   [[ $? -ne 0 ]] && exit 1
+}
+
+function dump_tests_status() {
+  # If formatting fail for any reason, use yaml as a fall back.
+  kubectl get builds -o=custom-columns-file=./tests/columns.txt || \
+    kubectl get builds -oyaml
 }
 
 # Script entry point.
@@ -174,8 +180,6 @@ fi
 echo "================================================="
 echo "* Cluster is ${K8S_CLUSTER_OVERRIDE}"
 echo "* Docker is ${DOCKER_REPO_OVERRIDE}"
-echo "*** Project info ***"
-gcloud compute project-info describe
 
 header "Building and starting the controller"
 trap teardown EXIT
@@ -196,6 +200,7 @@ if (( IS_PROW )); then
 fi
 
 bazel run //:everything.apply
+exit_if_test_failed
 # Make sure that are no builds or build templates in the current namespace.
 kubectl delete builds --all
 kubectl delete buildtemplates --all
@@ -206,6 +211,42 @@ header "Running tests"
 
 bazel run //tests:all_tests.apply
 exit_if_test_failed
+
+# Wait for tests to finish.
+tests_finished=0
+for i in {1..60}; do
+  finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
+  if [[ ! "$finished" == *"False"* ]]; then
+    tests_finished=1
+    break
+  fi
+  sleep 5
+done
+if (( ! tests_finished )); then
+  echo "ERROR: tests timed out"
+  dump_tests_status
+  exit 1
+fi
+
+# Check that tests passed.
+tests_passed=1
+for expected_status in complete failed invalid; do
+  results="$(kubectl get builds -l expect=${expected_status} \
+      --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{" "}{end}')"
+  for result in ${results}; do
+    if [[ ! "${result,,}" == *"=${expected_status}" ]]; then
+      echo "ERROR: test ${result} but should be ${expected_status}"
+      tests_passed=0
+    fi
+  done
+done
+if (( ! tests_passed )); then
+  echo "ERROR: one or more tests failed"
+  dump_tests_status
+  exit 1
+fi
+
+echo "*** ALL TESTS PASSED ***"
 
 # kubetest teardown might fail and thus incorrectly report failure of the
 # script, even if the tests pass.
