@@ -27,5 +27,4 @@ spec:
     image: ubuntu
     terminationMessagePath: "/tmp/my-custom-status"
     command: ["/bin/bash"]
-    args:
     args: ["-c", "echo this is my custom status > /tmp/my-custom-status"]
