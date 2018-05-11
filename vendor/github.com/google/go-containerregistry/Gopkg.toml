@@ -16,33 +16,30 @@
 #   source = "github.com/myfork/project2"
 #
 # [[override]]
-#  name = "github.com/x/y"
-#  version = "2.4.0"
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
 
-# Required for Bazel
+# Used for deep copy code generation
 required = [
-  "k8s.io/apimachinery/pkg/util/sets/types",
-  "k8s.io/apimachinery/pkg/apimachinery/registered",
   "k8s.io/code-generator/cmd/deepcopy-gen",
-  "k8s.io/code-generator/cmd/defaulter-gen",
-  "k8s.io/code-generator/cmd/client-gen",
-  "k8s.io/code-generator/cmd/lister-gen",
-  "k8s.io/code-generator/cmd/informer-gen",
-  "github.com/google/go-containerregistry/cmd/ko",
 ]
-
-[[constraint]]
-  name = "k8s.io/api"
-  version = "kubernetes-1.10.0"
-
-[[constraint]]
-  name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.0"
 
 [[constraint]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.10.0"
 
 [[constraint]]
-  name = "k8s.io/client-go"
-  version = "kubernetes-1.10.0"
+  name = "github.com/google/go-cmp"
+  version = "0.2.0"
+
+# Use HEAD (2018-04-21) to pick up:
+# https://github.com/spf13/cobra/pull/662
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  revision = "615425954c3b0d9485a7027d4d451fdcdfdee84e"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+  non-go = true
