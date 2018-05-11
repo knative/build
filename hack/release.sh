@@ -18,8 +18,7 @@ set -o errexit
 set -o pipefail
 
 readonly BUILD_ROOT=$(dirname ${BASH_SOURCE})/..
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
-readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
+readonly OG_DOCKER_REPO="${KO_DOCKER_REPO}"
 
 function header() {
   echo "*************************************************"
@@ -28,9 +27,7 @@ function header() {
 }
 
 function cleanup() {
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
-  export K8S_CLUSTER_OVERRIDE="${OG_K8S_CLUSTER}"
-  bazel clean --expunge || true
+  export KO_DOCKER_REPO="${OG_DOCKER_REPO}"
 }
 
 cd ${BUILD_ROOT}
@@ -44,9 +41,7 @@ header "TEST PHASE"
 header "BUILD PHASE"
 
 # Set the repository to the official one:
-export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
-# Build should not try to deploy anything, use a bogus value for cluster.
-export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
+export KO_DOCKER_REPO=gcr.io/build-crd
 
 # If this is a prow job, authenticate against GCR.
 if [[ $USER == "prow" ]]; then
@@ -58,10 +53,8 @@ if [[ $USER == "prow" ]]; then
   echo "Successfully authenticated"
 fi
 
-echo "Cleaning up"
-bazel clean --expunge
 echo "Building build-crd"
-bazel run :everything > release.yaml
+ko resolve -f config/ > release.yaml
 
 echo "Publishing release.yaml"
 gsutil cp release.yaml gs://build-crd/latest/release.yaml
