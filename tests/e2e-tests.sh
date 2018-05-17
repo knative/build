@@ -45,6 +45,7 @@ readonly UUID=$(cat /proc/sys/kernel/random/uuid)
 readonly IS_PROW
 readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
 readonly BUILD_ROOT="$(dirname ${SCRIPT_CANONICAL_PATH})/.."
+readonly OUTPUT_GOBIN="${BUILD_ROOT}/_output/bin"
 
 # Save *_OVERRIDE variables in case a bazel cleanup if required.
 readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
@@ -183,6 +184,8 @@ echo "* Docker is ${DOCKER_REPO_OVERRIDE}"
 
 header "Building and starting the controller"
 trap teardown EXIT
+
+GOBIN="${OUTPUT_GOBIN}" go install ./vendor/github.com/google/go-containerregistry/cmd/ko
 
 # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
 bazel clean --expunge
