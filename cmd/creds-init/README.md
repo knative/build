@@ -14,7 +14,7 @@ These will be made available to the `Build` by attaching them to the
 
 ### Guiding credential integration.
 
-Having one of these secret types in insufficient for turning it into a usable
+Having one of these secret types is insufficient for turning it into a usable
 secret.  e.g. basic auth (username / password) is usable with both Git and
 Docker repositories, and I may have *N* Git secrets and *M* Docker secrets.
 
