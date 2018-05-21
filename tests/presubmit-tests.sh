@@ -21,32 +21,16 @@
 set -o errexit
 set -o pipefail
 
-# Useful environment variables
-readonly BUILDCRD_ROOT=$(dirname ${BASH_SOURCE})/..
-[[ $USER == "prow" ]] && IS_PROW=1 || IS_PROW=0
-readonly IS_PROW
-
-# Save *_OVERRIDE variables in case a cleanup is required.
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
-
-function restore_env() {
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
-}
+source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
 
 function cleanup() {
-  header "Cleanup (teardown)"
-  restore_env
+  echo "Cleaning up for teardown"
+  restore_override_vars
   # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
   bazel clean --expunge || true
 }
 
-function header() {
-  echo "================================================="
-  echo $1
-  echo "================================================="
-}
-
-cd ${BUILDCRD_ROOT}
+cd ${BUILD_ROOT_DIR}
 
 # Set the required env vars to dummy values to satisfy bazel.
 export DOCKER_REPO_OVERRIDE=REPO_NOT_SET
@@ -54,23 +38,23 @@ export DOCKER_REPO_OVERRIDE=REPO_NOT_SET
 # For local runs, cleanup before and after the tests.
 if (( ! IS_PROW )); then
   trap cleanup EXIT
-  header "Cleanup (setup)"
+  echo "Cleaning up for setup"
   # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
   bazel clean --expunge
 fi
 
 # Tests to be performed.
 
-# Step 1: Build relevant packages to ensure nothing is broken.
-header "Building phase"
+# Build tests, to ensure nothing is broken.
+header "Running build tests"
 bazel build //cmd/... //pkg/...
 
-# Step 2: Run unit tests.
-header "Testing phase"
+# Unit tests.
+header "Running unit tests"
 bazel test //cmd/... //pkg/...
 go test ./...
 
-# Step 3: Run end-to-end tests.
-# Restore environment variables, let e2e-tests.sh handle them.
-restore_env
+# Integration tests.
+# Make sure environment variables are intact.
+restore_override_vars
 ./tests/e2e-tests.sh
