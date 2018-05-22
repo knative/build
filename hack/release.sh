@@ -17,31 +17,26 @@
 set -o errexit
 set -o pipefail
 
-readonly BUILD_ROOT=$(dirname ${BASH_SOURCE})/..
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
-readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
-
-function header() {
-  echo "*************************************************"
-  echo "** $1"
-  echo "*************************************************"
-}
+source "$(dirname $(readlink -f ${BASH_SOURCE}))/../tests/library.sh"
 
 function cleanup() {
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
-  export K8S_CLUSTER_OVERRIDE="${OG_K8S_CLUSTER}"
+  restore_override_vars
   bazel clean --expunge || true
 }
 
-cd ${BUILD_ROOT}
+cd ${BUILD_ROOT_DIR}
 trap cleanup EXIT
 
-header "TEST PHASE"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@ RUNNING RELEASE VALIDATION TESTS @@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
 # Run tests.
 ./tests/presubmit-tests.sh
 
-header "BUILD PHASE"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@@@@     BUILDING THE RELEASE    @@@@"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
 # Set the repository to the official one:
 export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
@@ -49,14 +44,7 @@ export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
 export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 
 # If this is a prow job, authenticate against GCR.
-if [[ $USER == "prow" ]]; then
-  echo "Authenticating to GCR"
-  # kubekins-e2e images lack docker-credential-gcr, install it manually.
-  # TODO(adrcunha): Remove this step once docker-credential-gcr is available.
-  gcloud components install docker-credential-gcr
-  docker-credential-gcr configure-docker
-  echo "Successfully authenticated"
-fi
+(( IS_PROW )) && gcr_auth
 
 echo "Cleaning up"
 bazel clean --expunge
