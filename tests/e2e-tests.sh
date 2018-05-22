@@ -28,42 +28,23 @@
 # the cluster.
 # $DOCKER_REPO_OVERRIDE must point to a valid writable docker repo.
 
+source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
+
 # Test cluster parameters and location of generated test images
-readonly E2E_CLUSTER_NAME=buildcrd-e2e-cluster
+readonly E2E_CLUSTER_NAME=build-e2e-cluster${BUILD_NUMBER}
+readonly E2E_NETWORK_NAME=build-e2e-net${BUILD_NUMBER}
 readonly E2E_CLUSTER_ZONE=us-central1-a
 readonly E2E_CLUSTER_NODES=2
 readonly E2E_CLUSTER_MACHINE=n1-standard-2
-readonly GKE_VERSION=v1.9.6-gke.1
-readonly TEST_RESULT_FILE=/tmp/buildcrd-e2e-result
+readonly TEST_RESULT_FILE=/tmp/build-e2e-result
 
-# Unique identifier for this test execution
-# uuidgen is not available in kubekins images
-readonly UUID=$(cat /proc/sys/kernel/random/uuid)
+# This script.
+readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
 
 # Useful environment variables
-[[ $USER == "prow" ]] && IS_PROW=1 || IS_PROW=0
-readonly IS_PROW
-readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
-readonly BUILD_ROOT="$(dirname ${SCRIPT_CANONICAL_PATH})/.."
-readonly OUTPUT_GOBIN="${BUILD_ROOT}/_output/bin"
+readonly OUTPUT_GOBIN="${BUILD_ROOT_DIR}/_output/bin"
 
-# Save *_OVERRIDE variables in case a bazel cleanup if required.
-readonly OG_DOCKER_REPO="${DOCKER_REPO_OVERRIDE}"
-readonly OG_K8S_CLUSTER="${K8S_CLUSTER_OVERRIDE}"
-
-function header() {
-  echo "================================================="
-  echo $1
-  echo "================================================="
-}
-
-function cleanup_bazel() {
-  header "Cleaning up Bazel"
-  export DOCKER_REPO_OVERRIDE="${OG_DOCKER_REPO}"
-  export K8S_CLUSTER_OVERRIDE="${OG_K8S_CLUSTER}"
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-  bazel clean --expunge
-}
+# Helper functions.
 
 function teardown() {
   header "Tearing down test environment"
@@ -75,33 +56,47 @@ function teardown() {
 
   # Delete images when using prow.
   if (( IS_PROW )); then
-    delete_build_images
+    echo "Images in ${DOCKER_REPO_OVERRIDE}:"
+    gcloud container images list --repository=${DOCKER_REPO_OVERRIDE}
+    delete_gcr_images ${DOCKER_REPO_OVERRIDE}
   else
-    cleanup_bazel
+    restore_override_vars
+    # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
+    bazel clean --expunge
   fi
 }
 
-function delete_build_images() {
-  local all_images=""
-  for image in build-controller creds-image git-image test ; do
-    all_images="${all_images} ${DOCKER_REPO_OVERRIDE}/${image}"
-  done
-  gcloud -q container images delete ${all_images}
-}
-
 function exit_if_test_failed() {
-  [[ $? -ne 0 ]] && exit 1
+  [[ $? -eq 0 ]] && return 0
+  echo "***************************************"
+  echo "***           TEST FAILED           ***"
+  echo "***    Start of information dump    ***"
+  echo "***************************************"
+  if (( IS_PROW )) || [[ $PROJECT_ID != "" ]]; then
+    echo ">>> Project info:"
+    gcloud compute project-info describe
+  fi
+  echo ">>> All resources:"
+  kubectl get all --all-namespaces
+  echo "***************************************"
+  echo "***           TEST FAILED           ***"
+  echo "***     End of information dump     ***"
+  echo "***************************************"
+  exit 1
 }
 
-function dump_tests_status() {
-  # If formatting fail for any reason, use yaml as a fall back.
+function abort_test() {
+  echo "$1"
+  # If formatting fails for any reason, use yaml as a fall back.
   kubectl get builds -o=custom-columns-file=./tests/columns.txt || \
     kubectl get builds -oyaml
+  false  # Force exit
+  exit_if_test_failed
 }
 
 # Script entry point.
 
-cd ${BUILD_ROOT}
+cd ${BUILD_ROOT_DIR}
 
 # Show help if bad arguments are passed.
 if [[ -n $1 && $1 != "--run-tests" ]]; then
@@ -122,7 +117,7 @@ if [[ -z $1 ]]; then
     --gcp-node-image=cos
     --cluster="${E2E_CLUSTER_NAME}"
     --gcp-zone="${E2E_CLUSTER_ZONE}"
-    --gcp-network=ela-e2e-net
+    --gcp-network="${E2E_NETWORK_NAME}"
     --gke-environment=prod
   )
   if (( ! IS_PROW )); then
@@ -141,10 +136,12 @@ if [[ -z $1 ]]; then
   kubetest "${CLUSTER_CREATION_ARGS[@]}" \
     --up \
     --down \
-    --extract "${GKE_VERSION}" \
+    --extract "v${BUILD_GKE_VERSION}" \
     --test-cmd "${SCRIPT_CANONICAL_PATH}" \
     --test-cmd-args --run-tests
-  exit $(cat ${TEST_RESULT_FILE})
+  result="$(cat ${TEST_RESULT_FILE})"
+  echo "Test result code is $result"
+  exit $result
 fi
 
 # --run-tests passed as first argument, run the tests.
@@ -159,28 +156,21 @@ USING_EXISTING_CLUSTER=1
 if [[ -z ${K8S_CLUSTER_OVERRIDE} ]]; then
   USING_EXISTING_CLUSTER=0
   export K8S_CLUSTER_OVERRIDE=$(kubectl config current-context)
-  # Fresh new test cluster, set cluster-admin.
-  # Get the password of the admin and use it, as the service account (or the user)
-  # might not have the necessary permission.
-  passwd=$(gcloud container clusters describe ${E2E_CLUSTER_NAME} --zone=${E2E_CLUSTER_ZONE} | \
-      grep password | cut -d' ' -f4)
-  kubectl --username=admin --password=$passwd create clusterrolebinding cluster-admin-binding \
-      --clusterrole=cluster-admin \
-      --user=${K8S_USER_OVERRIDE}
+  acquire_cluster_admin_role ${K8S_USER_OVERRIDE} ${E2E_CLUSTER_NAME} ${E2E_CLUSTER_ZONE}
   # Make sure we're in the default namespace
   kubectl config set-context $K8S_CLUSTER_OVERRIDE --namespace=default
 fi
 readonly USING_EXISTING_CLUSTER
 
 if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-  export DOCKER_REPO_OVERRIDE=gcr.io/$(gcloud config get-value project)
+  export DOCKER_REPO_OVERRIDE=gcr.io/$(gcloud config get-value project)/build-e2e-img
 fi
 
 # Build and start the controller.
 
-echo "================================================="
-echo "* Cluster is ${K8S_CLUSTER_OVERRIDE}"
-echo "* Docker is ${DOCKER_REPO_OVERRIDE}"
+echo "- Cluster is ${K8S_CLUSTER_OVERRIDE}"
+echo "- User is ${K8S_USER_OVERRIDE}"
+echo "- Docker is ${DOCKER_REPO_OVERRIDE}"
 
 header "Building and starting the controller"
 trap teardown EXIT
@@ -193,14 +183,7 @@ if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
   bazel run //:everything.delete  # ignore if not running
 fi
-if (( IS_PROW )); then
-  echo "Authenticating to GCR"
-  # kubekins-e2e images lack docker-credential-gcr, install it manually.
-  # TODO(adrcunha): Remove this step once docker-credential-gcr is available.
-  gcloud components install docker-credential-gcr
-  docker-credential-gcr configure-docker
-  echo "Successfully authenticated"
-fi
+(( IS_PROW )) && gcr_auth
 
 bazel run //:everything.apply
 exit_if_test_failed
@@ -225,11 +208,7 @@ for i in {1..60}; do
   fi
   sleep 5
 done
-if (( ! tests_finished )); then
-  echo "ERROR: tests timed out"
-  dump_tests_status
-  exit 1
-fi
+(( tests_finished )) || abort_test "ERROR: tests timed out"
 
 # Check that tests passed.
 tests_passed=1
@@ -243,13 +222,7 @@ for expected_status in complete failed invalid; do
     fi
   done
 done
-if (( ! tests_passed )); then
-  echo "ERROR: one or more tests failed"
-  dump_tests_status
-  exit 1
-fi
-
-echo "*** ALL TESTS PASSED ***"
+(( tests_passed )) || abort_test "ERROR: one or more tests failed"
 
 # kubetest teardown might fail and thus incorrectly report failure of the
 # script, even if the tests pass.
@@ -257,5 +230,7 @@ echo "*** ALL TESTS PASSED ***"
 # failure in kubetest.
 # TODO(adrcunha): Get rid of this workaround.
 echo -n "0"> ${TEST_RESULT_FILE}
-
+echo "**************************************"
+echo "***        ALL TESTS PASSED        ***"
+echo "**************************************"
 exit 0
