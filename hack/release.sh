@@ -19,13 +19,16 @@ set -o pipefail
 
 source "$(dirname $(readlink -f ${BASH_SOURCE}))/../tests/library.sh"
 
+readonly OUTPUT_GOBIN="${BUILD_ROOT_DIR}/_output/bin"
+
 function cleanup() {
   restore_override_vars
-  bazel clean --expunge || true
 }
 
 cd ${BUILD_ROOT_DIR}
 trap cleanup EXIT
+
+GOBIN="${OUTPUT_GOBIN}" go install ./vendor/github.com/google/go-containerregistry/cmd/ko
 
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@@@@ RUNNING RELEASE VALIDATION TESTS @@@@"
@@ -39,17 +42,13 @@ echo "@@@@     BUILDING THE RELEASE    @@@@"
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
 # Set the repository to the official one:
-export DOCKER_REPO_OVERRIDE=gcr.io/build-crd
-# Build should not try to deploy anything, use a bogus value for cluster.
-export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
+export KO_DOCKER_REPO=gcr.io/build-crd
 
 # If this is a prow job, authenticate against GCR.
 (( IS_PROW )) && gcr_auth
 
-echo "Cleaning up"
-bazel clean --expunge
 echo "Building build-crd"
-bazel run :everything > release.yaml
+"${OUTPUT_GOBIN}/ko" resolve -f config/ > release.yaml
 
 echo "Publishing release.yaml"
 gsutil cp release.yaml gs://build-crd/latest/release.yaml
