@@ -26,7 +26,7 @@
 # Calling this script without arguments will create a new cluster in
 # project $PROJECT_ID, start the controller, run the tests and delete
 # the cluster.
-# $DOCKER_REPO_OVERRIDE must point to a valid writable docker repo.
+# $KO_DOCKER_REPO must point to a valid writable docker repo.
 
 source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
 
@@ -50,19 +50,17 @@ function teardown() {
   header "Tearing down test environment"
   # Free resources in GCP project.
   if (( ! USING_EXISTING_CLUSTER )); then
-    bazel run //tests:all_tests.delete
-    bazel run //:everything.delete
+    "${OUTPUT_GOBIN}/ko" delete --ignore-not-found=true -R -f tests/
+    "${OUTPUT_GOBIN}/ko" delete --ignore-not-found=true -f config/
   fi
 
   # Delete images when using prow.
   if (( IS_PROW )); then
-    echo "Images in ${DOCKER_REPO_OVERRIDE}:"
-    gcloud container images list --repository=${DOCKER_REPO_OVERRIDE}
-    delete_gcr_images ${DOCKER_REPO_OVERRIDE}
+    echo "Images in ${KO_DOCKER_REPO}:"
+    gcloud container images list --repository=${KO_DOCKER_REPO}
+    delete_gcr_images ${KO_DOCKER_REPO}
   else
     restore_override_vars
-    # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-    bazel clean --expunge
   fi
 }
 
@@ -128,7 +126,7 @@ if [[ -z $1 ]]; then
     touch $HOME/.ssh/google_compute_engine
   fi
   # Clear user and cluster variables, so they'll be set to the test cluster.
-  # DOCKER_REPO_OVERRIDE is not touched because when running locally it must
+  # KO_DOCKER_REPO is not touched because when running locally it must
   # be a writeable docker repo.
   export K8S_CLUSTER_OVERRIDE=
   # Assume test failed (see more details at the end of this script).
@@ -162,30 +160,28 @@ if [[ -z ${K8S_CLUSTER_OVERRIDE} ]]; then
 fi
 readonly USING_EXISTING_CLUSTER
 
-if [[ -z ${DOCKER_REPO_OVERRIDE} ]]; then
-  export DOCKER_REPO_OVERRIDE=gcr.io/$(gcloud config get-value project)/build-e2e-img
+if [[ -z ${KO_DOCKER_REPO} ]]; then
+  export KO_DOCKER_REPO=gcr.io/$(gcloud config get-value project)/build-e2e-img
 fi
 
 # Build and start the controller.
 
 echo "- Cluster is ${K8S_CLUSTER_OVERRIDE}"
 echo "- User is ${K8S_USER_OVERRIDE}"
-echo "- Docker is ${DOCKER_REPO_OVERRIDE}"
+echo "- Docker is ${KO_DOCKER_REPO}"
 
 header "Building and starting the controller"
 trap teardown EXIT
 
 GOBIN="${OUTPUT_GOBIN}" go install ./vendor/github.com/google/go-containerregistry/cmd/ko
 
-# --expunge is a workaround for https://github.com/elafros/elafros/issues/366
-bazel clean --expunge
 if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
-  bazel run //:everything.delete  # ignore if not running
+  "${OUTPUT_GOBIN}/ko" delete --ignore-not-found=true -f config/
 fi
 (( IS_PROW )) && gcr_auth
 
-bazel run //:everything.apply
+"${OUTPUT_GOBIN}/ko" apply -f config/
 exit_if_test_failed
 # Make sure that are no builds or build templates in the current namespace.
 kubectl delete builds --all
@@ -195,7 +191,7 @@ kubectl delete buildtemplates --all
 
 header "Running tests"
 
-bazel run //tests:all_tests.apply
+"${OUTPUT_GOBIN}/ko" apply -R -f tests/
 exit_if_test_failed
 
 # Wait for tests to finish.
