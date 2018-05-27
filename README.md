@@ -44,8 +44,6 @@ kubectl create -f https://storage.googleapis.com/build-crd/latest/release.yaml
 
 ### Run your first `Build`
 
-Create your first `build.yaml`:
-
 ```yaml
 apiVersion: build.dev/v1alpha1
 kind: Build
