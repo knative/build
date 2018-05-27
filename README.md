@@ -100,7 +100,13 @@ different name. Let's dive into that pod!
 
 ```shell
 $ kubectl get pod hello-build-jx4ql -oyaml
-...lots of stuff!
+...lots of interesting stuff!
+```
+
+Here's a shortcut for getting a build's underlying `podName`:
+
+```shell
+$ kubectl get build hello-build -ojsonpath={.status.cluster.podName}
 ```
 
 The build's underlying pod also contains the build's logs, in an init
@@ -109,7 +115,7 @@ build step's name was `hello`, so the pod will have an init container named
 `build-step-hello` which ran the step.
 
 ```shell
-$ kubectl logs hello-build-jx4ql -c build-step-hello -f
+$ kubectl logs $(kubectl get build hello-build -ojsonpath={.status.cluster.podName}) -c build-step-hello
 hello build
 ```
 
