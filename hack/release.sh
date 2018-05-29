@@ -19,8 +19,6 @@ set -o pipefail
 
 source "$(dirname $(readlink -f ${BASH_SOURCE}))/../tests/library.sh"
 
-readonly OUTPUT_GOBIN="${BUILD_ROOT_DIR}/_output/bin"
-
 function cleanup() {
   restore_override_vars
 }
@@ -28,7 +26,7 @@ function cleanup() {
 cd ${BUILD_ROOT_DIR}
 trap cleanup EXIT
 
-GOBIN="${OUTPUT_GOBIN}" go install ./vendor/github.com/google/go-containerregistry/cmd/ko
+install_ko
 
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@@@@ RUNNING RELEASE VALIDATION TESTS @@@@"
@@ -48,7 +46,7 @@ export KO_DOCKER_REPO=gcr.io/build-crd
 (( IS_PROW )) && gcr_auth
 
 echo "Building build-crd"
-"${OUTPUT_GOBIN}/ko" resolve -f config/ > release.yaml
+ko resolve -f config/ > release.yaml
 
 echo "Publishing release.yaml"
 gsutil cp release.yaml gs://build-crd/latest/release.yaml

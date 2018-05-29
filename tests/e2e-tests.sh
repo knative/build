@@ -50,8 +50,8 @@ function teardown() {
   header "Tearing down test environment"
   # Free resources in GCP project.
   if (( ! USING_EXISTING_CLUSTER )); then
-    "${OUTPUT_GOBIN}/ko" delete --ignore-not-found=true -R -f tests/
-    "${OUTPUT_GOBIN}/ko" delete --ignore-not-found=true -f config/
+    ko delete --ignore-not-found=true -R -f tests/
+    ko delete --ignore-not-found=true -f config/
   fi
 
   # Delete images when using prow.
@@ -173,15 +173,15 @@ echo "- Docker is ${KO_DOCKER_REPO}"
 header "Building and starting the controller"
 trap teardown EXIT
 
-GOBIN="${OUTPUT_GOBIN}" go install ./vendor/github.com/google/go-containerregistry/cmd/ko
+install_ko
 
 if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
-  "${OUTPUT_GOBIN}/ko" delete --ignore-not-found=true -f config/
+  ko delete --ignore-not-found=true -f config/
 fi
 (( IS_PROW )) && gcr_auth
 
-"${OUTPUT_GOBIN}/ko" apply -f config/
+ko apply -f config/
 exit_if_test_failed
 # Make sure that are no builds or build templates in the current namespace.
 kubectl delete builds --all
@@ -191,7 +191,7 @@ kubectl delete buildtemplates --all
 
 header "Running tests"
 
-"${OUTPUT_GOBIN}/ko" apply -R -f tests/
+ko apply -R -f tests/
 exit_if_test_failed
 
 # Wait for tests to finish.
