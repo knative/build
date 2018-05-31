@@ -34,16 +34,16 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"github.com/elafros/build/pkg/builder"
-	onclusterbuilder "github.com/elafros/build/pkg/builder/cluster"
-	gcb "github.com/elafros/build/pkg/builder/google"
-	"github.com/elafros/build/pkg/controller"
-	"github.com/elafros/build/pkg/controller/build"
-	"github.com/elafros/build/pkg/controller/buildtemplate"
+	"github.com/knative/build/pkg/builder"
+	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
+	gcb "github.com/knative/build/pkg/builder/google"
+	"github.com/knative/build/pkg/controller"
+	"github.com/knative/build/pkg/controller/build"
+	"github.com/knative/build/pkg/controller/buildtemplate"
 
-	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
-	informers "github.com/elafros/build/pkg/client/informers/externalversions"
-	"github.com/elafros/build/pkg/signals"
+	clientset "github.com/knative/build/pkg/client/clientset/versioned"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
+	"github.com/knative/build/pkg/signals"
 )
 
 const (

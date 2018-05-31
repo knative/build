@@ -20,4 +20,4 @@ metadata:
 spec:
   steps:
   - name: test
-    image: github.com/elafros/build/tests/panic
+    image: github.com/knative/build/tests/panic

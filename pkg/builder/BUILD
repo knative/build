@@ -7,7 +7,7 @@ go_library(
         "interface.go",
         "validate.go",
     ],
-    importpath = "github.com/elafros/build/pkg/builder",
+    importpath = "github.com/knative/build/pkg/builder",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",

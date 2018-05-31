@@ -19,10 +19,10 @@ package google
 import (
 	"fmt"
 
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
-	buildercommon "github.com/elafros/build/pkg/builder"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	buildercommon "github.com/knative/build/pkg/builder"
 
-	"github.com/elafros/build/pkg/builder/google/fakecloudbuild"
+	"github.com/knative/build/pkg/builder/google/fakecloudbuild"
 
 	"testing"
 )

@@ -5,7 +5,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/elafros/build/tests/secret-env",
+    importpath = "github.com/knative/build/tests/secret-env",
     deps = ["//vendor/github.com/golang/glog:go_default_library"],
 )
 
@@ -32,7 +32,7 @@ k8s_object(
 k8s_object(
     name = "build",
     images = {
-        "github.com/elafros/build/tests/secret-env": ":test-image",
+        "github.com/knative/build/tests/secret-env": ":test-image",
     },
     template = "build.yaml",
 )

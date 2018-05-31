@@ -41,9 +41,6 @@ readonly TEST_RESULT_FILE=/tmp/build-e2e-result
 # This script.
 readonly SCRIPT_CANONICAL_PATH="$(readlink -f ${BASH_SOURCE})"
 
-# Useful environment variables
-readonly OUTPUT_GOBIN="${BUILD_ROOT_DIR}/_output/bin"
-
 # Helper functions.
 
 function teardown() {

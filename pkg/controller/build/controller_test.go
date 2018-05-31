@@ -20,10 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elafros/build/pkg/builder"
-	"github.com/elafros/build/pkg/builder/google"
-	"github.com/elafros/build/pkg/builder/google/fakecloudbuild"
-	"github.com/elafros/build/pkg/builder/nop"
+	"github.com/knative/build/pkg/builder"
+	"github.com/knative/build/pkg/builder/google"
+	"github.com/knative/build/pkg/builder/google/fakecloudbuild"
+	"github.com/knative/build/pkg/builder/nop"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,9 +32,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
-	"github.com/elafros/build/pkg/client/clientset/versioned/fake"
-	informers "github.com/elafros/build/pkg/client/informers/externalversions"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
 )
 
 const (

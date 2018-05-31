@@ -19,8 +19,8 @@ package convert
 import (
 	"testing"
 
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
-	"github.com/elafros/build/pkg/buildtest"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/buildtest"
 	cloudbuild "google.golang.org/api/cloudbuild/v1"
 )
 

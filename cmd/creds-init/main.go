@@ -20,9 +20,9 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/elafros/build/pkg/credentials"
-	"github.com/elafros/build/pkg/credentials/dockercreds"
-	"github.com/elafros/build/pkg/credentials/gitcreds"
+	"github.com/knative/build/pkg/credentials"
+	"github.com/knative/build/pkg/credentials/dockercreds"
+	"github.com/knative/build/pkg/credentials/gitcreds"
 )
 
 func main() {

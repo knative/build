@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["error.go"],
-    importpath = "github.com/elafros/build/pkg/builder/validation",
+    importpath = "github.com/knative/build/pkg/builder/validation",
     visibility = ["//visibility:public"],
 )

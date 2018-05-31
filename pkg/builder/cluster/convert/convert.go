@@ -27,11 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
-	"github.com/elafros/build/pkg/builder/validation"
-	"github.com/elafros/build/pkg/credentials"
-	"github.com/elafros/build/pkg/credentials/dockercreds"
-	"github.com/elafros/build/pkg/credentials/gitcreds"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/builder/validation"
+	"github.com/knative/build/pkg/credentials"
+	"github.com/knative/build/pkg/credentials/dockercreds"
+	"github.com/knative/build/pkg/credentials/gitcreds"
 )
 
 // These are effectively const, but Go doesn't have such an annotation.

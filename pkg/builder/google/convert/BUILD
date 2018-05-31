@@ -9,7 +9,7 @@ go_library(
         "step.go",
         "volume.go",
     ],
-    importpath = "github.com/elafros/build/pkg/builder/google/convert",
+    importpath = "github.com/knative/build/pkg/builder/google/convert",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",

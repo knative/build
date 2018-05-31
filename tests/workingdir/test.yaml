@@ -20,5 +20,5 @@ metadata:
 spec:
   steps:
   - name: test
-    image: github.com/elafros/build/tests/workingdir
+    image: github.com/knative/build/tests/workingdir
     workingdir: /a/path/too/far

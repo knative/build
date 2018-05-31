@@ -21,11 +21,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/elafros/build/pkg/builder"
+	"github.com/knative/build/pkg/builder"
 
-	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
-	buildscheme "github.com/elafros/build/pkg/client/clientset/versioned/scheme"
-	informers "github.com/elafros/build/pkg/client/informers/externalversions"
+	clientset "github.com/knative/build/pkg/client/clientset/versioned"
+	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
 )
 
 func init() {

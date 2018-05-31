@@ -20,8 +20,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/elafros/build/pkg/apis/build/v1alpha1"
-	"github.com/elafros/build/pkg/builder/validation"
+	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/builder/validation"
 )
 
 var nestedPlaceholderRE = regexp.MustCompile(`\${[^}]+\$`)

@@ -11,7 +11,7 @@ go_library(
         "register.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "github.com/elafros/build/pkg/apis/build/v1alpha1",
+    importpath = "github.com/knative/build/pkg/apis/build/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build:go_default_library",

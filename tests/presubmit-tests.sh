@@ -26,7 +26,7 @@ source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
 function cleanup() {
   echo "Cleaning up for teardown"
   restore_override_vars
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
+  # --expunge is a workaround for https://github.com/knative/serving/issues/366
   bazel clean --expunge || true
 }
 
@@ -39,7 +39,7 @@ export DOCKER_REPO_OVERRIDE=REPO_NOT_SET
 if (( ! IS_PROW )); then
   trap cleanup EXIT
   echo "Cleaning up for setup"
-  # --expunge is a workaround for https://github.com/elafros/elafros/issues/366
+  # --expunge is a workaround for https://github.com/knative/serving/issues/366
   bazel clean --expunge
 fi
 

@@ -20,7 +20,7 @@ metadata:
 spec:
   steps:
   - name: test
-    image: github.com/elafros/build/tests/custom-env
+    image: github.com/knative/build/tests/custom-env
     env:
     - name: MY_VAR1
       value: foo
