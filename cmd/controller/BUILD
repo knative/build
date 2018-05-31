@@ -5,7 +5,7 @@ load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/elafros/build/cmd/controller",
+    importpath = "github.com/knative/build/cmd/controller",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/builder:go_default_library",

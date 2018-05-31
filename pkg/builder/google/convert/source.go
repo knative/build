@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"strings"
 
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	cloudbuild "google.golang.org/api/cloudbuild/v1"
 
-	"github.com/elafros/build/pkg/builder/validation"
+	"github.com/knative/build/pkg/builder/validation"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 func ToRepoSourceFromGit(og *v1alpha1.GitSourceSpec) (*cloudbuild.RepoSource, error) {
 	if !csr.MatchString(og.Url) {
 		// TODO(mattmoor): This could fall back on logic as in the on-cluster builder.
-		// https://github.com/elafros/build/issues/22
+		// https://github.com/knative/build/issues/22
 		return nil, validation.NewError("UnsupportedGitUrl", "git.url must match %v for the Google builder, got %q", csr, og.Url)
 	}
 	// Extract the capture groups.

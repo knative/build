@@ -21,7 +21,7 @@ import (
 
 	"google.golang.org/api/cloudbuild/v1"
 
-	"github.com/elafros/build/pkg/builder/validation"
+	"github.com/knative/build/pkg/builder/validation"
 )
 
 func ToContainerFromStep(og *cloudbuild.BuildStep) (*corev1.Container, error) {

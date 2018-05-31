@@ -34,15 +34,15 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/elafros/build/pkg/builder"
-	"github.com/elafros/build/pkg/builder/validation"
-	"github.com/elafros/build/pkg/controller"
+	"github.com/knative/build/pkg/builder"
+	"github.com/knative/build/pkg/builder/validation"
+	"github.com/knative/build/pkg/controller"
 
-	v1alpha1 "github.com/elafros/build/pkg/apis/build/v1alpha1"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 
-	clientset "github.com/elafros/build/pkg/client/clientset/versioned"
-	informers "github.com/elafros/build/pkg/client/informers/externalversions"
-	listers "github.com/elafros/build/pkg/client/listers/build/v1alpha1"
+	clientset "github.com/knative/build/pkg/client/clientset/versioned"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
+	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
 )
 
 const controllerAgentName = "build-controller"

@@ -5,7 +5,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/elafros/build/tests/default-workingdir",
+    importpath = "github.com/knative/build/tests/default-workingdir",
     visibility = ["//visibility:private"],
     deps = ["//vendor/github.com/golang/glog:go_default_library"],
 )
@@ -29,7 +29,7 @@ load("@k8s_object//:defaults.bzl", "k8s_object")
 k8s_object(
     name = "test",
     images = {
-        "github.com/elafros/build/tests/default-workingdir": ":test-image",
+        "github.com/knative/build/tests/default-workingdir": ":test-image",
     },
     template = "test.yaml",
 )

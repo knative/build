@@ -7,7 +7,7 @@ go_library(
         "creds.go",
         "ssh.go",
     ],
-    importpath = "github.com/elafros/build/pkg/credentials/gitcreds",
+    importpath = "github.com/knative/build/pkg/credentials/gitcreds",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/credentials:go_default_library",

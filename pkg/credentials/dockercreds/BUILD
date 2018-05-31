@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["creds.go"],
-    importpath = "github.com/elafros/build/pkg/credentials/dockercreds",
+    importpath = "github.com/knative/build/pkg/credentials/dockercreds",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/credentials:go_default_library",

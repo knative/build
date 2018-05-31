@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/elafros/build/pkg/buildtest"
+	"github.com/knative/build/pkg/buildtest"
 )
 
 const bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"

@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["builder.go"],
-    importpath = "github.com/elafros/build/pkg/builder/cluster",
+    importpath = "github.com/knative/build/pkg/builder/cluster",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/build/v1alpha1:go_default_library",
