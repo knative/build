@@ -3,8 +3,8 @@
 This document serves to define how authentication is provided during execution
 of a build.
 
-Two basic types of authentication are supported, using the Kubernetes-native
-types:
+The build system supports two types of authentication, using Kuberernetes'
+first-class `Secret` types:
 
 * `kubernetes.io/basic-auth`
 * `kubernetes.io/ssh-auth`
@@ -24,13 +24,15 @@ To solve this, prior to even the `Source` step, all builds execute a credential
 initialization process that accesses each of its secrets and aggregates them
 into their respective files in `$HOME`.
 
-## Git SSH authentication
+## SSH authentication (Git)
 
 First, define a `Secret` containing your SSH private key.
 
 ```yaml
 metadata:
   name: ssh-key
+  annotations:
+    build.dev/git-0: https://github.com  # Described below
 type: kubernetes.io/ssh-auth
 data:
   ssh-privatekey: <base64 encoded>
@@ -42,7 +44,7 @@ To generate the value of `ssh-privatekey`, copy the value of (for example) `cat 
 
 Then copy the value of `cat ~/.ssh/known_hosts | base64` to the `known_hosts` field.
 
-Next, give access to this `Secret` to a `ServiceAccount`:
+Next, direct a `ServiceAccount` to use this `Secret`:
 
 ```yaml
 apiVersion: v1
@@ -66,25 +68,33 @@ spec:
   ...
 ```
 
-When this build executes, a `~/.gitconfig` will be generated at the beginning
-of the build that uses the specified SSH key to authenticate remote Git
-operations.
+To execute the build:
 
-## Docker Basic Authentication
+```shell
+kubectl apply -f secret.yaml serviceaccount.yaml build.yaml
+```
+
+When the build executes, before steps execute, a `~/.ssh/config` will be
+generated containing the key configured in the `Secret`, and this key will be
+used to authenticate with the Git service.
+
+## Basic Authentication (Git)
 
 First, define a `Secret` containing the base64-encoded username and password
-the build should use to authenticate to a Docker registry.
+the build should use to authenticate to a Git repository.
 
 ```yaml
 metadata:
   name: basic-user-pass
+  annotations:
+    build.dev/git-0: https://github.com  # Described below
 type: kubernetes.io/basic-auth
 data:
   username: <base64 encoded>
   password: <base64 encoded>
 ```
 
-Next, give access to this `Secret` to a `ServiceAccount`:
+Next, direct a `ServiceAccount` to use this `Secret`:
 
 ```yaml
 apiVersion: v1
@@ -108,12 +118,65 @@ spec:
   ...
 ```
 
-When this build executes, a `~/.docker/config.json` will be generated at the
-beginning of the build that uses the specified username and password to
-authenticate remote Docker registry operations.
+To execute the build:
 
-This method can also be used to pass basic username/password credentials to a
-Git repository.
+```shell
+kubectl apply -f secret.yaml serviceaccount.yaml build.yaml
+```
+
+When this build executes, before steps execute, a `~/.gitconfig` will be
+generated containing the credentials configured in the `Secret`, and these
+credentials will be used to authenticate with the Git repository.
+
+## Basic Authentication (Docker)
+
+First, define a `Secret` containing the base64-encoded username and password
+the build should use to authenticate to a Docker registry.
+
+```yaml
+metadata:
+  name: basic-user-pass
+  annotations:
+    build.dev/docker-0: https://gcr.io  # Described below
+type: kubernetes.io/basic-auth
+data:
+  username: <base64 encoded>
+  password: <base64 encoded>
+```
+
+Next, direct a `ServiceAccount` to use this `Secret`:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: build-bot
+secrets:
+- name: basic-user-pass
+```
+
+Then use that `ServiceAccount` in your `Build`:
+
+```yaml
+apiVersion: build.dev/v1alpha1
+kind: Build
+metadata:
+  name: build-with-basic-auth
+spec:
+  serviceAccountName: build-bot
+  steps:
+  ...
+```
+
+To execute the build:
+
+```shell
+kubectl apply -f secret.yaml serviceaccount.yaml build.yaml
+```
+
+When this build executes, before steps execute, a `~/.docker/config.json` will
+be generated containing the credentials configured in the `Secret`, and these
+credentials will be used to authenticate with the Docker registry.
 
 ### Guiding credential selection
 
@@ -154,6 +217,10 @@ data:
 
 This describes an SSH key secret which should be used to access Git repos at
 github.com only.
+
+Credential annotation keys must begin with `build.dev/docker-` or
+`build.dev/git-` and the value describes the URL of the host with which to use
+the credential.
 
 ## Implementation Detail
 
