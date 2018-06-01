@@ -7,7 +7,6 @@ This doc explains how to setup a development environment so you can get started
 
 1. [Check out the repository](#checking-out-the-repository)
 1. [Run the controller (ko)](#running-the-controller-ko)
-1. Or [run the controller (bazel)](#running-the-controller-bazel)
 1. [Running integration tests](#running-integration-tests)
 
 ## Checking out the repository
@@ -76,59 +75,6 @@ ko apply -f config/controller.yaml
 You can clean up everything with:
 ```shell
 ko delete -f config/
-```
-
-## Running the Controller (bazel)
-
-### One-time setup
-
-To tell Bazel where to publish images, and to which cluster to deploy:
-
-```shell
-# You can put these definitions in .bashrc, so this is one-time setup.
-export DOCKER_REPO_OVERRIDE=us.gcr.io/project
-# See: kubectl config get-contexts
-export K8S_CLUSTER_OVERRIDE=cluster-name
-
-# Forces Bazel to pick up these changes (don't put in .bashrc)
-bazel clean
-```
-
-Note that this expects your Docker authorization is [properly configured](
-https://cloud.google.com/container-registry/docs/advanced-authentication#standalone_docker_credential_helper).
-
-### Standing it up
-
-You can stand up a version of this controller on-cluster with:
-```shell
-# This will register the CRD and deploy the controller to start acting on them.
-bazel run //config:everything.create
-```
-
-### Iterating
-
-As you make changes to the code, you can redeploy your controller with:
-```shell
-bazel run //config:controller.replace
-```
-
-**Two things of note:**
-1. If your (external) dependencies have changed, you should:
-   `./hack/update-deps.sh`.
-1. If your type definitions have changed, you should:
-   `./hack/update-codegen.sh`.
-
-If only internal dependencies have changed, and you want to avoid the `dep`
-portion of `./hack/update-deps.sh`, you can just run `Gazelle` with:
-```shell
-bazel run //:gazelle -- -proto=disable
-```
-
-### Cleanup
-
-You can clean up everything with:
-```shell
-bazel run //config:everything.delete
 ```
 
 ## Running Integration Tests
