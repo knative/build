@@ -21,7 +21,7 @@ spec:
   serviceAccountName: test-build-robot-git-ssh
   source:
     git:
-      url: git@github.com:elafros/build.git
+      url: git@github.com:knative/build.git
       branch: master
 
   steps:
