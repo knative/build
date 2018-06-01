@@ -26,32 +26,24 @@ source "$(dirname $(readlink -f ${BASH_SOURCE}))/library.sh"
 function cleanup() {
   echo "Cleaning up for teardown"
   restore_override_vars
-  # --expunge is a workaround for https://github.com/knative/serving/issues/366
-  bazel clean --expunge || true
 }
 
 cd ${BUILD_ROOT_DIR}
-
-# Set the required env vars to dummy values to satisfy bazel.
-export DOCKER_REPO_OVERRIDE=REPO_NOT_SET
 
 # For local runs, cleanup before and after the tests.
 if (( ! IS_PROW )); then
   trap cleanup EXIT
   echo "Cleaning up for setup"
-  # --expunge is a workaround for https://github.com/knative/serving/issues/366
-  bazel clean --expunge
 fi
 
 # Tests to be performed.
 
 # Build tests, to ensure nothing is broken.
 header "Running build tests"
-bazel build //cmd/... //pkg/...
+go build ./...
 
 # Unit tests.
 header "Running unit tests"
-bazel test //cmd/... //pkg/...
 go test ./...
 
 # Integration tests.

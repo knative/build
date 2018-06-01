@@ -25,9 +25,3 @@ trap popd EXIT
 
 # Ensure we have everything we need under vendor/
 dep ensure
-
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
-
-# Make sure that BUILD files are up to date (the above removes them).
-bazel run //:gazelle
