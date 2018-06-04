@@ -47,8 +47,8 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.Google.Operation = op.Name()
 	status.StartTime = op.startTime
 	status.SetCondition(&v1alpha1.BuildCondition{
-		Type:   v1alpha1.BuildComplete,
-		Status: corev1.ConditionFalse,
+		Type:   v1alpha1.BuildSucceeded,
+		Status: corev1.ConditionUnknown,
 		Reason: "Building",
 	})
 	return nil
@@ -70,10 +70,10 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 				CompletionTime: metav1.Now(),
 			}
 			if cbOp.Error != nil {
-				bs.RemoveCondition(v1alpha1.BuildComplete)
+				bs.RemoveCondition(v1alpha1.BuildSucceeded)
 				bs.SetCondition(&v1alpha1.BuildCondition{
-					Type:   v1alpha1.BuildFailed,
-					Status: corev1.ConditionTrue,
+					Type:   v1alpha1.BuildSucceeded,
+					Status: corev1.ConditionFalse,
 					// TODO(mattmoor): Considering inlining the final "Status"
 					// string from GCB's Build (camelcased) as "Reason" here:
 					// https://godoc.org/google.golang.org/api/cloudbuild/v1#Build
@@ -81,7 +81,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 				})
 			} else {
 				bs.SetCondition(&v1alpha1.BuildCondition{
-					Type:   v1alpha1.BuildComplete,
+					Type:   v1alpha1.BuildSucceeded,
 					Status: corev1.ConditionTrue,
 				})
 			}

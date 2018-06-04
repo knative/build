@@ -325,8 +325,8 @@ func (c *Controller) syncHandler(key string) error {
 			op, err := b.Execute()
 			if err != nil {
 				build.Status.SetCondition(&v1alpha1.BuildCondition{
-					Type:    v1alpha1.BuildFailed,
-					Status:  corev1.ConditionTrue,
+					Type:    v1alpha1.BuildSucceeded,
+					Status:  corev1.ConditionFalse,
 					Reason:  "BuildExecuteFailed",
 					Message: err.Error(),
 				})

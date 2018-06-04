@@ -51,8 +51,8 @@ func (nb *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.Google.Operation = nb.Name()
 	status.StartTime = StartTime
 	status.SetCondition(&v1alpha1.BuildCondition{
-		Type:   v1alpha1.BuildComplete,
-		Status: corev1.ConditionFalse,
+		Type:   v1alpha1.BuildSucceeded,
+		Status: corev1.ConditionUnknown,
 		Reason: "Building",
 	})
 	return nil
@@ -70,16 +70,16 @@ func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	}
 
 	if nb.builder.ErrorMessage != "" {
-		bs.RemoveCondition(v1alpha1.BuildComplete)
+		bs.RemoveCondition(v1alpha1.BuildSucceeded)
 		bs.SetCondition(&v1alpha1.BuildCondition{
-			Type:    v1alpha1.BuildFailed,
-			Status:  corev1.ConditionTrue,
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
 			Reason:  "NopFailed",
 			Message: nb.builder.ErrorMessage,
 		})
 	} else {
 		bs.SetCondition(&v1alpha1.BuildCondition{
-			Type:   v1alpha1.BuildComplete,
+			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionTrue,
 		})
 	}
