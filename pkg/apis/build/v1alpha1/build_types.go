@@ -147,7 +147,7 @@ type GoogleSpec struct {
 type BuildConditionType string
 
 const (
-	// BuildComplete is set when the build is running, and becomes True
+	// BuildSucceeded is set when the build is running, and becomes True
 	// when the build finishes successfully.
 	//
 	// If the build is ongoing, its status will be Unknown. If it fails,

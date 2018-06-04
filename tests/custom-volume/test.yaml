@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-custom-volume
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   steps:
   - name: write

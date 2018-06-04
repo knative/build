@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-build-with-serviceaccount-docker-basic
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   serviceAccountName: test-build-robot-docker-basic
   steps:

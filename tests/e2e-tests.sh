@@ -205,7 +205,7 @@ done
 
 # Check that tests passed.
 tests_passed=1
-for expected_status in complete failed invalid; do
+for expected_status in succeeded invalid; do
   results="$(kubectl get builds -l expect=${expected_status} \
       --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{" "}{end}')"
   for result in ${results}; do

@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-build-with-step-status
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   steps:
   - name: default-termination-path

@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-build-with-serviceaccount-pull-secrets
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   serviceAccountName: test-build-robot
   steps:

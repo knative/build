@@ -99,16 +99,16 @@ format the output nicely.
 
 ```shell
 $ kubectl get builds -o=custom-columns-file=./tests/columns.txt
-NAME                             TYPE       STATUS    START                  END
-test-custom-env-vars             Complete   True      2018-01-26T02:36:00Z   2018-01-26T02:36:02Z
-test-custom-volume               Complete   True      2018-01-26T02:36:07Z   2018-01-26T02:36:10Z
-test-default-workingdir          Complete   True      2018-01-26T02:36:02Z   2018-01-26T02:36:12Z
-test-home-is-set                 Complete   True      2018-01-26T02:35:58Z   2018-01-26T02:36:01Z
-test-home-volume                 Complete   True      2018-01-26T02:36:06Z   2018-01-26T02:36:10Z
-test-template-duplicate-volume   Invalid    True      <nil>                  <nil>
-test-template-volume             Complete   True      2018-01-26T02:36:08Z   2018-01-26T02:36:12Z
-test-workingdir                  Complete   True      2018-01-26T02:36:04Z   2018-01-26T02:36:08Z
-test-workspace-volume            Complete   True      2018-01-26T02:36:05Z   2018-01-26T02:36:09Z
+NAME                             TYPE        STATUS    START                  END
+test-custom-env-vars             Succeeded   True      2018-01-26T02:36:00Z   2018-01-26T02:36:02Z
+test-custom-volume               Succeeded   True      2018-01-26T02:36:07Z   2018-01-26T02:36:10Z
+test-default-workingdir          Succeeded   True      2018-01-26T02:36:02Z   2018-01-26T02:36:12Z
+test-home-is-set                 Succeeded   True      2018-01-26T02:35:58Z   2018-01-26T02:36:01Z
+test-home-volume                 Succeeded   True      2018-01-26T02:36:06Z   2018-01-26T02:36:10Z
+test-template-duplicate-volume   Invalid     True      <nil>                  <nil>
+test-template-volume             Succeeded   True      2018-01-26T02:36:08Z   2018-01-26T02:36:12Z
+test-workingdir                  Succeeded   True      2018-01-26T02:36:04Z   2018-01-26T02:36:08Z
+test-workspace-volume            Succeeded   True      2018-01-26T02:36:05Z   2018-01-26T02:36:09Z
 
 ```
 
@@ -123,13 +123,13 @@ test-template-duplicate-volume   Invalid   True      <nil>     <nil>
 
 $ kubectl get builds -o=custom-columns-file=./tests/columns.txt -l expect=complete
 NAME                      TYPE       STATUS    START                  END
-test-custom-env-vars      Complete   True      2018-01-26T02:36:00Z   2018-01-26T02:36:02Z
-test-custom-volume        Complete   True      2018-01-26T02:36:07Z   2018-01-26T02:36:10Z
-test-default-workingdir   Complete   True      2018-01-26T02:36:02Z   2018-01-26T02:36:12Z
-test-home-is-set          Complete   True      2018-01-26T02:35:58Z   2018-01-26T02:36:01Z
-test-home-volume          Complete   True      2018-01-26T02:36:06Z   2018-01-26T02:36:10Z
-test-template-volume      Complete   True      2018-01-26T02:36:08Z   2018-01-26T02:36:12Z
-test-workingdir           Complete   True      2018-01-26T02:36:04Z   2018-01-26T02:36:08Z
-test-workspace-volume     Complete   True      2018-01-26T02:36:05Z   2018-01-26T02:36:09Z
+test-custom-env-vars      Succeeded  True      2018-01-26T02:36:00Z   2018-01-26T02:36:02Z
+test-custom-volume        Succeeded  True      2018-01-26T02:36:07Z   2018-01-26T02:36:10Z
+test-default-workingdir   Succeeded  True      2018-01-26T02:36:02Z   2018-01-26T02:36:12Z
+test-home-is-set          Succeeded  True      2018-01-26T02:35:58Z   2018-01-26T02:36:01Z
+test-home-volume          Succeeded  True      2018-01-26T02:36:06Z   2018-01-26T02:36:10Z
+test-template-volume      Succeeded  True      2018-01-26T02:36:08Z   2018-01-26T02:36:12Z
+test-workingdir           Succeeded  True      2018-01-26T02:36:04Z   2018-01-26T02:36:08Z
+test-workspace-volume     Succeeded  True      2018-01-26T02:36:05Z   2018-01-26T02:36:09Z
 
 ```
