@@ -155,6 +155,8 @@ const (
 	BuildSucceeded BuildConditionType = "Succeeded"
 
 	// BuildInvalid specifies that the given build specification is invalid.
+	//
+	// TODO(jasonhall): Remove when webhook validation rejects invalid builds.
 	BuildInvalid BuildConditionType = "Invalid"
 )
 

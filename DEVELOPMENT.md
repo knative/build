@@ -121,7 +121,7 @@ $ kubectl get builds -o=custom-columns-file=./tests/columns.txt -l expect=invali
 NAME                             TYPE      STATUS    START     END
 test-template-duplicate-volume   Invalid   True      <nil>     <nil>
 
-$ kubectl get builds -o=custom-columns-file=./tests/columns.txt -l expect=complete
+$ kubectl get builds -o=custom-columns-file=./tests/columns.txt -l expect=succeeded
 NAME                      TYPE       STATUS    START                  END
 test-custom-env-vars      Succeeded  True      2018-01-26T02:36:00Z   2018-01-26T02:36:02Z
 test-custom-volume        Succeeded  True      2018-01-26T02:36:07Z   2018-01-26T02:36:10Z

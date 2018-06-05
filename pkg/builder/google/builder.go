@@ -70,7 +70,6 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 				CompletionTime: metav1.Now(),
 			}
 			if cbOp.Error != nil {
-				bs.RemoveCondition(v1alpha1.BuildSucceeded)
 				bs.SetCondition(&v1alpha1.BuildCondition{
 					Type:   v1alpha1.BuildSucceeded,
 					Status: corev1.ConditionFalse,

@@ -28,4 +28,4 @@ spec:
   - name: config
     image: ubuntu
     command: ["/bin/bash"]
-    args: ["-c", "cat WORKSPACE"]
+    args: ["-c", "cat README.md"]
