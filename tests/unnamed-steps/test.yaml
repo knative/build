@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-unnamed-steps
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   steps:
   - image: 'ubuntu'

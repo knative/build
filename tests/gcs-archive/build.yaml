@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-gcs-archive
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   source:
     gcs:

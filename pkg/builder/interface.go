@@ -62,11 +62,11 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 		return false
 	}
 	for _, cond := range status.Conditions {
-		switch cond.Type {
-		case v1alpha1.BuildComplete, v1alpha1.BuildFailed, v1alpha1.BuildInvalid:
-			if cond.Status == corev1.ConditionTrue {
-				return true
-			}
+		if cond.Type == v1alpha1.BuildInvalid && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+		if cond.Type == v1alpha1.BuildSucceeded {
+			return cond.Status != corev1.ConditionUnknown
 		}
 	}
 	return false
@@ -77,11 +77,12 @@ func ErrorMessage(status *v1alpha1.BuildStatus) (string, bool) {
 		return "", false
 	}
 	for _, cond := range status.Conditions {
-		switch cond.Type {
-		case v1alpha1.BuildFailed, v1alpha1.BuildInvalid:
-			if cond.Status == corev1.ConditionTrue {
-				return cond.Message, true
-			}
+		if cond.Type == v1alpha1.BuildInvalid && cond.Status == corev1.ConditionTrue {
+			return cond.Message, true
+		}
+
+		if cond.Type == v1alpha1.BuildSucceeded && cond.Status == corev1.ConditionFalse {
+			return cond.Message, true
 		}
 	}
 	return "", false
@@ -92,11 +93,8 @@ func IsValidTemplate(status *v1alpha1.BuildTemplateStatus) bool {
 		return true
 	}
 	for _, cond := range status.Conditions {
-		switch cond.Type {
-		case v1alpha1.BuildTemplateInvalid:
-			if cond.Status == corev1.ConditionTrue {
-				return false
-			}
+		if cond.Type == v1alpha1.BuildTemplateInvalid && cond.Status == corev1.ConditionTrue {
+			return false
 		}
 	}
 	return true

@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-build-with-serviceaccount-git-ssh
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   serviceAccountName: test-build-robot-git-ssh
   source:
@@ -28,4 +28,4 @@ spec:
   - name: config
     image: ubuntu
     command: ["/bin/bash"]
-    args: ["-c", "cat WORKSPACE"]
+    args: ["-c", "cat README.md"]

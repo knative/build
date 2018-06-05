@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-template-env-merge
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   template:
     name: template-env-merge

@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-custom-source
   labels:
-    expect: complete
+    expect: succeeded
 spec:
   source:
     custom:

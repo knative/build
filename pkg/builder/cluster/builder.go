@@ -56,8 +56,8 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 		status.StepStates = append(status.StepStates, s.State)
 	}
 	status.SetCondition(&v1alpha1.BuildCondition{
-		Type:   v1alpha1.BuildComplete,
-		Status: corev1.ConditionFalse,
+		Type:   v1alpha1.BuildSucceeded,
+		Status: corev1.ConditionUnknown,
 		Reason: "Building",
 	})
 	return nil
@@ -93,15 +93,14 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	}
 	if pod.Status.Phase == corev1.PodFailed {
 		msg := getFailureMessage(pod)
-		bs.RemoveCondition(v1alpha1.BuildComplete)
 		bs.SetCondition(&v1alpha1.BuildCondition{
-			Type:    v1alpha1.BuildFailed,
-			Status:  corev1.ConditionTrue,
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
 			Message: msg,
 		})
 	} else {
 		bs.SetCondition(&v1alpha1.BuildCondition{
-			Type:   v1alpha1.BuildComplete,
+			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionTrue,
 		})
 	}

@@ -195,7 +195,8 @@ exit_if_test_failed
 tests_finished=0
 for i in {1..60}; do
   finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
-  if [[ ! "$finished" == *"False"* ]]; then
+  echo $finished
+  if [[ ! "$finished" == *"Unknown"* ]]; then
     tests_finished=1
     break
   fi
@@ -205,12 +206,26 @@ done
 
 # Check that tests passed.
 tests_passed=1
-for expected_status in complete failed invalid; do
+for expected_status in succeeded failed invalid; do
   results="$(kubectl get builds -l expect=${expected_status} \
-      --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{" "}{end}')"
+      --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
+  case $expected_status in
+    succeeded)
+      want=succeededtrue
+      ;;
+    failed)
+      want=succeededfalse
+      ;;
+    invalid)
+      want=invalidtrue
+      ;;
+    *)
+      echo Invalid expected status $expected_status
+      exit 1
+  esac
   for result in ${results}; do
-    if [[ ! "${result,,}" == *"=${expected_status}" ]]; then
-      echo "ERROR: test ${result} but should be ${expected_status}"
+    if [[ ! "${result,,}" == *"=${want}" ]]; then
+      echo "ERROR: test ${result} but should be ${want}"
       tests_passed=0
     fi
   done
