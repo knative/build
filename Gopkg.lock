@@ -114,6 +114,17 @@
   revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
 
 [[projects]]
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
@@ -194,6 +205,12 @@
   version = "v1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/josephburnett/k8sflag"
+  packages = ["pkg/k8sflag"]
+  revision = "eaf31dc5c82d361eba9d4a94739d6d67ddbb59c9"
+
+[[projects]]
   name = "github.com/json-iterator/go"
   packages = ["."]
   revision = "13f86432b882000a51c6e610c620974462691a97"
@@ -203,6 +220,12 @@
   packages = ["."]
   revision = "c2353362d570a7bfa228149c62842019201cfb71"
   version = "v1.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mattbaird/jsonpatch"
+  packages = ["."]
+  revision = "81af80346b1a01caae0cbc27fd3c1ba5b11e189f"
 
 [[projects]]
   branch = "master"
@@ -258,6 +281,31 @@
   packages = ["."]
   revision = "b5e8006cbee93ec955a89ab31e0e3ce3204f3736"
   version = "v1.0.2"
+
+[[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
+  version = "v1.8.0"
 
 [[projects]]
   name = "golang.org/x/crypto"
@@ -376,6 +424,7 @@
 [[projects]]
   name = "k8s.io/api"
   packages = [
+    "admission/v1beta1",
     "admissionregistration/v1alpha1",
     "admissionregistration/v1beta1",
     "apps/v1",
@@ -665,6 +714,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "505a76767f7f9d4f3e1311dd4e546eaea586038fde49843518ed6cd7b379bfc5"
+  inputs-digest = "93433f740527ca11e11db56514fbc02ad78c734e2c787904e2e35ef99aacb5e6"
   solver-name = "gps-cdcl"
   solver-version = 1
