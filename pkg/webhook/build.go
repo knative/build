@@ -19,7 +19,7 @@ import (
 	"github.com/mattbaird/jsonpatch"
 )
 
-func validateBuild(patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error {
+func validateBuild(patches *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {
 	// TODO(jasonhall): Move validation logic out of controller to here.
 	return nil
 }

@@ -56,7 +56,7 @@ const (
 	buildWebhookDeployment = "build-webhook"
 )
 
-var deploymentKind = v1beta1.SchemeGroupVersion.WithKind("Deployment")
+var resources = []string{"builds", "buildtemplates"}
 
 // ControllerOptions contains the configuration for the webhook
 type ControllerOptions struct {
@@ -89,38 +89,32 @@ type ControllerOptions struct {
 	RegistrationDelay time.Duration
 }
 
-// ResourceCallback defines a signature for resource specific (Build, BuildTemplate, etc.)
-// handlers that can validate and mutate an object. If non-nil error is returned, object creation
-// is denied. Mutations should be appended to the patches operations.
-type ResourceCallback func(patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error
+// genericCRDHandler defines the factory object to use for unmarshaling incoming objects
+type genericCRDHandler struct {
+	Factory runtime.Object
 
-// ResourceDefaulter defines a signature for resource specific (Build, BuildTemplate, etc.)
-// handlers that can set defaults on an object. If non-nil error is returned, object creation
-// is denied. Mutations should be appended to the patches operations.
-type ResourceDefaulter func(patches *[]jsonpatch.JsonPatchOperation, crd GenericCRD) error
+	// Defaulter sets defaults on an object. If non-nil error is returned, object
+	// creation is denied. Mutations should be appended to the patches operations.
+	Defaulter func(patches *[]jsonpatch.JsonPatchOperation, crd genericCRD) error
 
-// GenericCRDHandler defines the factory object to use for unmarshaling incoming objects
-type GenericCRDHandler struct {
-	Factory   runtime.Object
-	Defaulter ResourceDefaulter
-	Validator ResourceCallback
+	// Validator validates an object, mutating it if necessary. If non-nil error
+	// is returned, object creation is denied. Mutations should be appended to
+	// the patches operations.
+	Validator func(patches *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error
 }
-
-var _ GenericCRD = (*v1alpha1.Build)(nil)
-var _ GenericCRD = (*v1alpha1.BuildTemplate)(nil)
 
 // AdmissionController implements the external admission webhook for validation of
 // pilot configuration.
 type AdmissionController struct {
 	client   kubernetes.Interface
 	options  ControllerOptions
-	handlers map[string]GenericCRDHandler
+	handlers map[string]genericCRDHandler
 	logger   *zap.SugaredLogger
 }
 
-// GenericCRD is the interface definition that allows us to perform the generic
+// genericCRD is the interface definition that allows us to perform the generic
 // CRD actions like deciding whether to increment generation and so forth.
-type GenericCRD interface {
+type genericCRD interface {
 	// GetObjectMeta return the object metadata
 	GetObjectMeta() metav1.Object
 	// GetGeneration returns the current Generation of the object
@@ -131,7 +125,10 @@ type GenericCRD interface {
 	GetSpecJSON() ([]byte, error)
 }
 
-// GetAPIServerExtensionCACert gets the Kubernetes aggregate apiserver
+var _ genericCRD = (*v1alpha1.Build)(nil)
+var _ genericCRD = (*v1alpha1.BuildTemplate)(nil)
+
+// getAPIServerExtensionCACert gets the Kubernetes aggregate apiserver
 // client CA cert used by validator.
 //
 // NOTE: this certificate is provided kubernetes. We do not control
@@ -210,12 +207,12 @@ func NewAdmissionController(client kubernetes.Interface, options ControllerOptio
 	return &AdmissionController{
 		client:  client,
 		options: options,
-		handlers: map[string]GenericCRDHandler{
-			"Build": GenericCRDHandler{
+		handlers: map[string]genericCRDHandler{
+			"Build": genericCRDHandler{
 				Factory:   &v1alpha1.Build{},
 				Validator: validateBuild,
 			},
-			"BuildTemplate": GenericCRDHandler{
+			"BuildTemplate": genericCRDHandler{
 				Factory:   &v1alpha1.BuildTemplate{},
 				Validator: validateBuildTemplate,
 			},
@@ -289,7 +286,7 @@ func (ac *AdmissionController) Run(stop <-chan struct{}) error {
 	return nil
 }
 
-// Unregister unregisters the external admission webhook
+// unregister unregisters the external admission webhook
 func (ac *AdmissionController) unregister(
 	ctx context.Context, client clientadmissionregistrationv1beta1.MutatingWebhookConfigurationInterface) error {
 	logger := logging.FromContext(ctx)
@@ -297,17 +294,21 @@ func (ac *AdmissionController) unregister(
 	return nil
 }
 
-// Register registers the external admission webhook for pilot
-// configuration types.
-
 func (ac *AdmissionController) register(
 	ctx context.Context, client clientadmissionregistrationv1beta1.MutatingWebhookConfigurationInterface, caCert []byte) error { // nolint: lll
 	logger := logging.FromContext(ctx)
-	resources := []string{"builds", "buildtemplates"}
+
+	// Set the owner to our deployment
+	deployment, err := ac.client.ExtensionsV1beta1().Deployments(pkg.GetBuildSystemNamespace()).Get(buildWebhookDeployment, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("Failed to fetch our deployment: %s", err)
+	}
+	deploymentRef := metav1.NewControllerRef(deployment, v1beta1.SchemeGroupVersion.WithKind("Deployment"))
 
 	webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ac.options.WebhookName,
+			Name:            ac.options.WebhookName,
+			OwnerReferences: []metav1.OwnerReference{*deploymentRef},
 		},
 		Webhooks: []admissionregistrationv1beta1.Webhook{{
 			Name: ac.options.WebhookName,
@@ -332,17 +333,8 @@ func (ac *AdmissionController) register(
 		}},
 	}
 
-	// Set the owner to our deployment
-	deployment, err := ac.client.ExtensionsV1beta1().Deployments(pkg.GetBuildSystemNamespace()).Get(buildWebhookDeployment, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("Failed to fetch our deployment: %s", err)
-	}
-	deploymentRef := metav1.NewControllerRef(deployment, deploymentKind)
-	webhook.OwnerReferences = append(webhook.OwnerReferences, *deploymentRef)
-
 	// Try to create the webhook and if it already exists validate webhook rules
-	_, err = client.Create(webhook)
-	if err != nil {
+	if _, err := client.Create(webhook); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("Failed to create a webhook: %s", err)
 		}
@@ -452,8 +444,8 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 		return nil, fmt.Errorf("unhandled kind: %q", kind)
 	}
 
-	oldObj := handler.Factory.DeepCopyObject().(GenericCRD)
-	newObj := handler.Factory.DeepCopyObject().(GenericCRD)
+	oldObj := handler.Factory.DeepCopyObject().(genericCRD)
+	newObj := handler.Factory.DeepCopyObject().(genericCRD)
 
 	if len(newBytes) != 0 {
 		newDecoder := json.NewDecoder(bytes.NewBuffer(newBytes))
@@ -508,7 +500,7 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 	return json.Marshal(patches)
 }
 
-func validateMetadata(new GenericCRD) error {
+func validateMetadata(new genericCRD) error {
 	name := new.GetObjectMeta().GetName()
 
 	if strings.Contains(name, ".") {
@@ -529,7 +521,7 @@ func validateMetadata(new GenericCRD) error {
 // by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
 // So, we add Generation here. Once that gets fixed, remove this and use
 // ObjectMeta.Generation instead.
-func updateGeneration(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error {
+func updateGeneration(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old genericCRD, new genericCRD) error {
 	logger := logging.FromContext(ctx)
 	var oldGeneration int64
 	if old == nil {
