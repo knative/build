@@ -37,3 +37,6 @@ bazel-bin
 bazel-genfiles
 bazel-out
 bazel-testlogs
+
+# VSCode config
+.vscode
