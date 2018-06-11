@@ -114,6 +114,17 @@
   revision = "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9"
 
 [[projects]]
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
@@ -703,6 +714,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6fff87024ced9ebd729ffdf190f95707aa648705f23c1588256c379822d5341a"
+  inputs-digest = "93433f740527ca11e11db56514fbc02ad78c734e2c787904e2e35ef99aacb5e6"
   solver-name = "gps-cdcl"
   solver-version = 1
