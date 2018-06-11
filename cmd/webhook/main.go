@@ -56,9 +56,5 @@ func main() {
 		SecretName:       "build-webhook-certs",
 		WebhookName:      "webhook.build.dev",
 	}
-	controller, err := webhook.NewAdmissionController(clientset, options, logger)
-	if err != nil {
-		logger.Fatal("Failed to create the admission controller", zap.Error(err))
-	}
-	controller.Run(stopCh)
+	webhook.NewAdmissionController(clientset, options, logger).Run(stopCh)
 }

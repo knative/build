@@ -89,12 +89,12 @@ type ControllerOptions struct {
 	RegistrationDelay time.Duration
 }
 
-// ResourceCallback defines a signature for resource specific (Route, Configuration, etc.)
+// ResourceCallback defines a signature for resource specific (Build, BuildTemplate, etc.)
 // handlers that can validate and mutate an object. If non-nil error is returned, object creation
 // is denied. Mutations should be appended to the patches operations.
 type ResourceCallback func(patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error
 
-// ResourceDefaulter defines a signature for resource specific (Route, Configuration, etc.)
+// ResourceDefaulter defines a signature for resource specific (Build, BuildTemplate, etc.)
 // handlers that can set defaults on an object. If non-nil error is returned, object creation
 // is denied. Mutations should be appended to the patches operations.
 type ResourceDefaulter func(patches *[]jsonpatch.JsonPatchOperation, crd GenericCRD) error
@@ -206,22 +206,22 @@ func getOrGenerateKeyCertsFromSecret(ctx context.Context, client kubernetes.Inte
 }
 
 // NewAdmissionController creates a new instance of the admission webhook controller.
-func NewAdmissionController(client kubernetes.Interface, options ControllerOptions, logger *zap.SugaredLogger) (*AdmissionController, error) {
+func NewAdmissionController(client kubernetes.Interface, options ControllerOptions, logger *zap.SugaredLogger) *AdmissionController {
 	return &AdmissionController{
 		client:  client,
 		options: options,
 		handlers: map[string]GenericCRDHandler{
 			"Build": GenericCRDHandler{
 				Factory:   &v1alpha1.Build{},
-				Validator: func(patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error { return nil },
+				Validator: validateBuild,
 			},
 			"BuildTemplate": GenericCRDHandler{
 				Factory:   &v1alpha1.BuildTemplate{},
-				Validator: func(patches *[]jsonpatch.JsonPatchOperation, old GenericCRD, new GenericCRD) error { return nil },
+				Validator: validateBuildTemplate,
 			},
 		},
 		logger: logger,
-	}, nil
+	}
 }
 
 func configureCerts(ctx context.Context, client kubernetes.Interface, options *ControllerOptions) (*tls.Config, []byte, error) {
