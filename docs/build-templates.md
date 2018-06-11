@@ -2,16 +2,22 @@
 
 This document serves to define "Build Templates", and their capabilities.
 
+A set of curated and supported build templates is available in the
+[`build-templates`](https://github.com/elafros/build-templates) repo.
+
 ## What is a Build Template?
 
-A `BuildTemplate` is one of the custom resources introduced by this project.
-It serves to encapsulate a shareable [build](./builds.md) process with some
-limited paramaterization capabilities.
+A `BuildTemplate` serves to encapsulate a shareable [build](./builds.md)
+process with some limited paramaterization capabilities.
 
 ### Example Template
 
 For example, a `BuildTemplate` to encapsulate a `Dockerfile` build might look
 something like this:
+
+**NB:** Building a container image using `docker build` on-cluster is _very
+unsafe_. Use [kaniko](https://github.com/GoogleContainerTools/kaniko) instead.
+This is only used for the purposes of demonstration.
 
 ```yaml
 spec:
@@ -57,21 +63,20 @@ spec:
 
 In this example, `parameters` describes the formal arguments for the template.
 The `description` is used for diagnostic messages during validation (and maybe
-in the future for UI).  The `default` value enables a template to have a
+in the future for UI). The `default` value enables a template to have a
 graduated complexity, where options are only overridden when the user strays
 from some set of sane defaults.
 
-`steps` and `volumes` are just like in a [Build resource](./builds.md), but may
-contain references to parameters in the form: `${PARAMETER_NAME}`.
+`steps` and `volumes` are just like in a [`Build`(./builds.md) resource, but
+may contain references to parameters in the form: `${PARAMETER_NAME}`.
 
-The `steps` of a template replace those of its Build.  The `volumes` of a
+The `steps` of a template replace those of its Build. The `volumes` of a
 template augment those of its Build.
-
 
 ### Example Builds
 
 For the sake of illustrating re-use, here are several example Builds
-instantiating the BuildTemplate above (`dockerfile-build-and-push`).
+instantiating the `BuildTemplate` above (`dockerfile-build-and-push`).
 
 Build `mchmarny/rester-tester`:
 ```yaml
