@@ -119,6 +119,6 @@ spec:
     # Optional overrides
     - name: DIRECTORY
       value: /workspace/docker
-    - name: DOCKERFILE_PATH
+    - name: DOCKERFILE_NAME
       value: Dockerfile-17.06.1
 ```
