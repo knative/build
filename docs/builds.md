@@ -151,4 +151,4 @@ spec:
 #### Lots 'o trivial examples
 
 For a variety of additional (mostly trivial) examples, see also our [tests
-directory](./tests).
+directory](../tests).
