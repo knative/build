@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/knative/build/pkg/buildtest"
@@ -67,6 +68,10 @@ func TestBuildConditions(t *testing.T) {
 
 	if len(rev.Status.Conditions) != 1 {
 		t.Fatalf("Unexpected Condition length; want 1, got %d", len(rev.Status.Conditions))
+	}
+
+	if got, want := rev.Status.GetCondition(foo.Type), foo; !reflect.DeepEqual(got, want) {
+		t.Errorf("GetCondition() = %v, want %v", got, want)
 	}
 
 	// Add a second condition.
