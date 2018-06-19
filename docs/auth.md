@@ -29,6 +29,8 @@ into their respective files in `$HOME`.
 First, define a `Secret` containing your SSH private key.
 
 ```yaml
+apiVersion: v1
+kind: Secret
 metadata:
   name: ssh-key
   annotations:
@@ -84,6 +86,8 @@ First, define a `Secret` containing the base64-encoded username and password
 the build should use to authenticate to a Git repository.
 
 ```yaml
+apiVersion: v1
+kind: Secret
 metadata:
   name: basic-user-pass
   annotations:
@@ -134,6 +138,8 @@ First, define a `Secret` containing the base64-encoded username and password
 the build should use to authenticate to a Docker registry.
 
 ```yaml
+apiVersion: v1
+kind: Secret
 metadata:
   name: basic-user-pass
   annotations:
@@ -186,6 +192,8 @@ many private Docker repositories. You can use annotations to guide which secret
 to use to authenticate to different resources, for example:
 
 ```yaml
+apiVersion: v1
+kind: Secret
 metadata:
   annotations:
     build.dev/git-0: https://github.com
@@ -204,6 +212,8 @@ repositories at gcr.io.
 Similarly, for SSH:
 
 ```yaml
+apiVersion: v1
+kind: Secret
 metadata:
   annotations:
     build.dev/git-0: github.com
