@@ -30,10 +30,10 @@ block for CI/CD in [the future](./roadmap-2018.md)
 
 ## Terminology and Conventions
 
-* [Builds](./builds.md)
-* [Build Templates](./build-templates.md)
-* [Builders](./builder-contract.md)
-* [Authentication](./cmd/creds-init/README.md)
+* [Builds](./docs/builds.md)
+* [Build Templates](./docs/build-templates.md)
+* [Builders](./docs/builder-contract.md)
+* [Authentication](./docs/auth.md)
 
 ## Getting Started
 
