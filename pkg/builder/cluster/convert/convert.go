@@ -282,9 +282,9 @@ func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Inte
 
 		matched := false
 		for _, b := range builders {
-			if arg, found := b.HasMatchingAnnotation(secret); found {
+			if sa := b.HasMatchingAnnotation(secret); len(sa) > 0 {
 				matched = true
-				args = append(args, arg)
+				args = append(args, sa...)
 			}
 		}
 

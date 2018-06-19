@@ -124,20 +124,24 @@ func NewBuilder() credentials.Builder {
 	return &DockerConfigBuilder{}
 }
 
-func (dcb *DockerConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (string, bool) {
+// HasMatchingAnnotations extracts flags for the credential helper
+// from the supplied secret and returns a slice (of length 0 or
+// greater) of applicable domains.
+func (dcb *DockerConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) []string {
+	var flags []string
 	switch secret.Type {
 	case corev1.SecretTypeBasicAuth:
 		// OK.
 	default:
-		return "", false
+		return flags
 	}
 
 	for k, v := range secret.Annotations {
 		if strings.HasPrefix(k, annotationPrefix) {
-			return fmt.Sprintf("-basic-docker=%s=%s", secret.Name, v), true
+			flags = append(flags, fmt.Sprintf("-basic-docker=%s=%s", secret.Name, v))
 		}
 	}
-	return "", false
+	return flags
 }
 
 func (dcb *DockerConfigBuilder) Write() error {
