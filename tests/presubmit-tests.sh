@@ -41,6 +41,9 @@ fi
 # Build tests, to ensure nothing is broken.
 header "Running build tests"
 go build ./...
+# kubekins images don't have dep installed by default
+go get -u github.com/golang/dep/cmd/dep
+./hack/verify-codegen.sh
 
 # Unit tests.
 header "Running unit tests"
