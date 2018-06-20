@@ -51,7 +51,7 @@ A custom service account may be specified via `serviceAccountName: build-bot`.
 Service accounts may be used to project certain types of credentials into the
 context of a Build automagically.  For more information on how this process is
 configured and how it works, see the [credential initializer documentation](
-./cmd/creds-init/README.md).
+./auth.md).
 
 
 #### Volumes
@@ -64,7 +64,7 @@ Volumes can be used in a wide variety of ways, just as in Kubernetes itself.
 Common examples include:
 
  * Mounting in Kubernetes secrets (a manual alternative to [our service account
- model](./cmd/creds-init/README.md)).
+ model](./auth.md)).
 
  * Creating an extra `emptyDir` volume to act as a multi-step cache (maybe even
  a persistent volume for inter-build caching).
@@ -151,4 +151,4 @@ spec:
 #### Lots 'o trivial examples
 
 For a variety of additional (mostly trivial) examples, see also our [tests
-directory](./tests).
+directory](../tests).
