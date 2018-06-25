@@ -19,7 +19,6 @@ package webhook
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -171,7 +170,8 @@ func TestValidateBuild(t *testing.T) {
 	ctx := context.Background()
 	hasDefault := "has-default"
 	empty := ""
-	for i, test := range []struct {
+	for _, c := range []struct {
+		desc   string
 		build  *v1alpha1.Build
 		tmpl   *v1alpha1.BuildTemplate
 		reason string // if "", expect success.
@@ -185,7 +185,7 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
-		// Multiple unnamed steps.
+		desc: "Multiple unnamed steps",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Steps: []corev1.Container{{
@@ -319,7 +319,7 @@ func TestValidateBuild(t *testing.T) {
 		},
 		reason: "UnsatisfiedParameter",
 	}, {
-		// valid, arg doesn't match any parameter.
+		desc: "Arg doesn't match any parameter",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Template: &v1alpha1.TemplateInstantiationSpec{
@@ -336,7 +336,7 @@ func TestValidateBuild(t *testing.T) {
 			Spec:       v1alpha1.BuildTemplateSpec{},
 		},
 	}, {
-		// valid, since unsatisfied parameter has a default.
+		desc: "Unsatisfied parameter has a default",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Template: &v1alpha1.TemplateInstantiationSpec{
@@ -360,7 +360,7 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
-		// valid, since unsatisfied parameter has an empty default.
+		desc: "Unsatisfied parameter has empty default",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Template: &v1alpha1.TemplateInstantiationSpec{
@@ -378,7 +378,6 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
-		// invalid, since build is missing template name
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Template: &v1alpha1.TemplateInstantiationSpec{},
@@ -386,18 +385,22 @@ func TestValidateBuild(t *testing.T) {
 		},
 		reason: "MissingTemplateName",
 	}} {
-		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+		name := c.desc
+		if c.reason != "" {
+			name = "invalid-" + c.reason
+		}
+		t.Run(name, func(t *testing.T) {
 			buildClient := fakebuildclientset.NewSimpleClientset()
-			if test.tmpl != nil {
-				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(test.tmpl); err != nil {
+			if c.tmpl != nil {
+				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
 					t.Fatalf("Failed to create template: %v", err)
 				}
 			}
 
 			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), buildClient, &nop.Builder{}, defaultOptions, testLogger)
-			verr := ac.validateBuild(ctx, nil, nil, test.build)
-			if gotErr, wantErr := verr != nil, test.reason != ""; gotErr != wantErr {
-				t.Errorf("ValidateBuild(%d); got %v, want %q", i, verr, test.reason)
+			verr := ac.validateBuild(ctx, nil, nil, c.build)
+			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+				t.Errorf("validateBuild(%s); got %v, want %q", name, verr, c.reason)
 			}
 		})
 	}
@@ -406,10 +409,12 @@ func TestValidateBuild(t *testing.T) {
 func TestValidateTemplate(t *testing.T) {
 	ctx := context.Background()
 	hasDefault := "has-default"
-	for i, test := range []struct {
+	for _, c := range []struct {
+		desc   string
 		tmpl   *v1alpha1.BuildTemplate
 		reason string // if "", expect success.
 	}{{
+		desc: "Single named step",
 		tmpl: &v1alpha1.BuildTemplate{
 			Spec: v1alpha1.BuildTemplateSpec{
 				Steps: []corev1.Container{{
@@ -419,7 +424,7 @@ func TestValidateTemplate(t *testing.T) {
 			},
 		},
 	}, {
-		// Multiple unnamed steps.
+		desc: "Multiple unnamed steps",
 		tmpl: &v1alpha1.BuildTemplate{
 			Spec: v1alpha1.BuildTemplateSpec{
 				Steps: []corev1.Container{{
@@ -477,7 +482,6 @@ func TestValidateTemplate(t *testing.T) {
 		},
 		reason: "DuplicateParamName",
 	}, {
-		// invalid, template step name has nested placeholder.
 		tmpl: &v1alpha1.BuildTemplate{
 			Spec: v1alpha1.BuildTemplateSpec{
 				Steps: []corev1.Container{{
@@ -493,11 +497,15 @@ func TestValidateTemplate(t *testing.T) {
 		},
 		reason: "NestedPlaceholder",
 	}} {
-		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+		name := c.desc
+		if c.reason != "" {
+			name = "invalid-" + c.reason
+		}
+		t.Run(name, func(t *testing.T) {
 			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
-			verr := ac.validateBuildTemplate(ctx, nil, nil, test.tmpl)
-			if gotErr, wantErr := verr != nil, test.reason != ""; gotErr != wantErr {
-				t.Errorf("ValidateTemplate(%d); got %v, want %q", i, verr, test.reason)
+			verr := ac.validateBuildTemplate(ctx, nil, nil, c.tmpl)
+			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
 			}
 		})
 	}
