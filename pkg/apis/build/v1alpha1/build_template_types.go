@@ -56,13 +56,6 @@ type BuildTemplateStatus struct {
 
 type BuildTemplateConditionType string
 
-const (
-	// BuildTemplateInvalid specifies that the given specification is invalid.
-	//
-	// TODO(jasonhall): Remove when webhook validation rejects invalid build templates.
-	BuildTemplateInvalid BuildTemplateConditionType = "Invalid"
-)
-
 // BuildTemplateCondition defines a readiness condition for a BuildTemplate.
 // See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
 type BuildTemplateCondition struct {

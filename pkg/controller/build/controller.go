@@ -35,7 +35,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/builder/validation"
 	"github.com/knative/build/pkg/controller"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -271,18 +270,6 @@ func (c *Controller) syncHandler(key string) error {
 			// will kick in.
 			var tmpl *v1alpha1.BuildTemplate
 			if build.Spec.Template != nil {
-				if build.Spec.Template.Name == "" {
-					build.Status.SetCondition(&v1alpha1.BuildCondition{
-						Type:    v1alpha1.BuildInvalid,
-						Status:  corev1.ConditionTrue,
-						Reason:  "MissingTemplateName",
-						Message: "the build specifies a 'template' without a name.",
-					})
-					if _, err := c.updateStatus(build); err != nil {
-						return err
-					}
-					return nil
-				}
 				tmplNS := namespace
 				if build.Spec.Template.Namespace != "" {
 					tmplNS = build.Spec.Template.Namespace
@@ -296,22 +283,6 @@ func (c *Controller) syncHandler(key string) error {
 					}
 					return err
 				}
-			}
-			if err := c.builder.Validate(build, tmpl); err != nil {
-				verr, ok := err.(*validation.Error)
-				if !ok {
-					return err
-				}
-				build.Status.SetCondition(&v1alpha1.BuildCondition{
-					Type:    v1alpha1.BuildInvalid,
-					Status:  corev1.ConditionTrue,
-					Reason:  verr.Reason,
-					Message: verr.Message,
-				})
-				if _, err := c.updateStatus(build); err != nil {
-					return err
-				}
-				return fmt.Errorf("build validation for %q failed with %v: %v", build.Name, verr.Reason, verr.Message)
 			}
 			build, err = builder.ApplyTemplate(build, tmpl)
 			if err != nil {

@@ -43,6 +43,8 @@ import (
 	"github.com/knative/build/pkg"
 	"github.com/knative/build/pkg/apis/build"
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/builder"
+	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	"github.com/knative/build/pkg/logging"
 	"github.com/knative/build/pkg/logging/logkey"
 )
@@ -95,21 +97,23 @@ type genericCRDHandler struct {
 
 	// Defaulter sets defaults on an object. If non-nil error is returned, object
 	// creation is denied. Mutations should be appended to the patches operations.
-	Defaulter func(patches *[]jsonpatch.JsonPatchOperation, crd genericCRD) error
+	Defaulter func(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, crd genericCRD) error
 
 	// Validator validates an object, mutating it if necessary. If non-nil error
 	// is returned, object creation is denied. Mutations should be appended to
 	// the patches operations.
-	Validator func(patches *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error
+	Validator func(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error
 }
 
 // AdmissionController implements the external admission webhook for validation of
 // pilot configuration.
 type AdmissionController struct {
-	client   kubernetes.Interface
-	options  ControllerOptions
-	handlers map[string]genericCRDHandler
-	logger   *zap.SugaredLogger
+	client      kubernetes.Interface
+	buildClient buildclientset.Interface
+	builder     builder.Interface
+	options     ControllerOptions
+	handlers    map[string]genericCRDHandler
+	logger      *zap.SugaredLogger
 }
 
 // genericCRD is the interface definition that allows us to perform the generic
@@ -203,22 +207,25 @@ func getOrGenerateKeyCertsFromSecret(ctx context.Context, client kubernetes.Inte
 }
 
 // NewAdmissionController creates a new instance of the admission webhook controller.
-func NewAdmissionController(client kubernetes.Interface, options ControllerOptions, logger *zap.SugaredLogger) *AdmissionController {
-	return &AdmissionController{
-		client:  client,
-		options: options,
-		handlers: map[string]genericCRDHandler{
-			"Build": genericCRDHandler{
-				Factory:   &v1alpha1.Build{},
-				Validator: validateBuild,
-			},
-			"BuildTemplate": genericCRDHandler{
-				Factory:   &v1alpha1.BuildTemplate{},
-				Validator: validateBuildTemplate,
-			},
-		},
-		logger: logger,
+func NewAdmissionController(client kubernetes.Interface, buildClient buildclientset.Interface, builder builder.Interface, options ControllerOptions, logger *zap.SugaredLogger) *AdmissionController {
+	ac := &AdmissionController{
+		client:      client,
+		buildClient: buildClient,
+		builder:     builder,
+		options:     options,
+		logger:      logger,
 	}
+	ac.handlers = map[string]genericCRDHandler{
+		"Build": genericCRDHandler{
+			Factory:   &v1alpha1.Build{},
+			Validator: ac.validateBuild,
+		},
+		"BuildTemplate": genericCRDHandler{
+			Factory:   &v1alpha1.BuildTemplate{},
+			Validator: ac.validateBuildTemplate,
+		},
+	}
+	return ac
 }
 
 func configureCerts(ctx context.Context, client kubernetes.Interface, options *ControllerOptions) (*tls.Config, []byte, error) {
@@ -478,7 +485,7 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 	}
 
 	if defaulter := handler.Defaulter; defaulter != nil {
-		if err := defaulter(&patches, newObj); err != nil {
+		if err := defaulter(ctx, &patches, newObj); err != nil {
 			logger.Error("Failed the resource specific defaulter", zap.Error(err))
 			// Return the error message as-is to give the defaulter callback
 			// discretion over (our portion of) the message that the user sees.
@@ -486,7 +493,7 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 		}
 	}
 
-	if err := handler.Validator(&patches, oldObj, newObj); err != nil {
+	if err := handler.Validator(ctx, &patches, oldObj, newObj); err != nil {
 		logger.Error("Failed the resource specific validation", zap.Error(err))
 		// Return the error message as-is to give the validation callback
 		// discretion over (our portion of) the message that the user sees.

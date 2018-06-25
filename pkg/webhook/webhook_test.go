@@ -19,6 +19,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -26,11 +27,14 @@ import (
 	"github.com/mattbaird/jsonpatch"
 	"go.uber.org/zap"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/builder/nop"
+	fakebuildclientset "github.com/knative/build/pkg/client/clientset/versioned/fake"
 	"github.com/knative/build/pkg/logging"
 )
 
@@ -143,7 +147,7 @@ func TestAdmitBuild(t *testing.T) {
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
 			ctx := context.Background()
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), defaultOptions, testLogger)
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
 			resp := ac.admit(ctx, &admissionv1beta1.AdmissionRequest{
 				Operation: c.op,
 				Kind:      metav1.GroupVersionKind{Kind: c.kind},
@@ -158,6 +162,342 @@ func TestAdmitBuild(t *testing.T) {
 				if diff := cmp.Diff(gotPatches, c.wantPatches); diff != "" {
 					t.Errorf("patches differed: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestValidateBuild(t *testing.T) {
+	ctx := context.Background()
+	hasDefault := "has-default"
+	empty := ""
+	for i, test := range []struct {
+		build  *v1alpha1.Build
+		tmpl   *v1alpha1.BuildTemplate
+		reason string // if "", expect success.
+	}{{
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		// Multiple unnamed steps.
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:oops",
+				}},
+			},
+		},
+		reason: "DuplicateStepName",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+				Volumes: []corev1.Volume{{
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}, {
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		},
+		reason: "DuplicateVolumeName",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Arguments: []v1alpha1.ArgumentSpec{{
+						Name:  "foo",
+						Value: "hello",
+					}, {
+						Name:  "foo",
+						Value: "world",
+					}},
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "foo",
+				}},
+			},
+		},
+		reason: "DuplicateArgName",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "foo-bar",
+				},
+				Volumes: []corev1.Volume{{
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+				Volumes: []corev1.Volume{{
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		},
+		reason: "DuplicateVolumeName",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "template",
+				},
+			},
+		},
+		reason: "TemplateAndSteps",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "template",
+					Arguments: []v1alpha1.ArgumentSpec{{
+						Name:  "foo",
+						Value: "hello",
+					}},
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "template"},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "foo",
+				}, {
+					Name: "bar",
+				}},
+			},
+		},
+		reason: "UnsatisfiedParameter",
+	}, {
+		// valid, arg doesn't match any parameter.
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "template",
+					Arguments: []v1alpha1.ArgumentSpec{{
+						Name:  "bar",
+						Value: "hello",
+					}},
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "template"},
+			Spec:       v1alpha1.BuildTemplateSpec{},
+		},
+	}, {
+		// valid, since unsatisfied parameter has a default.
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "template",
+					Arguments: []v1alpha1.ArgumentSpec{{
+						Name:  "foo",
+						Value: "hello",
+					}},
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "template"},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "foo",
+				}, {
+					Name:    "bar",
+					Default: &hasDefault,
+				}},
+			},
+		},
+	}, {
+		// valid, since unsatisfied parameter has an empty default.
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "empty-default",
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name:    "foo",
+					Default: &empty,
+				}},
+			},
+		},
+	}, {
+		// invalid, since build is missing template name
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{},
+			},
+		},
+		reason: "MissingTemplateName",
+	}} {
+		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+			buildClient := fakebuildclientset.NewSimpleClientset()
+			if test.tmpl != nil {
+				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(test.tmpl); err != nil {
+					t.Fatalf("Failed to create template: %v", err)
+				}
+			}
+
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), buildClient, &nop.Builder{}, defaultOptions, testLogger)
+			verr := ac.validateBuild(ctx, nil, nil, test.build)
+			if gotErr, wantErr := verr != nil, test.reason != ""; gotErr != wantErr {
+				t.Errorf("ValidateBuild(%d); got %v, want %q", i, verr, test.reason)
+			}
+		})
+	}
+}
+
+func TestValidateTemplate(t *testing.T) {
+	ctx := context.Background()
+	hasDefault := "has-default"
+	for i, test := range []struct {
+		tmpl   *v1alpha1.BuildTemplate
+		reason string // if "", expect success.
+	}{{
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		// Multiple unnamed steps.
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:oops",
+				}},
+			},
+		},
+		reason: "DuplicateStepName",
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+				Volumes: []corev1.Volume{{
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}, {
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		},
+		reason: "DuplicateVolumeName",
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "foo",
+				}, {
+					Name: "foo",
+				}},
+			},
+		},
+		reason: "DuplicateParamName",
+	}, {
+		// invalid, template step name has nested placeholder.
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "step-name-${FOO${BAR}}",
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}, {
+					Name:    "BAR",
+					Default: &hasDefault,
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}} {
+		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+			verr := ac.validateBuildTemplate(ctx, nil, nil, test.tmpl)
+			if gotErr, wantErr := verr != nil, test.reason != ""; gotErr != wantErr {
+				t.Errorf("ValidateTemplate(%d); got %v, want %q", i, verr, test.reason)
 			}
 		})
 	}
@@ -218,7 +558,7 @@ func TestAdmitBuildTemplate(t *testing.T) {
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
 			ctx := context.Background()
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), defaultOptions, testLogger)
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
 			resp := ac.admit(ctx, &admissionv1beta1.AdmissionRequest{
 				Operation: c.op,
 				Kind:      metav1.GroupVersionKind{Kind: c.kind},
