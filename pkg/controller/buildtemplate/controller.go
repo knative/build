@@ -35,7 +35,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/builder/validation"
 	"github.com/knative/build/pkg/controller"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -249,24 +248,6 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Don't modify the informer's copy.
 	tmpl = tmpl.DeepCopy()
-
-	// TODO(mattmoor): Consider making this specific to a particular builder implementation.
-	if err := builder.ValidateTemplate(tmpl); err != nil {
-		verr, ok := err.(*validation.Error)
-		if !ok {
-			return err
-		}
-		tmpl.Status.SetCondition(&v1alpha1.BuildTemplateCondition{
-			Type:    v1alpha1.BuildTemplateInvalid,
-			Status:  corev1.ConditionTrue,
-			Reason:  verr.Reason,
-			Message: verr.Message,
-		})
-		if _, err := c.updateStatus(tmpl); err != nil {
-			return err
-		}
-	}
-
 	c.recorder.Event(tmpl, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }

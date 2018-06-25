@@ -162,11 +162,6 @@ const (
 	// If the build is ongoing, its status will be Unknown. If it fails,
 	// its status will be False.
 	BuildSucceeded BuildConditionType = "Succeeded"
-
-	// BuildInvalid specifies that the given build specification is invalid.
-	//
-	// TODO(jasonhall): Remove when webhook validation rejects invalid builds.
-	BuildInvalid BuildConditionType = "Invalid"
 )
 
 // BuildCondition defines a readiness condition for a Build.
