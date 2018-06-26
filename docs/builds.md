@@ -149,7 +149,7 @@ spec:
   # Here build-bot is a ServiceAccount that's had an extra Secret attached
   # with `type: kubernetes.io/basic-auth`.  The username and password are
   # specified per usual, and there is an additional annotation on the Secret
-  # of the form: `build.dev/git-0: https://github.com`, which
+  # of the form: `build.knative.dev/git-0: https://github.com`, which
   # directs us to configure this basic authentication for use with github
   # via Git.
   serviceAccountName: build-bot

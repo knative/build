@@ -81,7 +81,7 @@ func main() {
 		ServiceNamespace: pkg.GetBuildSystemNamespace(),
 		Port:             443,
 		SecretName:       "build-webhook-certs",
-		WebhookName:      "webhook.build.dev",
+		WebhookName:      "webhook.build.knative.dev",
 	}
 	webhook.NewAdmissionController(kubeClient, buildClient, bldr, options, logger).Run(stopCh)
 }

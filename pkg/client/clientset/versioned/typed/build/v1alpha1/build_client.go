@@ -28,7 +28,7 @@ type BuildV1alpha1Interface interface {
 	BuildTemplatesGetter
 }
 
-// BuildV1alpha1Client is used to interact with features provided by the build.dev group.
+// BuildV1alpha1Client is used to interact with features provided by the build.knative.dev group.
 type BuildV1alpha1Client struct {
 	restClient rest.Interface
 }

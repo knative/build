@@ -34,7 +34,7 @@ kind: Secret
 metadata:
   name: ssh-key
   annotations:
-    build.dev/git-0: https://github.com  # Described below
+    build.knative.dev/git-0: https://github.com  # Described below
 type: kubernetes.io/ssh-auth
 data:
   ssh-privatekey: <base64 encoded>
@@ -60,7 +60,7 @@ secrets:
 Then use that `ServiceAccount` in your `Build`:
 
 ```yaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: build-with-ssh-auth
@@ -91,7 +91,7 @@ kind: Secret
 metadata:
   name: basic-user-pass
   annotations:
-    build.dev/git-0: https://github.com  # Described below
+    build.knative.dev/git-0: https://github.com  # Described below
 type: kubernetes.io/basic-auth
 data:
   username: <base64 encoded>
@@ -112,7 +112,7 @@ secrets:
 Then use that `ServiceAccount` in your `Build`:
 
 ```yaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: build-with-basic-auth
@@ -143,7 +143,7 @@ kind: Secret
 metadata:
   name: basic-user-pass
   annotations:
-    build.dev/docker-0: https://gcr.io  # Described below
+    build.knative.dev/docker-0: https://gcr.io  # Described below
 type: kubernetes.io/basic-auth
 data:
   username: <base64 encoded>
@@ -164,7 +164,7 @@ secrets:
 Then use that `ServiceAccount` in your `Build`:
 
 ```yaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: build-with-basic-auth
@@ -196,9 +196,9 @@ apiVersion: v1
 kind: Secret
 metadata:
   annotations:
-    build.dev/git-0: https://github.com
-    build.dev/git-1: https://gitlab.com
-    build.dev/docker-0: https://gcr.io
+    build.knative.dev/git-0: https://github.com
+    build.knative.dev/git-1: https://gitlab.com
+    build.knative.dev/docker-0: https://gcr.io
 type: kubernetes.io/basic-auth
 data:
   username: <base64 encoded>
@@ -216,7 +216,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   annotations:
-    build.dev/git-0: github.com
+    build.knative.dev/git-0: github.com
 type: kubernetes.io/ssh-auth
 data:
   ssh-privatekey: <base64 encoded>
@@ -228,8 +228,8 @@ data:
 This describes an SSH key secret which should be used to access Git repos at
 github.com only.
 
-Credential annotation keys must begin with `build.dev/docker-` or
-`build.dev/git-` and the value describes the URL of the host with which to use
+Credential annotation keys must begin with `build.knative.dev/docker-` or
+`build.knative.dev/git-` and the value describes the URL of the host with which to use
 the credential.
 
 ## Implementation Detail

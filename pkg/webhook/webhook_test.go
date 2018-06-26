@@ -49,7 +49,7 @@ var (
 		ServiceNamespace: "knative-build",
 		Port:             443,
 		SecretName:       "build-webhook-certs",
-		WebhookName:      "webhook.build.dev",
+		WebhookName:      "webhook.build.knative.dev",
 	}
 	testLogger = zap.NewNop().Sugar()
 	testCtx    = logging.WithLogger(context.TODO(), testLogger)
