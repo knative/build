@@ -16,4 +16,4 @@ limitations under the License.
 
 package build
 
-const GroupName = "build.dev"
+const GroupName = "build.knative.dev"

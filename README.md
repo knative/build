@@ -45,7 +45,7 @@ kubectl create -f https://storage.googleapis.com/build-crd/latest/release.yaml
 ### Run your first `Build`
 
 ```yaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: hello-build
@@ -75,7 +75,7 @@ Get more information about the build:
 
 ```shell
 $ kubectl get build hello-build -oyaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 ...
 status:

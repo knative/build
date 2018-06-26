@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	annotationPrefix = "build.dev/git-"
+	annotationPrefix = "build.knative.dev/git-"
 )
 
 var (

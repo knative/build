@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	annotationPrefix = "build.dev/docker-"
+	annotationPrefix = "build.knative.dev/docker-"
 )
 
 var (
