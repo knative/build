@@ -397,14 +397,16 @@ func TestValidateBuild(t *testing.T) {
 		desc: "Acceptable secret annotations",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
-				ServiceAccountName: "serviceaccount",
+				// ServiceAccountName will default to "default"
 			},
 		},
 		sa: &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{Name: "serviceaccount"},
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
 			Secrets: []corev1.ObjectReference{
 				{Name: "good-sekrit"},
 				{Name: "another-good-sekrit"},
+				{Name: "one-more-good-sekrit"},
+				{Name: "last-one-promise"},
 			},
 		},
 		secrets: []*corev1.Secret{{
