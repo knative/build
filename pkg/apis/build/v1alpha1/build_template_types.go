@@ -32,8 +32,7 @@ type BuildTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BuildTemplateSpec   `json:"spec"`
-	Status BuildTemplateStatus `json:"status"`
+	Spec BuildTemplateSpec `json:"spec"`
 }
 
 // BuildTemplateSpec is the spec for a BuildTemplate.
@@ -55,26 +54,6 @@ type BuildTemplateSpec struct {
 	// Volumes is a collection of volumes that are available to mount into the
 	// steps of the build.
 	Volumes []corev1.Volume `json:"volumes"`
-}
-
-// BuildTemplateStatus is the status for a Build resource.
-type BuildTemplateStatus struct {
-	Conditions []BuildTemplateCondition `json:"conditions,omitempty"`
-}
-
-type BuildTemplateConditionType string
-
-// BuildTemplateCondition defines a readiness condition for a BuildTemplate.
-// See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
-type BuildTemplateCondition struct {
-	Type BuildTemplateConditionType `json:"state"`
-
-	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
-
-	// +optional
-	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
-	// +optional
-	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
 }
 
 // ParameterSpec defines the possible parameters that can be populated in a
@@ -99,32 +78,6 @@ type BuildTemplateList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []BuildTemplate `json:"items"`
-}
-
-func (b *BuildTemplateStatus) SetCondition(newCond *BuildTemplateCondition) {
-	if newCond == nil {
-		return
-	}
-
-	t := newCond.Type
-	var conditions []BuildTemplateCondition
-	for _, cond := range b.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
-	conditions = append(conditions, *newCond)
-	b.Conditions = conditions
-}
-
-func (b *BuildTemplateStatus) RemoveCondition(t BuildTemplateConditionType) {
-	var conditions []BuildTemplateCondition
-	for _, cond := range b.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
-	b.Conditions = conditions
 }
 
 func (bt *BuildTemplate) GetGeneration() int64           { return bt.Spec.Generation }
