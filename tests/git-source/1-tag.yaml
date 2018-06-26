@@ -11,16 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.knative.dev/v1alpha1
+apiVersion: build.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-git-source
+  name: test-git-tag
   labels:
     expect: succeeded
 spec:
   source:
     git:
       url: https://github.com/bazelbuild/rules_docker
-      branch: master
+      ref: v0.4.0
   template:
     name: dump-workspace-template

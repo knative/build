@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	url       = flag.String("url", "", "The url of the Git repository to initialize.")
-	commitish = flag.String("commitish", "", "One of branch/tag/ref/commit to make the repository HEAD")
+	url = flag.String("url", "", "The url of the Git repository to initialize.")
+	ref = flag.String("ref", "", "The Git ref to make the repository HEAD")
 )
 
 func runOrFail(cmd string, args ...string) {
@@ -54,8 +54,8 @@ func main() {
 
 	runOrFail("git", "init")
 	runOrFail("git", "remote", "add", "origin", *url)
-	runOrFail("git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *commitish)
+	runOrFail("git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *ref)
 	runOrFail("git", "reset", "--hard", "FETCH_HEAD")
 
-	glog.Infof("Successfully cloned %q @ %q", *url, *commitish)
+	glog.Infof("Successfully cloned %q @ %q", *url, *ref)
 }

@@ -11,11 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-source:
-  git:
-    url: https://source.developers.google.com/p/my-project/r/tha-repo
-    branch: master
-steps:
-- name: helloworld
-  image: gcr.io/google-containers/busybox
-  args: ["echo Hello World!"]
+apiVersion: build.dev/v1alpha1
+kind: Build
+metadata:
+  name: test-git-commit
+  labels:
+    expect: succeeded
+spec:
+  source:
+    git:
+      url: https://github.com/bazelbuild/rules_docker
+      ref: 7401cb256222615c497c0dee5a4de5724a4f4cc7
+  template:
+    name: dump-workspace-template
