@@ -46,7 +46,7 @@ const (
 var (
 	defaultOptions = ControllerOptions{
 		ServiceName:      "build-webhook",
-		ServiceNamespace: "build-system",
+		ServiceNamespace: "knative-build",
 		Port:             443,
 		SecretName:       "build-webhook-certs",
 		WebhookName:      "webhook.build.dev",

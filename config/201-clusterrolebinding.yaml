@@ -18,7 +18,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: build-controller
-    namespace: build-system
+    namespace: knative-build
 roleRef:
   kind: ClusterRole
   name: cluster-admin

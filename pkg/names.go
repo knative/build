@@ -13,4 +13,4 @@ limitations under the License.
 
 package pkg
 
-func GetBuildSystemNamespace() string { return "build-system" }
+func GetBuildSystemNamespace() string { return "knative-build" }
