@@ -200,9 +200,9 @@ metadata:
     build.dev/git-1: https://gitlab.com
     build.dev/docker-0: https://gcr.io
 type: kubernetes.io/basic-auth
-data:
-  username: <base64 encoded>
-  password: <base64 encoded>
+stringData:
+  username: <cleartext non-encoded>
+  password: <cleartext non-encoded>
 ```
 
 This describes a "Basic Auth" (username and password) secret which should be
