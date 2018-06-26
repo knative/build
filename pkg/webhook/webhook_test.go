@@ -171,10 +171,12 @@ func TestValidateBuild(t *testing.T) {
 	hasDefault := "has-default"
 	empty := ""
 	for _, c := range []struct {
-		desc   string
-		build  *v1alpha1.Build
-		tmpl   *v1alpha1.BuildTemplate
-		reason string // if "", expect success.
+		desc    string
+		build   *v1alpha1.Build
+		tmpl    *v1alpha1.BuildTemplate
+		sa      *corev1.ServiceAccount
+		secrets []*corev1.Secret
+		reason  string // if "", expect success.
 	}{{
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
@@ -384,20 +386,78 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 		reason: "MissingTemplateName",
+	}, {
+		desc: "Acceptable secret annotations",
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				ServiceAccountName: "serviceaccount",
+			},
+		},
+		sa: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: "serviceaccount"},
+			Secrets: []corev1.ObjectReference{
+				{Name: "good-sekrit"},
+				{Name: "another-good-sekrit"},
+			},
+		},
+		secrets: []*corev1.Secret{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "good-sekrit",
+				Annotations: map[string]string{"docker-0": "https://index.docker.io/v1/"},
+			},
+		}, {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "another-good-sekrit",
+				Annotations: map[string]string{"unrelated": "index.docker.io"},
+			},
+		}, {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "one-more-good-sekrit",
+				Annotations: map[string]string{"docker-1": "gcr.io"},
+			},
+		}},
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				ServiceAccountName: "serviceaccount",
+			},
+		},
+		sa: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: "serviceaccount"},
+			Secrets:    []corev1.ObjectReference{{Name: "bad-sekrit"}},
+		},
+		secrets: []*corev1.Secret{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "bad-sekrit",
+				Annotations: map[string]string{"docker-0": "index.docker.io"},
+			},
+		}},
+		reason: "BadSecretAnnotation",
 	}} {
 		name := c.desc
 		if c.reason != "" {
 			name = "invalid-" + c.reason
 		}
 		t.Run(name, func(t *testing.T) {
+			client := fakekubeclientset.NewSimpleClientset()
 			buildClient := fakebuildclientset.NewSimpleClientset()
 			if c.tmpl != nil {
 				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
-					t.Fatalf("Failed to create template: %v", err)
+					t.Fatalf("Failed to create BuildTemplate: %v", err)
+				}
+			}
+			if c.sa != nil {
+				if _, err := client.CoreV1().ServiceAccounts("").Create(c.sa); err != nil {
+					t.Fatalf("Failed to create ServiceAccount: %v", err)
+				}
+			}
+			for _, s := range c.secrets {
+				if _, err := client.CoreV1().Secrets("").Create(s); err != nil {
+					t.Fatalf("Failed to create Secret %q: %v", s.Name, err)
 				}
 			}
 
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), buildClient, &nop.Builder{}, defaultOptions, testLogger)
+			ac := NewAdmissionController(client, buildClient, &nop.Builder{}, defaultOptions, testLogger)
 			verr := ac.validateBuild(ctx, nil, nil, c.build)
 			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
 				t.Errorf("validateBuild(%s); got %v, want %q", name, verr, c.reason)

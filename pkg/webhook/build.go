@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/mattbaird/jsonpatch"
 	corev1 "k8s.io/api/core/v1"
@@ -38,10 +39,12 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 		return validationError("TemplateAndSteps", "build cannot specify both template and steps")
 	}
 
-	if b.Spec.Template != nil {
-		if b.Spec.Template.Name == "" {
-			return validationError("MissingTemplateName", "template instantiation is missing template name: %v", b.Spec.Template)
-		}
+	if b.Spec.Template != nil && b.Spec.Template.Name == "" {
+		return validationError("MissingTemplateName", "template instantiation is missing template name: %v", b.Spec.Template)
+	}
+
+	if err := ac.validateSecrets(b); err != nil {
+		return err
 	}
 
 	// If a build specifies a template, all the template's parameters without
@@ -106,6 +109,43 @@ func unmarshalBuilds(ctx context.Context, old, new genericCRD) (*v1alpha1.Build,
 	logger.Infof("NEW Build is\n%+v", newbt)
 
 	return oldb, newbt, nil
+}
+
+// validateSecrets checks that if the Build specifies a ServiceAccount, that
+// that it exists, and that any Secrets referenced by it exist, and have valid
+// annotations.
+func (ac *AdmissionController) validateSecrets(b *v1alpha1.Build) error {
+	saName := b.Spec.ServiceAccountName
+	if saName == "" {
+		return nil
+	}
+
+	sa, err := ac.client.CoreV1().ServiceAccounts(b.Namespace).Get(saName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// TODO(jasonhall): Reject a ServiceAccount without any Secrets?
+
+	for _, se := range sa.Secrets {
+		sec, err := ac.client.CoreV1().Secrets(b.Namespace).Get(se.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		// Check that the annotation value "index.docker.io" is not
+		// present. This annotation value can be misleading, since
+		// Dockerhub expects the fully-specified value
+		// "https://index.docker.io/v1/", and other registries accept
+		// other variants (e.g., "gcr.io" or "https://gcr.io/v1/",
+		// etc.). See https://github.com/knative/build/issues/195
+		for k, v := range sec.Annotations {
+			if strings.HasPrefix(k, "docker-") && v == "index.docker.io" {
+				return validationError("BadSecretAnnotation", `Secret %q has incorrect annotation %q / %q, value should be "https://index.docker.io/v1/"`, se.Name, k, v)
+			}
+		}
+	}
+	return nil
 }
 
 func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplate) error {
