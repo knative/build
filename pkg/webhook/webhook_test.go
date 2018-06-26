@@ -146,7 +146,14 @@ func TestAdmitBuild(t *testing.T) {
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
 			ctx := context.Background()
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+			client := fakekubeclientset.NewSimpleClientset()
+			// Create the default ServiceAccount that the Build uses.
+			if _, err := client.CoreV1().ServiceAccounts(c.new.Namespace).Create(&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			}); err != nil {
+				t.Fatalf("Failed to create ServiceAccount: %v", err)
+			}
+			ac := NewAdmissionController(client, fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
 			resp := ac.admit(ctx, &admissionv1beta1.AdmissionRequest{
 				Operation: c.op,
 				Kind:      metav1.GroupVersionKind{Kind: c.kind},
@@ -154,7 +161,7 @@ func TestAdmitBuild(t *testing.T) {
 				Object:    runtime.RawExtension{Raw: mustMarshal(t, c.new)},
 			})
 			if resp.Allowed != c.wantAllowed {
-				t.Errorf("allowed got %t, want %t", resp.Allowed, c.wantAllowed)
+				t.Errorf("allowed got %t, want %t: %+v", resp.Allowed, c.wantAllowed, resp.Result)
 			}
 			if c.wantPatches != nil {
 				gotPatches := mustUnmarshalPatches(t, resp.Patch)
@@ -403,7 +410,7 @@ func TestValidateBuild(t *testing.T) {
 		secrets: []*corev1.Secret{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "good-sekrit",
-				Annotations: map[string]string{"docker-0": "https://index.docker.io/v1/"},
+				Annotations: map[string]string{"build.dev/docker-0": "https://index.docker.io/v1/"},
 			},
 		}, {
 			ObjectMeta: metav1.ObjectMeta{
@@ -413,7 +420,12 @@ func TestValidateBuild(t *testing.T) {
 		}, {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "one-more-good-sekrit",
-				Annotations: map[string]string{"docker-1": "gcr.io"},
+				Annotations: map[string]string{"build.dev/docker-1": "gcr.io"},
+			},
+		}, {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "last-one-promise",
+				Annotations: map[string]string{"docker-0": "index.docker.io"},
 			},
 		}},
 	}, {
@@ -429,7 +441,7 @@ func TestValidateBuild(t *testing.T) {
 		secrets: []*corev1.Secret{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "bad-sekrit",
-				Annotations: map[string]string{"docker-0": "index.docker.io"},
+				Annotations: map[string]string{"build.dev/docker-0": "index.docker.io"},
 			},
 		}},
 		reason: "BadSecretAnnotation",
@@ -441,16 +453,25 @@ func TestValidateBuild(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			client := fakekubeclientset.NewSimpleClientset()
 			buildClient := fakebuildclientset.NewSimpleClientset()
+			// Create a BuildTemplate.
 			if c.tmpl != nil {
 				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
 					t.Fatalf("Failed to create BuildTemplate: %v", err)
 				}
 			}
+			// Create ServiceAccount or create the default ServiceAccount.
 			if c.sa != nil {
-				if _, err := client.CoreV1().ServiceAccounts("").Create(c.sa); err != nil {
+				if _, err := client.CoreV1().ServiceAccounts(c.sa.Namespace).Create(c.sa); err != nil {
+					t.Fatalf("Failed to create ServiceAccount: %v", err)
+				}
+			} else {
+				if _, err := client.CoreV1().ServiceAccounts("").Create(&corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				}); err != nil {
 					t.Fatalf("Failed to create ServiceAccount: %v", err)
 				}
 			}
+			// Create any necessary Secrets.
 			for _, s := range c.secrets {
 				if _, err := client.CoreV1().Secrets("").Create(s); err != nil {
 					t.Fatalf("Failed to create Secret %q: %v", s.Name, err)
