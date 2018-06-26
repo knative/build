@@ -27,6 +27,7 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// BuildTemplate is a template that can used to easily create Builds.
 type BuildTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -35,6 +36,7 @@ type BuildTemplate struct {
 	Status BuildTemplateStatus `json:"status"`
 }
 
+// BuildTemplateSpec is the spec for a BuildTemplate.
 type BuildTemplateSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -44,12 +46,18 @@ type BuildTemplateSpec struct {
 	Generation int64 `json:"generation,omitempty"`
 
 	// Parameters defines the parameters that can be populated in a template.
-	Parameters []ParameterSpec    `json:"parameters,omitempty"`
-	Steps      []corev1.Container `json:"steps"`
-	Volumes    []corev1.Volume    `json:"volumes"`
+	Parameters []ParameterSpec `json:"parameters,omitempty"`
+
+	// Steps are the steps of the build; each step is run sequentially with the
+	// source mounted into /workspace.
+	Steps []corev1.Container `json:"steps"`
+
+	// Volumes is a collection of volumes that are available to mount into the
+	// steps of the build.
+	Volumes []corev1.Volume `json:"volumes"`
 }
 
-// BuildTemplateStatus is the status for a Build resource
+// BuildTemplateStatus is the status for a Build resource.
 type BuildTemplateStatus struct {
 	Conditions []BuildTemplateCondition `json:"conditions,omitempty"`
 }
@@ -85,7 +93,7 @@ type ParameterSpec struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// BuildTemplateList is a list of BuildTemplate resources
+// BuildTemplateList is a list of BuildTemplate resources.
 type BuildTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

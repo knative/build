@@ -50,11 +50,11 @@ type BuildSpec struct {
 	// Source specifies the input to the build.
 	Source *SourceSpec `json:"source,omitempty"`
 
-	// Steps are the steps of the build; each step is run with the source
-	// mounted into /workspace.
+	// Steps are the steps of the build; each step is run sequentially with the
+	// source mounted into /workspace.
 	Steps []corev1.Container `json:"steps,omitempty"`
 
-	// Volumes is a collection of volumes that are available for mount into the
+	// Volumes is a collection of volumes that are available to mount into the
 	// steps of the build.
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
