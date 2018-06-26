@@ -71,11 +71,9 @@ type BuildSpec struct {
 // a Build.
 type TemplateInstantiationSpec struct {
 	// Name references the BuildTemplate resource to use.
+	//
+	// The template is assumed to exist in the Build's namespace.
 	Name string `json:"name"`
-
-	// Namespace, if specified, is the namespace of the BuildTemplate resource to
-	// use. If omitted, the build's namespace is used.
-	Namespace string `json:"namespace,omitempty"`
 
 	// Arguments, if specified, lists values that should be applied to the
 	// parameters specified by the template.

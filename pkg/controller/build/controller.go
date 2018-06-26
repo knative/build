@@ -270,16 +270,11 @@ func (c *Controller) syncHandler(key string) error {
 			// will kick in.
 			var tmpl *v1alpha1.BuildTemplate
 			if build.Spec.Template != nil {
-				tmplNS := namespace
-				if build.Spec.Template.Namespace != "" {
-					tmplNS = build.Spec.Template.Namespace
-				}
-
-				tmpl, err = c.buildTemplatesLister.BuildTemplates(tmplNS).Get(build.Spec.Template.Name)
+				tmpl, err = c.buildTemplatesLister.BuildTemplates(namespace).Get(build.Spec.Template.Name)
 				if err != nil {
 					// The BuildTemplate resource may not exist.
 					if errors.IsNotFound(err) {
-						runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", key, tmplNS))
+						runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", key, namespace))
 					}
 					return err
 				}

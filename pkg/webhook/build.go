@@ -54,12 +54,8 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 			return validationError("MissingTemplateName", "the build specifies a template without a name")
 		}
 
-		// Look up the template.
-		tmplNS := b.Spec.Template.Namespace
-		if tmplNS == "" {
-			tmplNS = b.Namespace
-		}
-		tmpl, err = ac.buildClient.BuildV1alpha1().BuildTemplates(tmplNS).Get(tmplName, metav1.GetOptions{})
+		// Look up the template in the Build's namespace.
+		tmpl, err = ac.buildClient.BuildV1alpha1().BuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
