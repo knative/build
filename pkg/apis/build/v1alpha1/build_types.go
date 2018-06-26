@@ -27,7 +27,9 @@ import (
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Build is a specification for a Build resource
+// Build represents a build of a container image. A Build is made up of a
+// source, and a set of steps. Steps can mount volumes to share data between
+// themselves. A build may be created by instantiating a BuildTemplate.
 type Build struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -36,7 +38,7 @@ type Build struct {
 	Status BuildStatus `json:"status"`
 }
 
-// BuildSpec is the spec for a Build resource
+// BuildSpec is the spec for a Build resource.
 type BuildSpec struct {
 	// TODO: Generation does not work correctly with CRD. They are scrubbed
 	// by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
@@ -45,20 +47,28 @@ type BuildSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 
-	Source *SourceSpec        `json:"source,omitempty"`
-	Steps  []corev1.Container `json:"steps,omitempty"`
+	// Source specifies the input to the build.
+	Source *SourceSpec `json:"source,omitempty"`
 
+	// Steps are the steps of the build; each step is run with the source
+	// mounted into /workspace.
+	Steps []corev1.Container `json:"steps,omitempty"`
+
+	// Volumes is a collection of volumes that are available for mount into the
+	// steps of the build.
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// The name of the service account as which to run this build.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Template, if specified,references a BuildTemplate resource to use to
+	// Template, if specified, references a BuildTemplate resource to use to
 	// populate fields in the build, and optional Arguments to pass to the
 	// template.
 	Template *TemplateInstantiationSpec `json:"template,omitempty"`
 }
 
+// TemplateInstantiationSpec specifies how a BuildTemplate is instantiated into
+// a Build.
 type TemplateInstantiationSpec struct {
 	// Name references the BuildTemplate resource to use.
 	Name string `json:"name"`
@@ -72,7 +82,7 @@ type TemplateInstantiationSpec struct {
 	Arguments []ArgumentSpec `json:"arguments,omitempty"`
 
 	// Env, if specified will provide variables to all build template steps.
-	// This will override any of the template's steps environment variables
+	// This will override any of the template's steps environment variables.
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
