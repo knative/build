@@ -11,11 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-source:
-  git:
-    url: https://source.developers.google.com/p/a-project/r/secret-stuff
-    tag: v0.3.0
-steps:
-- name: helloworld
-  image: gcr.io/google-containers/busybox
-  args: ["echo Hello World!"]
+apiVersion: build.knative.dev/v1alpha1
+kind: Build
+metadata:
+  name: test-git-branch
+  labels:
+    expect: succeeded
+spec:
+  source:
+    git:
+      url: https://github.com/bazelbuild/rules_docker
+      ref: master
+  template:
+    name: dump-workspace-template

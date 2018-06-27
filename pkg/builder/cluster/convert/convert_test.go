@@ -47,10 +47,6 @@ func TestParsing(t *testing.T) {
 		"testdata/volumes.yaml",
 		"testdata/custom-source.yaml",
 
-		"testdata/git-branch.yaml",
-		"testdata/git-branch-github.yaml",
-		"testdata/git-tag.yaml",
-		"testdata/git-commit.yaml",
 		"testdata/git-ref.yaml",
 
 		"testdata/gcs-archive.yaml",

@@ -14,13 +14,13 @@
 apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-git-source
+  name: test-git-commit
   labels:
     expect: succeeded
 spec:
   source:
     git:
       url: https://github.com/bazelbuild/rules_docker
-      branch: master
+      ref: 7401cb256222615c497c0dee5a4de5724a4f4cc7
   template:
     name: dump-workspace-template

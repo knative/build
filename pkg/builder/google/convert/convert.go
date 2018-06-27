@@ -17,6 +17,7 @@ package convert
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -65,14 +66,7 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 	if u.Source != nil {
 		switch {
 		case u.Source.Git != nil:
-			scm, err := ToRepoSourceFromGit(u.Source.Git)
-			if err != nil {
-				return nil, err
-			}
-			bld.Source = &cloudbuild.Source{
-				RepoSource: scm,
-			}
-
+			return nil, errors.New("Unsupported: Git source with Google builder")
 		case u.Source.GCS != nil:
 			ss, err := ToStorageSourceFromGCS(u.Source.GCS)
 			if err != nil {
@@ -135,13 +129,7 @@ func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 	case u.Source != nil:
 		switch {
 		case u.Source.RepoSource != nil:
-			scm, err := ToGitFromRepoSource(u.Source.RepoSource)
-			if err != nil {
-				return nil, err
-			}
-			bld.Source = &v1alpha1.SourceSpec{
-				Git: scm,
-			}
+			return nil, errors.New("Unsupported: Git source with Google builder")
 		case u.Source.StorageSource != nil:
 			bld.Source = &v1alpha1.SourceSpec{
 				GCS: ToGCSFromStorageSource(u.Source.StorageSource),

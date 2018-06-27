@@ -87,7 +87,7 @@ spec:
   source:
     git:
       url: https://github.com/knative/build.git
-      branch: master
+      ref: master
   steps:
   - image: ubuntu
     args: ["cat", "README.md"]
@@ -104,7 +104,7 @@ spec:
   steps:
   - name: list-files
     image: ubuntu:latest
-    args: ["ls"]      
+    args: ["ls"]
 ```
 
 #### With a `custom` source
@@ -157,7 +157,7 @@ spec:
   source:
     git:
       url: https://github.com/google/secret-sauce.git
-      branch: master
+      ref: master
   steps:
   - image: ubuntu
     args: ["cat", "SECRETS.md"]
