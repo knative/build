@@ -21,5 +21,5 @@ subjects:
     namespace: knative-build
 roleRef:
   kind: ClusterRole
-  name: cluster-admin
+  name: knative-build-admin
   apiGroup: rbac.authorization.k8s.io
