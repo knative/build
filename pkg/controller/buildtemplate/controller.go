@@ -23,7 +23,6 @@ import (
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
@@ -36,8 +35,6 @@ import (
 
 	"github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/controller"
-
-	"github.com/knative/build/pkg/apis/build/v1alpha1"
 
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
@@ -250,19 +247,4 @@ func (c *Controller) syncHandler(key string) error {
 	tmpl = tmpl.DeepCopy()
 	c.recorder.Event(tmpl, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
-}
-
-func (c *Controller) updateStatus(u *v1alpha1.BuildTemplate) (*v1alpha1.BuildTemplate, error) {
-	tmplClient := c.buildclientset.BuildV1alpha1().BuildTemplates(u.Namespace)
-	newu, err := tmplClient.Get(u.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	newu.Status = u.Status
-
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Build resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	return tmplClient.Update(newu)
 }
