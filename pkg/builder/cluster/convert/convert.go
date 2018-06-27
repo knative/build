@@ -19,7 +19,6 @@ import (
 	"flag"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -113,11 +112,6 @@ var (
 		gcsSource:    containerToGCS,
 		customSource: containerToCustom,
 	}
-	// Used to recover the type of reference we checked out.
-	reCommits  = regexp.MustCompile("^[0-9a-f]{40}$")
-	reRefs     = regexp.MustCompile("^refs/")
-	reTags     = regexp.MustCompile("^refs/tags/(.*)")
-	reBranches = regexp.MustCompile("^refs/heads/(.*)")
 )
 
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
@@ -125,15 +119,15 @@ func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 	if git.Url == "" {
 		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
 	}
-	if git.Ref == "" {
-		return nil, validation.NewError("MissingRef", "git sources are expected to specify a Ref, got: %v", git)
+	if git.Revision == "" {
+		return nil, validation.NewError("MissingRevision", "git sources are expected to specify a Revision, got: %v", git)
 	}
 	return &corev1.Container{
 		Name:  gitSource,
 		Image: *gitImage,
 		Args: []string{
 			"-url", git.Url,
-			"-ref", git.Ref,
+			"revision", git.Revision,
 		},
 	}, nil
 }
@@ -148,8 +142,8 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
 		Git: &v1alpha1.GitSourceSpec{
-			Url: git.Args[1],
-			Ref: git.Args[3],
+			Url:      git.Args[1],
+			Revision: git.Args[3],
 		},
 	}, nil
 }

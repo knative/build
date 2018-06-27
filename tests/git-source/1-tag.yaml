@@ -21,6 +21,6 @@ spec:
   source:
     git:
       url: https://github.com/bazelbuild/rules_docker
-      ref: v0.4.0
+      revision: v0.4.0
   template:
     name: dump-workspace-template

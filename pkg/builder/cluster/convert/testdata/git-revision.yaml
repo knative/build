@@ -14,7 +14,7 @@
 source:
   git:
     url: https://source.developers.google.com/p/a-project/r/secret-stuff
-    ref: refs/pulls/179/head
+    revision: refs/pulls/179/head
 steps:
 - name: helloworld
   image: gcr.io/google-containers/busybox

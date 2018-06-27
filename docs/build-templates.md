@@ -84,7 +84,7 @@ spec:
   source:
     git:
       url: https://github.com/mchmarny/rester-tester.git
-      ref: master
+      revision: master
   template:
     name: dockerfile-build-and-push
     arguments:
@@ -98,7 +98,7 @@ spec:
   source:
     git:
       url: https://github.com/googlecloudplatform/cloud-builders.git
-      ref: master
+      revision: master
   template:
     name: dockerfile-build-and-push
     arguments:
@@ -115,7 +115,7 @@ spec:
   source:
     git:
       url: https://github.com/googlecloudplatform/cloud-builders.git
-      ref: master
+      revision: master
   template:
     name: dockerfile-build-and-push
     arguments:

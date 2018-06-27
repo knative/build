@@ -24,8 +24,7 @@ build.  This context is put into `/workspace`, a volume that is mounted into
 the `source:` and all of the `steps:`.
 
 Currently, the following types of source are supported:
- * `git:` which can specify a `url:` and one of: `branch`, `tag`, `ref`,
- or `commit`.
+ * `git:` which can specify a `url:` and a `revision:`.
 
  * `custom:` which can specify an arbitrary container specification, similar to
  steps (see below).
@@ -87,7 +86,7 @@ spec:
   source:
     git:
       url: https://github.com/knative/build.git
-      ref: master
+      revision: master
   steps:
   - image: ubuntu
     args: ["cat", "README.md"]
@@ -157,7 +156,7 @@ spec:
   source:
     git:
       url: https://github.com/google/secret-sauce.git
-      ref: master
+      revision: master
   steps:
   - image: ubuntu
     args: ["cat", "SECRETS.md"]
