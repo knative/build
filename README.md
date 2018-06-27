@@ -42,6 +42,15 @@ You can install the latest release of the Build CRD by running:
 kubectl create -f https://storage.googleapis.com/build-crd/latest/release.yaml
 ```
 
+Your account must have the `cluster-admin` role in order to do this. If your
+account does not have this role, you can add it:
+
+```
+kubectl create clusterrolebinding myname-cluster-admin-binding \
+    --clusterrole=cluster-admin \
+    --user=myname@example.org
+```
+
 ### Run your first `Build`
 
 ```yaml
