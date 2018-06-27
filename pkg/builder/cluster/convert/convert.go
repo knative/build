@@ -282,7 +282,7 @@ func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Inte
 
 		matched := false
 		for _, b := range builders {
-			if sa := b.HasMatchingAnnotation(secret); len(sa) > 0 {
+			if sa := b.MatchingAnnotation(secret); len(sa) > 0 {
 				matched = true
 				args = append(args, sa...)
 			}
@@ -432,6 +432,9 @@ func isImplicitVolume(v corev1.Volume) bool {
 		if v.Name == iv.Name {
 			return true
 		}
+	}
+	if strings.HasPrefix(v.Name, "secret-volume-") {
+		return true
 	}
 	return false
 }

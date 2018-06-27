@@ -53,10 +53,10 @@ func NewBuilder() credentials.Builder {
 	return &GitConfigBuilder{}
 }
 
-// HasMatchingAnnotations extracts flags for the credential helper
+// MatchingAnnotations extracts flags for the credential helper
 // from the supplied secret and returns a slice (of length 0 or
 // greater) of applicable domains.
-func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) []string {
+func (dcb *GitConfigBuilder) MatchingAnnotation(secret *corev1.Secret) []string {
 	var flagName string
 	var flags []string
 	switch secret.Type {
