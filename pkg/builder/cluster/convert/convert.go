@@ -127,7 +127,7 @@ func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 		Image: *gitImage,
 		Args: []string{
 			"-url", git.Url,
-			"revision", git.Revision,
+			"-revision", git.Revision,
 		},
 	}, nil
 }
