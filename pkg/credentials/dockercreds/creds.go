@@ -127,7 +127,7 @@ func NewBuilder() credentials.Builder {
 // MatchingAnnotations extracts flags for the credential helper
 // from the supplied secret and returns a slice (of length 0 or
 // greater) of applicable domains.
-func (dcb *DockerConfigBuilder) MatchingAnnotation(secret *corev1.Secret) []string {
+func (dcb *DockerConfigBuilder) MatchingAnnotations(secret *corev1.Secret) []string {
 	var flags []string
 	switch secret.Type {
 	case corev1.SecretTypeBasicAuth:
