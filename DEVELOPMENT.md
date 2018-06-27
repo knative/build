@@ -35,6 +35,9 @@ Configure `ko` to point to your registry:
 
 ```shell
 # You can put these definitions in .bashrc, so this is one-time setup.
+#
+# KO_DOCKER_REPO is the image repository where the images for build
+# will be pushed, including hostname.
 export KO_DOCKER_REPO=us.gcr.io/project
 
 # Install "ko" from our vendor snapshot.
