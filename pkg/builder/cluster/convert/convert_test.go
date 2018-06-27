@@ -99,6 +99,15 @@ func TestParsing(t *testing.T) {
 					}
 				}
 			}
+			expected := map[string]int{"https://us.gcr.io": 1, "https://docker.io": 1, "github.com": 1, "gitlab.com": 1}
+			for _, a := range j.Spec.InitContainers[0].Args {
+				expected[a] -= 1
+			}
+			for k, c := range expected {
+				if c > 0 {
+					t.Errorf("Expected arg related to %s in args, got %v", k, j.Spec.InitContainers[0].Args)
+				}
+			}
 		}
 		// Verify that reverse transformation works.
 		
