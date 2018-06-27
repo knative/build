@@ -20,4 +20,8 @@ metadata:
 spec:
   steps:
   - name: test
-    image: github.com/knative/build/tests/home
+    image: ubuntu
+    command: ['bash']
+    args:
+    - '-c'
+    - '[[ $HOME == /builder/home ]]'

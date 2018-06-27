@@ -20,9 +20,11 @@ metadata:
 spec:
   steps:
   - name: test
-    image: github.com/knative/build/tests/custom-env
+    image: ubuntu
+    command: ['bash']
+    args:
+    - '-c'
+    - '[[ $MY_VAR1 == foo ]]'
     env:
     - name: MY_VAR1
       value: foo
-    - name: MY_VAR2
-      value: bar
