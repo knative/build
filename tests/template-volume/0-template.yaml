@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,16 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: BuildTemplate
 metadata:
-  name: template-duplicate-volume
+  name: template-volume
 spec:
   steps:
   - name: write
     image: ubuntu:latest
-    # This should not run.
-    args: ["false"]
+    command: ["/bin/bash"]
+    args: ["-c", "echo some stuff > /im/a/custom/mount/path/file"]
+    volumeMounts:
+    - name: custom
+      mountPath: /im/a/custom/mount/path
+  - name: read
+    image: ubuntu:latest
+    command: ["/bin/bash"]
+    args: ["-c", "cat /short/and/stout/file"]
+    volumeMounts:
+    - name: custom
+      mountPath: /short/and/stout
 
   volumes:
   - name: custom

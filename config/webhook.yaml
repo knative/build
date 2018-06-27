@@ -1,4 +1,4 @@
-# Copyright 2018 Google LLC
+# Copyright 2018 Knative Authors LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: build-webhook
-  namespace: build-system
+  namespace: knative-build
 spec:
   replicas: 1
   template:
@@ -31,6 +31,11 @@ spec:
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: github.com/knative/build/cmd/webhook
+        args: [
+          "-builder", "cluster",
+          "-logtostderr",
+          "-stderrthreshold", "INFO",
+        ]
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging

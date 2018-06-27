@@ -1,4 +1,4 @@
-# Copyright 2018 Google LLC
+# Copyright 2018 Knative Authors LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ metadata:
   labels:
     role: build-webhook
   name: build-webhook
-  namespace: build-system
+  namespace: knative-build
 spec:
   ports:
     - port: 443

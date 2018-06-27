@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,25 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-build-with-serviceaccount-docker-basic
+  name: test-git-commit
   labels:
     expect: succeeded
 spec:
-  serviceAccountName: test-build-robot-docker-basic
-  steps:
-  - name: test
-    image: gcr.io/cloud-builders/docker
-    # Test pulling a private builder container.
-    args: ["pull", "gcr.io/build-crd-testing/secret-sauce"]
-    volumeMounts:
-    - name: docker-socket
-      mountPath: /var/run/docker.sock
-
-  volumes:
-  - name: docker-socket
-    hostPath:
-      path: /var/run/docker.sock
-      type: Socket
+  source:
+    git:
+      url: https://github.com/bazelbuild/rules_docker
+      ref: 7401cb256222615c497c0dee5a4de5724a4f4cc7
+  template:
+    name: dump-workspace-template

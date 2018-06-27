@@ -17,16 +17,27 @@ package main
 
 import (
 	"flag"
+	"log"
+	"time"
 
 	"go.uber.org/zap"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
+	"github.com/golang/glog"
 	"github.com/knative/build/pkg"
+	"github.com/knative/build/pkg/builder"
+	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
+	gcb "github.com/knative/build/pkg/builder/google"
+	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	"github.com/knative/build/pkg/logging"
 	"github.com/knative/build/pkg/signals"
 	"github.com/knative/build/pkg/webhook"
+)
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+var (
+	builderName = flag.String("builder", "", "The builder implementation to use to execute builds (supports: cluster, google).")
 )
 
 func main() {
@@ -39,14 +50,30 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	clusterConfig, err := rest.InClusterConfig()
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		logger.Fatal("Failed to get in cluster config", zap.Error(err))
 	}
 
-	clientset, err := kubernetes.NewForConfig(clusterConfig)
+	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatal("Failed to get the client set", zap.Error(err))
+	}
+
+	buildClient, err := buildclientset.NewForConfig(cfg)
+	if err != nil {
+		log.Fatalf("Error building Build clientset: %s", err.Error())
+	}
+
+	var bldr builder.Interface
+	switch *builderName {
+	case "cluster":
+		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+		bldr = onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory)
+	case "google":
+		bldr = gcb.NewBuilder(nil, "")
+	default:
+		glog.Fatalf("Unrecognized builder: %v (supported: google, cluster)", builderName)
 	}
 
 	options := webhook.ControllerOptions{
@@ -54,7 +81,7 @@ func main() {
 		ServiceNamespace: pkg.GetBuildSystemNamespace(),
 		Port:             443,
 		SecretName:       "build-webhook-certs",
-		WebhookName:      "webhook.build.dev",
+		WebhookName:      "webhook.build.knative.dev",
 	}
-	webhook.NewAdmissionController(clientset, options, logger).Run(stopCh)
+	webhook.NewAdmissionController(kubeClient, buildClient, bldr, options, logger).Run(stopCh)
 }

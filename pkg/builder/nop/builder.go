@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -103,10 +103,7 @@ func (nb *Builder) Builder() v1alpha1.BuildProvider {
 	return v1alpha1.GoogleBuildProvider
 }
 
-func (nb *Builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
-	return buildercommon.ValidateBuild(u, tmpl)
-}
-
+func (nb *Builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error { return nil }
 func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {
 	return &build{builder: nb}, nil
 }

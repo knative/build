@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -160,13 +160,8 @@ func (b *builder) Builder() v1alpha1.BuildProvider {
 }
 
 func (b *builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
-	if err := buildercommon.ValidateBuild(u, tmpl); err != nil {
-		return err
-	}
-	if _, err := convert.FromCRD(u, b.kubeclient); err != nil {
-		return err
-	}
-	return nil
+	_, err := convert.FromCRD(u, b.kubeclient)
+	return err
 }
 
 func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) {

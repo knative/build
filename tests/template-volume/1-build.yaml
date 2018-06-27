@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,21 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-build-with-serviceaccount-git-ssh
+  name: test-template-volume
   labels:
     expect: succeeded
 spec:
-  serviceAccountName: test-build-robot-git-ssh
-  source:
-    git:
-      url: git@github.com:knative/build.git
-      branch: master
-
-  steps:
-  - name: config
-    image: ubuntu
-    command: ["/bin/bash"]
-    args: ["-c", "cat README.md"]
+  template:
+    name: template-volume

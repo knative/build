@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -443,7 +443,7 @@ func TestBasicFlowWithCredentials(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Annotations: map[string]string{
-					"build.dev/docker-0": "https://gcr.io",
+					"build.knative.dev/docker-0": "https://gcr.io",
 				},
 			},
 			Type: corev1.SecretTypeBasicAuth,

@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,12 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.dev/v1alpha1
-kind: BuildTemplate
+apiVersion: build.knative.dev/v1alpha1
+kind: Build
 metadata:
-  name: dump-build-template
+  name: test-git-ref
+  labels:
+    expect: succeeded
 spec:
-  steps:
-  - name: dump-build
-    image: ubuntu:latest
-    args: ["cat", "/workspace/another-directory/BUILD"]
+  source:
+    git:
+      url: https://github.com/bazelbuild/rules_docker
+      ref: pull/100/head
+  template:
+    name: dump-workspace-template

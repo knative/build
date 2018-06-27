@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import (
 	"github.com/knative/build/pkg/controller/build"
 	"github.com/knative/build/pkg/controller/buildtemplate"
 
-	clientset "github.com/knative/build/pkg/client/clientset/versioned"
+	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/build/pkg/signals"
 )
@@ -51,9 +51,9 @@ const (
 )
 
 var (
-	masterURL   string
-	kubeconfig  string
-	builderName string
+	kubeconfig  = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	masterURL   = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	builderName = flag.String("builder", "", "The builder implementation to use to execute builds (supports: cluster, google).")
 )
 
 func newCloudBuilder() builder.Interface {
@@ -84,7 +84,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
 		glog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
@@ -94,13 +94,13 @@ func main() {
 		glog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	exampleClient, err := clientset.NewForConfig(cfg)
+	buildClient, err := buildclientset.NewForConfig(cfg)
 	if err != nil {
-		glog.Fatalf("Error building example clientset: %s", err.Error())
+		glog.Fatalf("Error building Build clientset: %s", err.Error())
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	exampleInformerFactory := informers.NewSharedInformerFactory(exampleClient, time.Second*30)
+	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, time.Second*30)
 
 	// Add new controllers here.
 	ctors := []controller.Constructor{
@@ -109,7 +109,7 @@ func main() {
 	}
 
 	var bldr builder.Interface
-	switch builderName {
+	switch *builderName {
 	case "cluster":
 		bldr = newOnClusterBuilder(kubeClient, kubeInformerFactory)
 	case "google":
@@ -122,11 +122,11 @@ func main() {
 	controllers := make([]controller.Interface, 0, len(ctors))
 	for _, ctor := range ctors {
 		controllers = append(controllers,
-			ctor(bldr, kubeClient, exampleClient, kubeInformerFactory, exampleInformerFactory))
+			ctor(bldr, kubeClient, buildClient, kubeInformerFactory, buildInformerFactory))
 	}
 
 	go kubeInformerFactory.Start(stopCh)
-	go exampleInformerFactory.Start(stopCh)
+	go buildInformerFactory.Start(stopCh)
 
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {
@@ -142,10 +142,4 @@ func main() {
 	// TODO(mattmoor): Use a sync.WaitGroup instead?
 	<-stopCh
 	glog.Flush()
-}
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&builderName, "builder", "", "The builder implementation to use to execute builds (supports: cluster, google).")
 }
