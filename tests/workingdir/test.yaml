@@ -19,6 +19,17 @@ metadata:
     expect: succeeded
 spec:
   steps:
-  - name: test
-    image: github.com/knative/build/tests/workingdir
-    workingdir: /a/path/too/far
+  - name: default
+    image: ubuntu
+    command: ['bash']
+    args:
+    - '-c'
+    - '[[ $PWD == /workspace ]]'
+
+  - name: override
+    image: ubuntu
+    command: ['bash']
+    workingdir: '/a/path/too/far'
+    args:
+    - '-c'
+    - '[[ $PWD == /a/path/too/far ]]'

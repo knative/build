@@ -20,7 +20,11 @@ metadata:
 spec:
   steps:
   - name: secret
-    image: github.com/knative/build/tests/configmap
+    image: ubuntu
+    command: ['bash']
+    args:
+    - '-c'
+    - '[[ $(cat /config/test.data) == $TEST_DATA ]]'
     env:
     - name: TEST_DATA
       valueFrom:
