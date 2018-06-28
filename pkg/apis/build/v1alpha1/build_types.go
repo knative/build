@@ -104,10 +104,10 @@ type GitSourceSpec struct {
 	// URL of the Git repository to clone from.
 	Url string `json:"url"`
 
-	// Git ref (branch, tag, commit SHA or ref) to clone.
-	// See https://git-scm.com/docs/gitrevisions#_specifying_revisions for
-	// more information.
-	Ref string `json:"ref,omitempty"`
+	// Git revision (branch, tag, commit SHA or ref) to clone.  See
+	// https://git-scm.com/docs/gitrevisions#_specifying_revisions for more
+	// information.
+	Revision string `json:"revision"`
 }
 
 // GCSSourceSpec describes source input to the Build in the form of an archive,

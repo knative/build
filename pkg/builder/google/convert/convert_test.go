@@ -129,7 +129,7 @@ func TestUnsupportedCRDs(t *testing.T) {
 		"testdata/volumes.yaml",
 
 		// GCB doesn't support arbitrary Git refs.
-		"testdata/git-ref.yaml",
+		"testdata/git-revision.yaml",
 
 		// GCB doesn't support source manifests.
 		"testdata/gcs-manifest.yaml",

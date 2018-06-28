@@ -22,7 +22,7 @@ spec:
   source:
     git:
       url: git@github.com:knative/build.git
-      ref: master
+      revision: master
 
   steps:
   - name: config
