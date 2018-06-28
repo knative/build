@@ -4,7 +4,10 @@ metadata:
   name: knative-build-admin
 rules:
   - apiGroups: [""]
-    resources: ["pods", "namespaces", "secrets", "events", "serviceaccounts"]
+    resources: ["pods", "namespaces", "secrets", "events", "serviceaccounts", "configmaps"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["deployments"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
