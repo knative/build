@@ -28,7 +28,10 @@ var (
 )
 
 type Builder interface {
-	HasMatchingAnnotation(*corev1.Secret) (string, bool)
+	// MatchingAnnotations extracts flags for the credential
+	// helper from the supplied secret and returns a slice (of
+	// length 0 or greater) of applicable domains.
+	MatchingAnnotations(*corev1.Secret) []string
 	Write() error
 }
 

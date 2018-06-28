@@ -53,8 +53,12 @@ func NewBuilder() credentials.Builder {
 	return &GitConfigBuilder{}
 }
 
-func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (string, bool) {
+// MatchingAnnotations extracts flags for the credential helper
+// from the supplied secret and returns a slice (of length 0 or
+// greater) of applicable domains.
+func (dcb *GitConfigBuilder) MatchingAnnotations(secret *corev1.Secret) []string {
 	var flagName string
+	var flags []string
 	switch secret.Type {
 	case corev1.SecretTypeBasicAuth:
 		flagName = "basic-git"
@@ -63,15 +67,15 @@ func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (strin
 		flagName = "ssh-git"
 
 	default:
-		return "", false
+		return flags
 	}
 
 	for k, v := range secret.Annotations {
 		if strings.HasPrefix(k, annotationPrefix) {
-			return fmt.Sprintf("-%s=%s=%s", flagName, secret.Name, v), true
+			flags = append(flags, fmt.Sprintf("-%s=%s=%s", flagName, secret.Name, v))
 		}
 	}
-	return "", false
+	return flags
 }
 
 func (dcb *GitConfigBuilder) Write() error {
