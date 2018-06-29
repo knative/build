@@ -59,7 +59,7 @@ func main() {
 		logger.Fatal("Failed to get the client set", zap.Error(err))
 	}
 
-	buildClient, err := buildclientset.NewForConfig(cfg, logger)
+	buildClient, err := buildclientset.NewForConfig(cfg)
 	if err != nil {
 		log.Fatalf("Error building Build clientset: %s", err.Error())
 	}

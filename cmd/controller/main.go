@@ -99,7 +99,7 @@ func main() {
 		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	buildClient, err := buildclientset.NewForConfig(cfg, logger)
+	buildClient, err := buildclientset.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatalf("Error building Build clientset: %s", err.Error())
 	}
