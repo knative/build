@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -38,4 +39,11 @@ type Interface interface {
 	Run(threadiness int, stopCh <-chan struct{}) error
 }
 
-type Constructor func(builder.Interface, kubernetes.Interface, clientset.Interface, kubeinformers.SharedInformerFactory, informers.SharedInformerFactory) Interface
+type Constructor func(
+	builder.Interface,
+	kubernetes.Interface,
+	clientset.Interface,
+	kubeinformers.SharedInformerFactory,
+	informers.SharedInformerFactory,
+	*zap.SugaredLogger,
+) Interface

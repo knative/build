@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -35,6 +35,7 @@ import (
 
 	"github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/controller"
+	"github.com/knative/build/pkg/logging/logkey"
 
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
@@ -75,6 +76,12 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+	// Sugared logger is easier to use but is not as performant as the
+	// raw logger. In performance critical paths, call logger.Desugar()
+	// and use the returned raw logger instead. In addition to the
+	// performance benefits, raw logger also preserves type-safety at
+	// the expense of slightly greater verbosity.
+	logger *zap.SugaredLogger
 }
 
 // NewController returns a new build controller
@@ -83,15 +90,21 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	buildInformerFactory informers.SharedInformerFactory) controller.Interface {
+	buildInformerFactory informers.SharedInformerFactory,
+	logger *zap.SugaredLogger,
+) controller.Interface {
 
 	// obtain a reference to a shared index informer for the BuildTemplate type.
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 
+	// Enrich the logs with controller name
+	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
+
 	// Create event broadcaster
-	glog.V(4).Info("Creating event broadcaster")
+	logger.Debug("Creating event broadcaster")
+
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(logger.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
@@ -102,9 +115,10 @@ func NewController(
 		buildTemplatesSynced: buildTemplateInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BuildTemplates"),
 		recorder:             recorder,
+		logger:               logger,
 	}
 
-	glog.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	// Set up an event handler for when BuildTemplate resources change
 	buildTemplateInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueTemplate,
@@ -125,23 +139,23 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting BuildTemplate controller")
+	c.logger.Info("Starting BuildTemplate controller")
 
 	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for informer caches to sync")
+	c.logger.Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.buildTemplatesSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	glog.Info("Starting workers")
+	c.logger.Info("Starting workers")
 	// Launch two workers to process BuildTemplate resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	glog.Info("Started workers")
+	c.logger.Info("Started workers")
 	<-stopCh
-	glog.Info("Shutting down workers")
+	c.logger.Info("Shutting down workers")
 
 	return nil
 }
@@ -195,7 +209,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		glog.Infof("Successfully synced '%s'", key)
+		c.logger.Infof("Successfully synced '%s'", key)
 		return nil
 	}(obj)
 

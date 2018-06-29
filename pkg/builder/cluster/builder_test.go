@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"go.uber.org/zap"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +43,8 @@ const (
 
 func newBuilder(cs kubernetes.Interface) *builder {
 	kif := kubeinformers.NewSharedInformerFactory(cs, time.Second*30)
-	return NewBuilder(cs, kif).(*builder)
+	logger := zap.NewExample().Sugar()
+	return NewBuilder(cs, kif, logger).(*builder)
 }
 
 func TestBasicFlow(t *testing.T) {

@@ -19,7 +19,7 @@ package main
 import (
 	"os"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 )
 
 const (
@@ -27,9 +27,10 @@ const (
 )
 
 func main() {
+	logger := zap.NewExample().Sugar()
 	if cwd, err := os.Getwd(); err != nil {
-		glog.Fatalf("Unexpected error in os.Getwd(): %v", err)
+		logger.Fatalf("Unexpected error in os.Getwd(): %v", err)
 	} else if cwd != expectedWorkingDir {
-		glog.Fatalf("Unexpected value for os.Getwd(), want %q, but got %q", expectedWorkingDir, cwd)
+		logger.Fatalf("Unexpected value for os.Getwd(), want %q, but got %q", expectedWorkingDir, cwd)
 	}
 }

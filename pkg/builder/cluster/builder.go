@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -72,7 +72,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		return nil, err
 	}
 
-	glog.Infof("Waiting for %q", op.Name())
+	op.builder.logger.Infof("Waiting for %q", op.Name())
 	pod := <-podCh
 	op.statuses = pod.Status.InitContainerStatuses
 
@@ -127,10 +127,11 @@ func (b *build) Execute() (buildercommon.Operation, error) {
 }
 
 // NewBuilder constructs an on-cluster builder.Interface for executing Build custom resources.
-func NewBuilder(kubeclient kubernetes.Interface, kubeinformers kubeinformers.SharedInformerFactory) buildercommon.Interface {
+func NewBuilder(kubeclient kubernetes.Interface, kubeinformers kubeinformers.SharedInformerFactory, logger *zap.SugaredLogger) buildercommon.Interface {
 	b := &builder{
 		kubeclient: kubeclient,
 		callbacks:  make(map[string]chan *corev1.Pod),
+		logger:     logger,
 	}
 
 	podInformer := kubeinformers.Core().V1().Pods()
@@ -153,6 +154,7 @@ type builder struct {
 	// On success, an empty string is sent.
 	// On failure, the Message of the failure PodCondition is sent.
 	callbacks map[string]chan *corev1.Pod
+	logger    *zap.SugaredLogger
 }
 
 func (b *builder) Builder() v1alpha1.BuildProvider {
@@ -186,6 +188,7 @@ func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercomm
 	for _, state := range status.StepStates {
 		statuses = append(statuses, corev1.ContainerStatus{State: state})
 	}
+
 	return &operation{
 		builder:   b,
 		namespace: status.Cluster.Namespace,
@@ -236,7 +239,7 @@ func (b *builder) addPodEvent(obj interface{}) {
 		ch <- pod
 		delete(b.callbacks, key)
 	} else {
-		glog.Errorf("Saw %q complete, but nothing was watching for it!", key)
+		b.logger.Errorf("Saw %q complete, but nothing was watching for it!", key)
 	}
 }
 
@@ -250,7 +253,7 @@ func (b *builder) updatePodEvent(old, new interface{}) {
 func (b *builder) deletePodEvent(obj interface{}) {
 	// TODO(mattmoor): If a pod gets deleted and someone's watching, we should propagate our
 	// own error message so that we don't leak a go routine waiting forever.
-	glog.Errorf("NYI: delete event for: %v", obj)
+	b.logger.Errorf("NYI: delete event for: %v", obj)
 }
 
 func isDone(pod *corev1.Pod) bool {
