@@ -56,6 +56,7 @@ type fixture struct {
 	// Objects from here preloaded into NewSimpleFake.
 	kubeobjects []runtime.Object
 	objects     []runtime.Object
+	eventCh     chan string
 }
 
 func newBuild(name string) *v1alpha1.Build {
@@ -69,14 +70,16 @@ func newBuild(name string) *v1alpha1.Build {
 	}
 }
 
-func (f *fixture) newController(b builder.Interface) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
+func (f *fixture) newController(b builder.Interface, eventCh chan string) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
 	logger := zap.NewExample().Sugar()
 	c := NewController(b, f.kubeclient, f.client, k8sI, i, logger).(*Controller)
 
 	c.buildsSynced = func() bool { return true }
-	c.recorder = &record.FakeRecorder{}
+	c.recorder = &record.FakeRecorder{
+		Events: eventCh,
+	}
 
 	return c, i, k8sI
 }
@@ -129,9 +132,11 @@ func TestBasicFlows(t *testing.T) {
 		}
 
 		stopCh := make(chan struct{})
+		eventCh := make(chan string, 1024)
 		defer close(stopCh)
+		defer close(eventCh)
 
-		c, i, k8sI := f.newController(test.bldr)
+		c, i, k8sI := f.newController(test.bldr, eventCh)
 		f.updateIndex(i, []*v1alpha1.Build{build})
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
@@ -176,6 +181,12 @@ func TestBasicFlows(t *testing.T) {
 		}
 		if msg, _ := builder.ErrorMessage(&second.Status); test.expectedErrorMessage != msg {
 			t.Errorf("Second ErrorMessage(%d); wanted %q, got %q.", idx, test.expectedErrorMessage, msg)
+		}
+
+		statusEvent := <-eventCh
+		successEvent := "Normal Synced Build synced successfully"
+		if statusEvent == "" {
+			t.Errorf("Event; wanted %q, got %q", successEvent, statusEvent)
 		}
 	}
 }
