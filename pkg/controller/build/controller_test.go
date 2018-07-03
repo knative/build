@@ -24,6 +24,7 @@ import (
 	"github.com/knative/build/pkg/builder/google"
 	"github.com/knative/build/pkg/builder/google/fakecloudbuild"
 	"github.com/knative/build/pkg/builder/nop"
+	"go.uber.org/zap"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,8 +72,8 @@ func newBuild(name string) *v1alpha1.Build {
 func (f *fixture) newController(b builder.Interface) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
-
-	c := NewController(b, f.kubeclient, f.client, k8sI, i).(*Controller)
+	logger := zap.NewExample().Sugar()
+	c := NewController(b, f.kubeclient, f.client, k8sI, i, logger).(*Controller)
 
 	c.buildsSynced = func() bool { return true }
 	c.recorder = &record.FakeRecorder{}

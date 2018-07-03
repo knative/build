@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/golang/glog"
 	"github.com/knative/build/pkg"
 	"github.com/knative/build/pkg/builder"
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
@@ -69,11 +68,11 @@ func main() {
 	switch *builderName {
 	case "cluster":
 		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-		bldr = onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory)
+		bldr = onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
 	case "google":
 		bldr = gcb.NewBuilder(nil, "")
 	default:
-		glog.Fatalf("Unrecognized builder: %v (supported: google, cluster)", builderName)
+		logger.Fatalf("Unrecognized builder: %v (supported: google, cluster)", builderName)
 	}
 
 	options := webhook.ControllerOptions{
