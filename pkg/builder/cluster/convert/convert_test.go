@@ -42,6 +42,7 @@ func TestParsing(t *testing.T) {
 		"testdata/env.yaml",
 		"testdata/env-valuefrom.yaml",
 		"testdata/workingdir.yaml",
+		"testdata/workspace.yaml",
 		"testdata/resources.yaml",
 		"testdata/security-context.yaml",
 		"testdata/volumes.yaml",
@@ -81,34 +82,45 @@ func TestParsing(t *testing.T) {
 			},
 		}
 		cs := fakek8s.NewSimpleClientset(sa, secret)
-		j, err := FromCRD(og, cs)
+		p, err := FromCRD(og, cs)
 		if err != nil {
 			t.Errorf("Unable to convert %q from CRD: %v", in, err)
 			continue
 		}
 
 		// Verify that secrets are loaded correctly.
-		if j.Spec.ServiceAccountName != "" {
-			for _, vol := range j.Spec.Volumes {
+		if p.Spec.ServiceAccountName != "" {
+			for _, vol := range p.Spec.Volumes {
 				if vol.Name == "secret-volume-multi-creds" {
 					if vol.Secret.SecretName != "multi-creds" {
-						t.Errorf("Expected multi-creds to be mounted in Pod %v", j.Spec)
+						t.Errorf("Expected multi-creds to be mounted in Pod %v", p.Spec)
 					}
 				}
 			}
 			expected := map[string]int{"https://us.gcr.io": 1, "https://docker.io": 1, "github.com": 1, "gitlab.com": 1}
-			for _, a := range j.Spec.InitContainers[0].Args {
+			for _, a := range p.Spec.InitContainers[0].Args {
 				expected[a] -= 1
 			}
 			for k, c := range expected {
 				if c > 0 {
-					t.Errorf("Expected arg related to %s in args, got %v", k, j.Spec.InitContainers[0].Args)
+					t.Errorf("Expected arg related to %s in args, got %v", k, p.Spec.InitContainers[0].Args)
 				}
 			}
 		}
-		// Verify that reverse transformation works.
 
-		b, err := ToCRD(j)
+		// Verify that volumeMounts are mounted at a unique path.
+		for i, s := range p.Spec.InitContainers {
+			seen := map[string]struct{}{}
+			for _, vm := range s.VolumeMounts {
+				if _, found := seen[vm.MountPath]; found {
+					t.Errorf("Step %d had duplicate volumeMount path %q", i, vm.MountPath)
+				}
+				seen[vm.MountPath] = struct{}{}
+			}
+		}
+
+		// Verify that reverse transformation works.
+		b, err := ToCRD(p)
 		if err != nil {
 			t.Errorf("Unable to convert %q to CRD: %v", in, err)
 			continue
