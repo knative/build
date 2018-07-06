@@ -30,6 +30,16 @@ var (
 	revision = flag.String("revision", "", "The Git revision to make the repository HEAD")
 )
 
+func run(logger *zap.SugaredLogger, cmd string, args ...string) {
+	c := exec.Command(cmd, args...)
+	var output bytes.Buffer
+	c.Stderr = &output
+	c.Stdout = &output
+	if err := c.Run(); err != nil {
+		logger.Errorf("Error running %v %v: %v\n%v", cmd, args, err, output.String())
+	}
+}
+
 func runOrFail(logger *zap.SugaredLogger, cmd string, args ...string) {
 	c := exec.Command(cmd, args...)
 	var output bytes.Buffer
@@ -56,8 +66,8 @@ func main() {
 		logger.Fatalf("Unexpected error creating symlink: %v", err)
 	}
 
-	runOrFail(logger, "git", "init")
-	runOrFail(logger, "git", "remote", "add", "origin", *url)
+	run(logger, "git", "init")
+	run(logger, "git", "remote", "add", "origin", *url)
 	runOrFail(logger, "git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *revision)
 	runOrFail(logger, "git", "reset", "--hard", "FETCH_HEAD")
 
