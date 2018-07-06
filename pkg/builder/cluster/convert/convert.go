@@ -18,6 +18,7 @@ package convert
 import (
 	"flag"
 	"fmt"
+	"path"
 	"reflect"
 	"strings"
 
@@ -263,6 +264,25 @@ func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Inte
 	}, volumes, nil
 }
 
+// workdir returns the joined workingdir given a srcDir and stepDir, either of
+// which can be "". stepDir can be absolute, in which case workdir will return
+// it directly. Otherwise, workdir is assumed to be within /workspace.
+func workdir(srcDir, stepDir string) string {
+	// srcDir should not be absolute, should be caught by validation.
+	if path.IsAbs(srcDir) {
+		return ""
+	}
+
+	// If step.WorkingDir is absolute, srcDir is ignored.
+	if path.IsAbs(stepDir) {
+		return path.Clean(stepDir)
+	}
+
+	// Otherwise, workdir is /workspace/$srcDir/$stepDir, where either can
+	// be "".
+	return path.Clean(path.Join("/workspace", srcDir, stepDir))
+}
+
 func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Pod, error) {
 	build = build.DeepCopy()
 
@@ -281,12 +301,16 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		setupContainers = append(setupContainers, *scm)
 	}
 
+	srcDir := ""
+	if build.Spec.Source != nil && build.Spec.Source.Git != nil {
+		srcDir = build.Spec.Source.Git.Dir
+	}
+
 	// Add the implicit volume mounts to each step container.
 	var initContainers []corev1.Container
 	for i, step := range append(setupContainers, build.Spec.Steps...) {
-		if step.WorkingDir == "" {
-			step.WorkingDir = "/workspace"
-		}
+		step.WorkingDir = workdir(srcDir, step.WorkingDir)
+
 		if step.Name == "" {
 			step.Name = fmt.Sprintf("%v%d", unnamedInitContainerPrefix, i)
 		} else {
@@ -413,7 +437,14 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 	for _, step := range podSpec.InitContainers {
 		if step.WorkingDir == "/workspace" {
 			step.WorkingDir = ""
+		} else if strings.HasPrefix(step.WorkingDir, "/workspace/") {
+			// This conversion is lossy, since it assumes any
+			// relative path inside /workspace comes from the
+			// step's workingdir and never comes from GitSource's
+			// Dir.
+			step.WorkingDir = strings.TrimPrefix(step.WorkingDir, "/workspace/")
 		}
+
 		step.Env = filterImplicitEnvVars(step.Env)
 		step.VolumeMounts = filterImplicitVolumeMounts(step.VolumeMounts)
 		// Strip the init container prefix that is added automatically.

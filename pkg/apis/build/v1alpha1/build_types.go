@@ -108,6 +108,13 @@ type GitSourceSpec struct {
 	// https://git-scm.com/docs/gitrevisions#_specifying_revisions for more
 	// information.
 	Revision string `json:"revision"`
+
+	// If set, directory within the repo in which to run the build.
+	//
+	// This must be a relative path. If a step's `workingdir` is specified
+	// and is an absolute path, this value is ignored for the step's
+	// execution.
+	Dir string `json:"dir"`
 }
 
 // GCSSourceSpec describes source input to the Build in the form of an archive,
