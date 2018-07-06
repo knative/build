@@ -11,31 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.knative.dev/v1alpha1
-kind: Build
-metadata:
-  name: test-workspace-volume
-  labels:
-    expect: succeeded
-spec:
-  steps:
-  - name: write
-    image: ubuntu
-    command: ['bash']
-    args: ['-c', 'echo some stuff > /workspace/stuff']
-  - name: read
-    image: ubuntu
-    args: ['cat', '/workspace/stuff']
-
-  - name: override-workspace
-    image: ubuntu
-    command: ['bash']
-    # /workspace/stuff *doesn't* exist.
-    args: ['-c', '[[ ! -f /workspace/stuff ]]']
-    volumeMounts:
-    - name: empty
-      mountPath: /workspace
-
-  volumes:
+steps:
+- name: override-workspace
+  image: busybox
+  args: ["echo Hello"]
+  volumeMounts:
   - name: empty
-    emptyDir: {}
+    mountPath: /workspace
+
+- name: override-home
+  image: busybox
+  args: ["echo Hello"]
+  volumeMounts:
+  - name: empty
+    mountPath: /builder/home
