@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/knative/build/pkg/logs"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 var namespace = flag.String("namespace", "default", "The namespace scope for this CLI request")
