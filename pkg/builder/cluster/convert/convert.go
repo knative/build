@@ -294,7 +294,18 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		}
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
-		step.VolumeMounts = append(step.VolumeMounts, implicitVolumeMounts...)
+
+		// Add implicit volume mounts, unless the step overrides it.
+		requestedMountPaths := map[string]struct{}{}
+		for _, v := range step.VolumeMounts {
+			requestedMountPaths[v.MountPath] = struct{}{}
+		}
+		for _, imp := range implicitVolumeMounts {
+			if _, found := requestedMountPaths[imp.MountPath]; !found {
+				step.VolumeMounts = append(step.VolumeMounts, imp)
+			}
+		}
+
 		initContainers = append(initContainers, step)
 	}
 	// Add our implicit volumes and any volumes needed for secrets to the explicitly
