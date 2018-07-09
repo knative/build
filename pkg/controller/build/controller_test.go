@@ -199,50 +199,38 @@ func TestBasicFlows(t *testing.T) {
 }
 
 func TestErrFlows(t *testing.T) {
-	_, cls := fakecloudbuild.New()
-	defer cls.Close()
+	bldr := &nop.Builder{Err: errors.New("not okay")}
+	expectedErrEventMsg := "Warning BuildExecuteFailed Failed to execute Build"
 
-	tests := []struct {
-		bldr                builder.Interface
-		setup               func()
-		expectedErrEventMsg string
-	}{{
-		bldr:                &nop.Builder{Err: errors.New("not okay")},
-		expectedErrEventMsg: "Warning BuildExecuteFailed Failed to execute Build",
-	}}
+	build := newBuild("test")
+	f := &fixture{
+		t:           t,
+		objects:     []runtime.Object{build},
+		kubeobjects: nil,
+		client:      fake.NewSimpleClientset(build),
+		kubeclient:  k8sfake.NewSimpleClientset(),
+	}
 
-	for _, test := range tests {
-		fakecloudbuild.ErrorMessage = test.expectedErrEventMsg
-		build := newBuild("test")
-		f := &fixture{
-			t:           t,
-			objects:     []runtime.Object{build},
-			kubeobjects: nil,
-			client:      fake.NewSimpleClientset(build),
-			kubeclient:  k8sfake.NewSimpleClientset(),
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	if err := c.syncHandler(getKey(build, t)); err == nil {
+		t.Errorf("Expect error syncing build")
+	}
+
+	select {
+	case statusEvent := <-eventCh:
+		if !strings.Contains(statusEvent, expectedErrEventMsg) {
+			t.Errorf("Event messsgae; wanted %q, got %q", expectedErrEventMsg, statusEvent)
 		}
-
-		stopCh := make(chan struct{})
-		eventCh := make(chan string, 1024)
-		defer close(stopCh)
-		defer close(eventCh)
-
-		c, i, k8sI := f.newController(test.bldr, eventCh)
-		f.updateIndex(i, []*v1alpha1.Build{build})
-		i.Start(stopCh)
-		k8sI.Start(stopCh)
-
-		if err := c.syncHandler(getKey(build, t)); err == nil {
-			t.Errorf("Expect error syncing build")
-		}
-
-		select {
-		case statusEvent := <-eventCh:
-			if !strings.Contains(statusEvent, test.expectedErrEventMsg) {
-				t.Errorf("Event messsgae; wanted %q, got %q", test.expectedErrEventMsg, statusEvent)
-			}
-		case <-time.After(2 * time.Second):
-			t.Fatalf("No events published")
-		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events published")
 	}
 }
