@@ -153,6 +153,15 @@ func (in *BuildSpec) DeepCopyInto(out *BuildSpec) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(v1.Affinity)
+			(*in).DeepCopyInto(*out)
+		}
+	}
 	return
 }
 
