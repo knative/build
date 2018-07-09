@@ -51,6 +51,7 @@ func TestParsing(t *testing.T) {
 
 		"testdata/gcs-archive.yaml",
 		"testdata/gcs-manifest.yaml",
+		"testdata/podaffinity.yaml",
 	}
 
 	for _, in := range inputs {

@@ -65,6 +65,9 @@ type BuildSpec struct {
 	// populate fields in the build, and optional Arguments to pass to the
 	// template.
 	Template *TemplateInstantiationSpec `json:"template,omitempty"`
+	// If specified, the pod's scheduling constraints
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // TemplateInstantiationSpec specifies how a BuildTemplate is instantiated into
