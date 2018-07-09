@@ -88,14 +88,19 @@ func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 
 type build struct {
 	builder *Builder
+	err     error
 }
 
 func (nb *build) Execute() (buildercommon.Operation, error) {
+	if nb.err != nil {
+		return nil, nb.err
+	}
 	return &operation{builder: nb.builder}, nil
 }
 
 type Builder struct {
 	ErrorMessage string
+	Err          error
 }
 
 func (nb *Builder) Builder() v1alpha1.BuildProvider {
@@ -105,7 +110,11 @@ func (nb *Builder) Builder() v1alpha1.BuildProvider {
 
 func (nb *Builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error { return nil }
 func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {
-	return &build{builder: nb}, nil
+	b := &build{builder: nb}
+	if nb.Err != nil {
+		b.err = nb.Err
+	}
+	return b, nil
 }
 
 func (nb *Builder) OperationFromStatus(*v1alpha1.BuildStatus) (buildercommon.Operation, error) {

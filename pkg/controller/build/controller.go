@@ -310,6 +310,9 @@ func (c *Controller) syncHandler(key string) error {
 					Reason:  "BuildExecuteFailed",
 					Message: err.Error(),
 				})
+
+				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildExecuteFailed", "Failed to execute Build %q: %v", build.Name, err)
+
 				if _, err := c.updateStatus(build); err != nil {
 					return err
 				}
