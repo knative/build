@@ -216,8 +216,8 @@ func TestSSHFlagHandling(t *testing.T) {
 
 	expectedSSHConfig := fmt.Sprintf(`Host github.com
     HostName github.com
-    IdentityFile %s/.ssh/id_foo
-`, os.Getenv("HOME"))
+    IdentityFile %s
+`, filepath.Join(os.Getenv("HOME"), ".ssh", "id_foo"))
 	if string(b) != expectedSSHConfig {
 		t.Errorf("got: %v, wanted: %v", string(b), expectedSSHConfig)
 	}
@@ -287,11 +287,12 @@ func TestSSHFlagHandlingTwice(t *testing.T) {
 
 	expectedSSHConfig := fmt.Sprintf(`Host github.com
     HostName github.com
-    IdentityFile %s/.ssh/id_foo
+    IdentityFile %s
 Host gitlab.com
     HostName gitlab.com
-    IdentityFile %s/.ssh/id_bar
-`, os.Getenv("HOME"), os.Getenv("HOME"))
+    IdentityFile %s
+`, filepath.Join(os.Getenv("HOME"), ".ssh", "id_foo"),
+		filepath.Join(os.Getenv("HOME"), ".ssh", "id_bar"))
 	if string(b) != expectedSSHConfig {
 		t.Errorf("got: %v, wanted: %v", string(b), expectedSSHConfig)
 	}

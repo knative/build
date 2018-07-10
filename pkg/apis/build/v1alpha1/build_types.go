@@ -103,6 +103,10 @@ type SourceSpec struct {
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GCS    *GCSSourceSpec    `json:"gcs,omitempty"`
 	Custom *corev1.Container `json:"custom,omitempty"`
+
+	// SubDir specifies a subdirectory of the fetched source which should be
+	// built.
+	SubDir string `json:"subDir,omitempty"`
 }
 
 // GitSourceSpec describes a Git repo source input to the Build.
