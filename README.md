@@ -3,8 +3,8 @@
 This repository implements `Build` and `BuildTemplate` custom resources
 for Kubernetes, and a controller for making them work.
 
-If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md)
-and [DEVELOPMENT.md](./DEVELOPMENT.md).
+If you are interested in contributing, see
+[CONTRIBUTING.md](./CONTRIBUTING.md) and [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Objective
 
@@ -19,9 +19,10 @@ This repository provides an implementation of the Build [CRD](
 https://kubernetes.io/docs/concepts/api-extension/custom-resources/) that runs
 Builds on-cluster (by default), because that is the lowest common denominator
 that we expect users to have available. It is also possible to write a
-[pkg/builder](./pkg/builder) implementation that delegates Builds to hosted
-services (e.g. [Google Container Builder](./pkg/builder/google)), but these are
-typically more restrictive.
+[pkg/builder](./pkg/builder)
+implementation that delegates Builds to hosted services (e.g. [Google Container
+Builder](./pkg/builder/google)), but
+these are typically more restrictive.
 
 This project as it exists today is not a complete standalone product that could
 be used for CI/CD, but it provides a building block to facilitate the
@@ -30,10 +31,10 @@ block for CI/CD in [the future](./roadmap-2018.md)
 
 ## Terminology and Conventions
 
-* [Builds](./docs/builds.md)
-* [Build Templates](./docs/build-templates.md)
-* [Builders](./docs/builder-contract.md)
-* [Authentication](./docs/auth.md)
+* [Builds](https://github.com/knative/docs/blob/master/build/builds.md)
+* [Build Templates](https://github.com/knative/docs/blob/master/build/build-templates.md)
+* [Builders](https://github.com/knative/docs/blob/master/build/builder-contract.md)
+* [Authentication](https://github.com/knative/docs/blob/master/build/auth.md)
 
 ## Getting Started
 
