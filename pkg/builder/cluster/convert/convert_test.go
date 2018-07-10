@@ -17,14 +17,14 @@ limitations under the License.
 package convert
 
 import (
-	"github.com/knative/build/pkg/buildtest"
+	"testing"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
-	"testing"
+	"github.com/knative/build/pkg/buildtest"
 )
 
 func read2CRD(f string) (*v1alpha1.Build, error) {
@@ -48,6 +48,7 @@ func TestParsing(t *testing.T) {
 		"testdata/custom-source.yaml",
 
 		"testdata/git-revision.yaml",
+		"testdata/git-dir.yaml",
 
 		"testdata/gcs-archive.yaml",
 		"testdata/gcs-manifest.yaml",
@@ -58,15 +59,14 @@ func TestParsing(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error in read2CRD(%q): %v", in, err)
 		}
-		sa := &corev1.ServiceAccount{
+		cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: "default"},
 			Secrets: []corev1.ObjectReference{
 				{
 					Name: "multi-creds",
 				},
 			},
-		}
-		secret := &corev1.Secret{
+		}, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "multi-creds",
 				Annotations: map[string]string{"build.dev/docker-0": "https://us.gcr.io",
 					"build.dev/docker-1": "https://docker.io",
@@ -78,8 +78,7 @@ func TestParsing(t *testing.T) {
 				"username": []byte("foo"),
 				"password": []byte("BestEver"),
 			},
-		}
-		cs := fakek8s.NewSimpleClientset(sa, secret)
+		})
 		j, err := FromCRD(og, cs)
 		if err != nil {
 			t.Errorf("Unable to convert %q from CRD: %v", in, err)
@@ -106,7 +105,6 @@ func TestParsing(t *testing.T) {
 			}
 		}
 		// Verify that reverse transformation works.
-		
 		b, err := ToCRD(j)
 		if err != nil {
 			t.Errorf("Unable to convert %q to CRD: %v", in, err)
