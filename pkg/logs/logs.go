@@ -68,9 +68,18 @@ func Tail(ctx context.Context, out io.Writer, buildName, namespace string) error
 		return err
 	}
 
-	for i := range pod.Status.InitContainerStatuses {
+	for i, container := range pod.Status.InitContainerStatuses {
 		pod, err := watcher.waitForPod(ctx, func(p *v1.Pod) bool {
-			return p.Status.InitContainerStatuses[i].State.Waiting == nil
+			waiting := p.Status.InitContainerStatuses[i].State.Waiting
+			if waiting == nil {
+				return true
+			}
+
+			if waiting.Message != "" {
+				fmt.Fprintln(out, red(fmt.Sprintf("[%s] %s", container.Name, waiting.Message)))
+			}
+
+			return false
 		})
 		if err != nil {
 			return fmt.Errorf("waiting for container: %v", err)
