@@ -26,8 +26,6 @@ function cleanup() {
 cd ${BUILD_ROOT_DIR}
 trap cleanup EXIT
 
-install_ko
-
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@@@@ RUNNING RELEASE VALIDATION TESTS @@@@"
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
@@ -41,9 +39,6 @@ echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
 # Set the repository to the official one:
 export KO_DOCKER_REPO=gcr.io/build-crd
-
-# If this is a prow job, authenticate against GCR.
-(( IS_PROW )) && gcr_auth
 
 echo "Building build-crd"
 ko resolve -f config/ > release.yaml
