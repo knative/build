@@ -166,13 +166,10 @@ echo "- Docker is ${KO_DOCKER_REPO}"
 header "Building and starting the controller"
 trap teardown EXIT
 
-install_ko
-
 if (( USING_EXISTING_CLUSTER )); then
   echo "Deleting any previous controller instance"
   ko delete --ignore-not-found=true -f config/
 fi
-(( IS_PROW )) && gcr_auth
 
 ko apply -f config/
 exit_if_test_failed
