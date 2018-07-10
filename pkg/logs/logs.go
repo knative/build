@@ -30,6 +30,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const buildExecuteFailed = "BuildExecuteFailed"
+
 // Tail tails the logs for a build.
 func Tail(ctx context.Context, out io.Writer, buildName, namespace string) error {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -213,6 +215,12 @@ func podName(cfg *rest.Config, out io.Writer, buildName, namespace string) (stri
 		cluster := b.Status.Cluster
 		if cluster != nil && cluster.PodName != "" {
 			return cluster.PodName, nil
+		}
+
+		for _, condition := range b.Status.Conditions {
+			if condition.Reason == buildExecuteFailed {
+				return "", fmt.Errorf("build failed: %s", condition.Message)
+			}
 		}
 	}
 }
