@@ -30,10 +30,10 @@ block for CI/CD in [the future](./roadmap-2018.md)
 
 ## Terminology and Conventions
 
-* [Builds](./docs/builds.md)
-* [Build Templates](./docs/build-templates.md)
-* [Builders](./docs/builder-contract.md)
-* [Authentication](./docs/auth.md)
+* [Builds](https://github.com/knative/docs/blob/master/build/builds.md)
+* [Build Templates](https://github.com/knative/docs/blob/master/build/build-templates.md)
+* [Builders](https://github.com/knative/docs/blob/master/build/builder-contract.md)
+* [Authentication](https://github.com/knative/docs/blob/master/build/auth.md)
 
 ## Getting Started
 
