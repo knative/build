@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,10 +67,6 @@ function exit_if_test_failed() {
   echo "***           TEST FAILED           ***"
   echo "***    Start of information dump    ***"
   echo "***************************************"
-  if (( IS_PROW )) || [[ $PROJECT_ID != "" ]]; then
-    echo ">>> Project info:"
-    gcloud compute project-info describe
-  fi
   echo ">>> All resources:"
   kubectl get all --all-namespaces
   echo "***************************************"
@@ -117,11 +113,11 @@ if [[ -z $1 ]]; then
   )
   if (( ! IS_PROW )); then
     CLUSTER_CREATION_ARGS+=(--gcp-project=${PROJECT_ID:?"PROJECT_ID must be set to the GCP project where the tests are run."})
-  else
-    # On prow, set bogus SSH keys for kubetest, we're not using them.
-    touch $HOME/.ssh/google_compute_engine.pub
-    touch $HOME/.ssh/google_compute_engine
   fi
+  # SSH keys are not used, but kubetest checks for their existence.
+  # Touch them so if they don't exist, empty files are create to satisfy the check.
+  touch $HOME/.ssh/google_compute_engine.pub
+  touch $HOME/.ssh/google_compute_engine
   # Clear user and cluster variables, so they'll be set to the test cluster.
   # KO_DOCKER_REPO is not touched because when running locally it must
   # be a writeable docker repo.
@@ -206,7 +202,7 @@ done
 
 # Check that tests passed.
 tests_passed=1
-for expected_status in succeeded failed invalid; do
+for expected_status in succeeded failed; do
   results="$(kubectl get builds -l expect=${expected_status} \
       --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
   case $expected_status in
@@ -215,9 +211,6 @@ for expected_status in succeeded failed invalid; do
       ;;
     failed)
       want=succeededfalse
-      ;;
-    invalid)
-      want=invalidtrue
       ;;
     *)
       echo Invalid expected status $expected_status

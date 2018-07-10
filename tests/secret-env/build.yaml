@@ -1,4 +1,4 @@
-# Copyright 2018 Google, Inc. All rights reserved.
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: test-secret-env
@@ -20,7 +20,11 @@ metadata:
 spec:
   steps:
   - name: secret
-    image: github.com/knative/build/tests/secret-env
+    image: ubuntu
+    command: ['bash']
+    args:
+    - '-c'
+    - '[[ $SECRET_PASSWORD == SECRET_PASSWORD ]]'
     env:
     - name: SECRET_PASSWORD
       valueFrom:

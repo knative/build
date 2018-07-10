@@ -30,10 +30,10 @@ block for CI/CD in [the future](./roadmap-2018.md)
 
 ## Terminology and Conventions
 
-* [Builds](./builds.md)
-* [Build Templates](./build-templates.md)
-* [Builders](./builder-contract.md)
-* [Authentication](./cmd/creds-init/README.md)
+* [Builds](./docs/builds.md)
+* [Build Templates](./docs/build-templates.md)
+* [Builders](./docs/builder-contract.md)
+* [Authentication](./docs/auth.md)
 
 ## Getting Started
 
@@ -42,10 +42,19 @@ You can install the latest release of the Build CRD by running:
 kubectl create -f https://storage.googleapis.com/build-crd/latest/release.yaml
 ```
 
+Your account must have the `cluster-admin` role in order to do this. If your
+account does not have this role, you can add it:
+
+```
+kubectl create clusterrolebinding myname-cluster-admin-binding \
+    --clusterrole=cluster-admin \
+    --user=myname@example.org
+```
+
 ### Run your first `Build`
 
 ```yaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: hello-build
@@ -75,7 +84,7 @@ Get more information about the build:
 
 ```shell
 $ kubectl get build hello-build -oyaml
-apiVersion: build.dev/v1alpha1
+apiVersion: build.knative.dev/v1alpha1
 kind: Build
 ...
 status:

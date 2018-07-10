@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	annotationPrefix = "build.dev/docker-"
+	annotationPrefix = "build.knative.dev/docker-"
 )
 
 var (
@@ -124,20 +124,24 @@ func NewBuilder() credentials.Builder {
 	return &DockerConfigBuilder{}
 }
 
-func (dcb *DockerConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (string, bool) {
+// MatchingAnnotations extracts flags for the credential helper
+// from the supplied secret and returns a slice (of length 0 or
+// greater) of applicable domains.
+func (dcb *DockerConfigBuilder) MatchingAnnotations(secret *corev1.Secret) []string {
+	var flags []string
 	switch secret.Type {
 	case corev1.SecretTypeBasicAuth:
 		// OK.
 	default:
-		return "", false
+		return flags
 	}
 
 	for k, v := range secret.Annotations {
 		if strings.HasPrefix(k, annotationPrefix) {
-			return fmt.Sprintf("-basic-docker=%s=%s", secret.Name, v), true
+			flags = append(flags, fmt.Sprintf("-basic-docker=%s=%s", secret.Name, v))
 		}
 	}
-	return "", false
+	return flags
 }
 
 func (dcb *DockerConfigBuilder) Write() error {

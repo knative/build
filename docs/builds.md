@@ -23,13 +23,13 @@ Builds may define a `source:` that describes the context with which to seed the
 build.  This context is put into `/workspace`, a volume that is mounted into
 the `source:` and all of the `steps:`.
 
-Currently, two types of source are supported:
- * `git:` which can specify a `url:` and one of: `branch`, `tag`, `ref`,
- or `commit`.
+Currently, the following types of source are supported:
+ * `git:` which can specify a `url:` and a `revision:`.
 
  * `custom:` which can specify an arbitrary container specification, similar to
  steps (see below).
 
+* `gcs:` which can specify an archive stored at Google Cloud Storage (GCS).
 
 #### Steps or Template
 
@@ -46,12 +46,11 @@ until the first failure (or the last container completes successfully).
 Builds (like Pods) run as a particular service account.  If none is specified, it
 is run as the "default" service account in the namespace of the Build.
 
-A custom service account may be specified via `serviceAccountName: build-bot`.
+A custom service account may be specified via `serviceAccountName: build-bot`. Note, service account names other than `build-bot` are acceptable.
 
 Service accounts may be used to project certain types of credentials into the
 context of a Build automagically.  For more information on how this process is
-configured and how it works, see the [credential initializer documentation](
-./cmd/creds-init/README.md).
+configured and how it works, see the [credential](./auth.md).
 
 
 #### Volumes
@@ -64,7 +63,7 @@ Volumes can be used in a wide variety of ways, just as in Kubernetes itself.
 Common examples include:
 
  * Mounting in Kubernetes secrets (a manual alternative to [our service account
- model](./cmd/creds-init/README.md)).
+ model](./auth.md)).
 
  * Creating an extra `emptyDir` volume to act as a multi-step cache (maybe even
  a persistent volume for inter-build caching).
@@ -86,10 +85,24 @@ spec:
   source:
     git:
       url: https://github.com/knative/build.git
-      branch: master
+      revision: master
   steps:
   - image: ubuntu
     args: ["cat", "README.md"]
+```
+
+#### With a `gcs` source
+
+```yaml
+spec:
+  source:
+    gcs:
+      type: Archive
+      location: gs://build-crd-tests/rules_docker-master.zip
+  steps:
+  - name: list-files
+    image: ubuntu:latest
+    args: ["ls"]
 ```
 
 #### With a `custom` source
@@ -134,7 +147,7 @@ spec:
   # Here build-bot is a ServiceAccount that's had an extra Secret attached
   # with `type: kubernetes.io/basic-auth`.  The username and password are
   # specified per usual, and there is an additional annotation on the Secret
-  # of the form: `build.dev/git-0: https://github.com`, which
+  # of the form: `build.knative.dev/git-0: https://github.com`, which
   # directs us to configure this basic authentication for use with github
   # via Git.
   serviceAccountName: build-bot
@@ -142,7 +155,7 @@ spec:
   source:
     git:
       url: https://github.com/google/secret-sauce.git
-      branch: master
+      revision: master
   steps:
   - image: ubuntu
     args: ["cat", "SECRETS.md"]
@@ -151,4 +164,4 @@ spec:
 #### Lots 'o trivial examples
 
 For a variety of additional (mostly trivial) examples, see also our [tests
-directory](./tests).
+directory](../tests).

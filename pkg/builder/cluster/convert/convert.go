@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"flag"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -113,11 +112,6 @@ var (
 		gcsSource:    containerToGCS,
 		customSource: containerToCustom,
 	}
-	// Used to recover the type of reference we checked out.
-	reCommits  = regexp.MustCompile("^[0-9a-f]{40}$")
-	reRefs     = regexp.MustCompile("^refs/")
-	reTags     = regexp.MustCompile("^refs/tags/(.*)")
-	reBranches = regexp.MustCompile("^refs/heads/(.*)")
 )
 
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
@@ -125,25 +119,15 @@ func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 	if git.Url == "" {
 		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
 	}
-	var commitish string
-	switch {
-	case git.Tag != "":
-		commitish = fmt.Sprintf("refs/tags/%s", git.Tag)
-	case git.Branch != "":
-		commitish = fmt.Sprintf("refs/heads/%s", git.Branch)
-	case git.Commit != "":
-		commitish = git.Commit
-	case git.Ref != "":
-		commitish = git.Ref
-	default:
-		return nil, validation.NewError("MissingCommitish", "git sources are expected to specify one of commit/tag/branch/ref, got %v", git)
+	if git.Revision == "" {
+		return nil, validation.NewError("MissingRevision", "git sources are expected to specify a Revision, got: %v", git)
 	}
 	return &corev1.Container{
 		Name:  gitSource,
 		Image: *gitImage,
 		Args: []string{
 			"-url", git.Url,
-			"-commitish", commitish,
+			"-revision", git.Revision,
 		},
 	}, nil
 }
@@ -156,46 +140,12 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
 	// Now undo what we did above
-	url := git.Args[1]
-	commitish := git.Args[3]
-	switch {
-	case reCommits.MatchString(commitish):
-		return &v1alpha1.SourceSpec{
-			Git: &v1alpha1.GitSourceSpec{
-				Url:    url,
-				Commit: commitish,
-			},
-		}, nil
-
-	case reTags.MatchString(commitish):
-		match := reTags.FindStringSubmatch(commitish)
-		return &v1alpha1.SourceSpec{
-			Git: &v1alpha1.GitSourceSpec{
-				Url: url,
-				Tag: match[1],
-			},
-		}, nil
-
-	case reBranches.MatchString(commitish):
-		match := reBranches.FindStringSubmatch(commitish)
-		return &v1alpha1.SourceSpec{
-			Git: &v1alpha1.GitSourceSpec{
-				Url:    url,
-				Branch: match[1],
-			},
-		}, nil
-
-	case reRefs.MatchString(commitish):
-		return &v1alpha1.SourceSpec{
-			Git: &v1alpha1.GitSourceSpec{
-				Url: url,
-				Ref: commitish,
-			},
-		}, nil
-
-	default:
-		return nil, fmt.Errorf("Unable to determine type of commitish: %v", commitish)
-	}
+	return &v1alpha1.SourceSpec{
+		Git: &v1alpha1.GitSourceSpec{
+			Url:      git.Args[1],
+			Revision: git.Args[3],
+		},
+	}, nil
 }
 
 func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
@@ -282,9 +232,9 @@ func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Inte
 
 		matched := false
 		for _, b := range builders {
-			if arg, found := b.HasMatchingAnnotation(secret); found {
+			if sa := b.MatchingAnnotations(secret); len(sa) > 0 {
 				matched = true
-				args = append(args, arg)
+				args = append(args, sa...)
 			}
 		}
 
@@ -432,6 +382,9 @@ func isImplicitVolume(v corev1.Volume) bool {
 		if v.Name == iv.Name {
 			return true
 		}
+	}
+	if strings.HasPrefix(v.Name, "secret-volume-") {
+		return true
 	}
 	return false
 }

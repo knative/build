@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
@@ -35,10 +34,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/builder/validation"
 	"github.com/knative/build/pkg/controller"
-
-	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/logging/logkey"
 
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
@@ -79,6 +76,12 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+	// Sugared logger is easier to use but is not as performant as the
+	// raw logger. In performance critical paths, call logger.Desugar()
+	// and use the returned raw logger instead. In addition to the
+	// performance benefits, raw logger also preserves type-safety at
+	// the expense of slightly greater verbosity.
+	logger *zap.SugaredLogger
 }
 
 // NewController returns a new build controller
@@ -87,15 +90,21 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
-	buildInformerFactory informers.SharedInformerFactory) controller.Interface {
+	buildInformerFactory informers.SharedInformerFactory,
+	logger *zap.SugaredLogger,
+) controller.Interface {
 
 	// obtain a reference to a shared index informer for the BuildTemplate type.
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 
+	// Enrich the logs with controller name
+	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
+
 	// Create event broadcaster
-	glog.V(4).Info("Creating event broadcaster")
+	logger.Debug("Creating event broadcaster")
+
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartLogging(logger.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
@@ -106,9 +115,10 @@ func NewController(
 		buildTemplatesSynced: buildTemplateInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BuildTemplates"),
 		recorder:             recorder,
+		logger:               logger,
 	}
 
-	glog.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	// Set up an event handler for when BuildTemplate resources change
 	buildTemplateInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueTemplate,
@@ -129,23 +139,23 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting BuildTemplate controller")
+	c.logger.Info("Starting BuildTemplate controller")
 
 	// Wait for the caches to be synced before starting workers
-	glog.Info("Waiting for informer caches to sync")
+	c.logger.Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.buildTemplatesSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	glog.Info("Starting workers")
+	c.logger.Info("Starting workers")
 	// Launch two workers to process BuildTemplate resources
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	glog.Info("Started workers")
+	c.logger.Info("Started workers")
 	<-stopCh
-	glog.Info("Shutting down workers")
+	c.logger.Info("Shutting down workers")
 
 	return nil
 }
@@ -199,7 +209,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		glog.Infof("Successfully synced '%s'", key)
+		c.logger.Infof("Successfully synced '%s'", key)
 		return nil
 	}(obj)
 
@@ -249,39 +259,6 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Don't modify the informer's copy.
 	tmpl = tmpl.DeepCopy()
-
-	// TODO(mattmoor): Consider making this specific to a particular builder implementation.
-	if err := builder.ValidateTemplate(tmpl); err != nil {
-		verr, ok := err.(*validation.Error)
-		if !ok {
-			return err
-		}
-		tmpl.Status.SetCondition(&v1alpha1.BuildTemplateCondition{
-			Type:    v1alpha1.BuildTemplateInvalid,
-			Status:  corev1.ConditionTrue,
-			Reason:  verr.Reason,
-			Message: verr.Message,
-		})
-		if _, err := c.updateStatus(tmpl); err != nil {
-			return err
-		}
-	}
-
 	c.recorder.Event(tmpl, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
-}
-
-func (c *Controller) updateStatus(u *v1alpha1.BuildTemplate) (*v1alpha1.BuildTemplate, error) {
-	tmplClient := c.buildclientset.BuildV1alpha1().BuildTemplates(u.Namespace)
-	newu, err := tmplClient.Get(u.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	newu.Status = u.Status
-
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Build resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	return tmplClient.Update(newu)
 }

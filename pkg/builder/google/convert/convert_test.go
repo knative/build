@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -90,10 +90,6 @@ func TestSupportedCRDs(t *testing.T) {
 
 		"testdata/custom-source.yaml",
 
-		"testdata/git-branch.yaml",
-		"testdata/git-tag.yaml",
-		"testdata/git-commit.yaml",
-
 		"testdata/gcs-archive.yaml",
 	}
 
@@ -132,11 +128,8 @@ func TestUnsupportedCRDs(t *testing.T) {
 		// GCB doesn't support other volume types.
 		"testdata/volumes.yaml",
 
-		// GCB doesn't support refs.
-		"testdata/git-ref.yaml",
-
-		// GCB doesn't support any Git but CSR
-		"testdata/git-branch-github.yaml",
+		// GCB doesn't support arbitrary Git refs.
+		"testdata/git-revision.yaml",
 
 		// GCB doesn't support source manifests.
 		"testdata/gcs-manifest.yaml",

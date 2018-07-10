@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package main
 import (
 	"os"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 )
 
 const (
@@ -27,9 +27,10 @@ const (
 )
 
 func main() {
+	logger := zap.NewExample().Sugar()
 	if cwd, err := os.Getwd(); err != nil {
-		glog.Fatalf("Unexpected error in os.Getwd(): %v", err)
+		logger.Fatalf("Unexpected error in os.Getwd(): %v", err)
 	} else if cwd != expectedWorkingDir {
-		glog.Fatalf("Unexpected value for os.Getwd(), want %q, but got %q", expectedWorkingDir, cwd)
+		logger.Fatalf("Unexpected value for os.Getwd(), want %q, but got %q", expectedWorkingDir, cwd)
 	}
 }

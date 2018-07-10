@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -47,11 +47,7 @@ func TestParsing(t *testing.T) {
 		"testdata/volumes.yaml",
 		"testdata/custom-source.yaml",
 
-		"testdata/git-branch.yaml",
-		"testdata/git-branch-github.yaml",
-		"testdata/git-tag.yaml",
-		"testdata/git-commit.yaml",
-		"testdata/git-ref.yaml",
+		"testdata/git-revision.yaml",
 
 		"testdata/gcs-archive.yaml",
 		"testdata/gcs-manifest.yaml",
@@ -62,12 +58,55 @@ func TestParsing(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error in read2CRD(%q): %v", in, err)
 		}
-		cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}})
+		sa := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Secrets: []corev1.ObjectReference{
+				{
+					Name: "multi-creds",
+				},
+			},
+		}
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "multi-creds",
+				Annotations: map[string]string{"build.dev/docker-0": "https://us.gcr.io",
+					"build.dev/docker-1": "https://docker.io",
+					"build.dev/git-0":    "github.com",
+					"build.dev/git-1":    "gitlab.com",
+				}},
+			Type: "kubernetes.io/basic-auth",
+			Data: map[string][]byte{
+				"username": []byte("foo"),
+				"password": []byte("BestEver"),
+			},
+		}
+		cs := fakek8s.NewSimpleClientset(sa, secret)
 		j, err := FromCRD(og, cs)
 		if err != nil {
 			t.Errorf("Unable to convert %q from CRD: %v", in, err)
 			continue
 		}
+
+		// Verify that secrets are loaded correctly.
+		if j.Spec.ServiceAccountName != "" {
+			for _, vol := range j.Spec.Volumes {
+				if vol.Name == "secret-volume-multi-creds" {
+					if vol.Secret.SecretName != "multi-creds" {
+						t.Errorf("Expected multi-creds to be mounted in Pod %v", j.Spec)
+					}
+				}
+			}
+			expected := map[string]int{"https://us.gcr.io": 1, "https://docker.io": 1, "github.com": 1, "gitlab.com": 1}
+			for _, a := range j.Spec.InitContainers[0].Args {
+				expected[a] -= 1
+			}
+			for k, c := range expected {
+				if c > 0 {
+					t.Errorf("Expected arg related to %s in args, got %v", k, j.Spec.InitContainers[0].Args)
+				}
+			}
+		}
+		// Verify that reverse transformation works.
+		
 		b, err := ToCRD(j)
 		if err != nil {
 			t.Errorf("Unable to convert %q to CRD: %v", in, err)

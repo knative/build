@@ -3,7 +3,7 @@
 This document serves to define "Build Templates", and their capabilities.
 
 A set of curated and supported build templates is available in the
-[`build-templates`](https://github.com/elafros/build-templates) repo.
+`build-templates` [repo]((https://github.com/knative/build-templates)).
 
 ## What is a Build Template?
 
@@ -84,7 +84,7 @@ spec:
   source:
     git:
       url: https://github.com/mchmarny/rester-tester.git
-      branch: master
+      revision: master
   template:
     name: dockerfile-build-and-push
     arguments:
@@ -98,7 +98,7 @@ spec:
   source:
     git:
       url: https://github.com/googlecloudplatform/cloud-builders.git
-      branch: master
+      revision: master
   template:
     name: dockerfile-build-and-push
     arguments:
@@ -115,7 +115,7 @@ spec:
   source:
     git:
       url: https://github.com/googlecloudplatform/cloud-builders.git
-      branch: master
+      revision: master
   template:
     name: dockerfile-build-and-push
     arguments:

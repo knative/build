@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	annotationPrefix = "build.dev/git-"
+	annotationPrefix = "build.knative.dev/git-"
 )
 
 var (
@@ -53,8 +53,12 @@ func NewBuilder() credentials.Builder {
 	return &GitConfigBuilder{}
 }
 
-func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (string, bool) {
+// MatchingAnnotations extracts flags for the credential helper
+// from the supplied secret and returns a slice (of length 0 or
+// greater) of applicable domains.
+func (dcb *GitConfigBuilder) MatchingAnnotations(secret *corev1.Secret) []string {
 	var flagName string
+	var flags []string
 	switch secret.Type {
 	case corev1.SecretTypeBasicAuth:
 		flagName = "basic-git"
@@ -63,15 +67,15 @@ func (dcb *GitConfigBuilder) HasMatchingAnnotation(secret *corev1.Secret) (strin
 		flagName = "ssh-git"
 
 	default:
-		return "", false
+		return flags
 	}
 
 	for k, v := range secret.Annotations {
 		if strings.HasPrefix(k, annotationPrefix) {
-			return fmt.Sprintf("-%s=%s=%s", flagName, secret.Name, v), true
+			flags = append(flags, fmt.Sprintf("-%s=%s=%s", flagName, secret.Name, v))
 		}
 	}
-	return "", false
+	return flags
 }
 
 func (dcb *GitConfigBuilder) Write() error {

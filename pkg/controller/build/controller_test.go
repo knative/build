@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google, Inc. All rights reserved.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ limitations under the License.
 package build
 
 import (
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/knative/build/pkg/builder/google"
 	"github.com/knative/build/pkg/builder/google/fakecloudbuild"
 	"github.com/knative/build/pkg/builder/nop"
+	"go.uber.org/zap"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,6 +58,7 @@ type fixture struct {
 	// Objects from here preloaded into NewSimpleFake.
 	kubeobjects []runtime.Object
 	objects     []runtime.Object
+	eventCh     chan string
 }
 
 func newBuild(name string) *v1alpha1.Build {
@@ -68,14 +72,16 @@ func newBuild(name string) *v1alpha1.Build {
 	}
 }
 
-func (f *fixture) newController(b builder.Interface) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
+func (f *fixture) newController(b builder.Interface, eventCh chan string) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
-
-	c := NewController(b, f.kubeclient, f.client, k8sI, i).(*Controller)
+	logger := zap.NewExample().Sugar()
+	c := NewController(b, f.kubeclient, f.client, k8sI, i, logger).(*Controller)
 
 	c.buildsSynced = func() bool { return true }
-	c.recorder = &record.FakeRecorder{}
+	c.recorder = &record.FakeRecorder{
+		Events: eventCh,
+	}
 
 	return c, i, k8sI
 }
@@ -128,9 +134,11 @@ func TestBasicFlows(t *testing.T) {
 		}
 
 		stopCh := make(chan struct{})
+		eventCh := make(chan string, 1024)
 		defer close(stopCh)
+		defer close(eventCh)
 
-		c, i, k8sI := f.newController(test.bldr)
+		c, i, k8sI := f.newController(test.bldr, eventCh)
 		f.updateIndex(i, []*v1alpha1.Build{build})
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
@@ -176,5 +184,53 @@ func TestBasicFlows(t *testing.T) {
 		if msg, _ := builder.ErrorMessage(&second.Status); test.expectedErrorMessage != msg {
 			t.Errorf("Second ErrorMessage(%d); wanted %q, got %q.", idx, test.expectedErrorMessage, msg)
 		}
+
+		successEvent := "Normal Synced Build synced successfully"
+
+		select {
+		case statusEvent := <-eventCh:
+			if statusEvent != successEvent {
+				t.Errorf("Event; wanted %q, got %q", successEvent, statusEvent)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("No events published")
+		}
+	}
+}
+
+func TestErrFlows(t *testing.T) {
+	bldr := &nop.Builder{Err: errors.New("not okay")}
+	expectedErrEventMsg := "Warning BuildExecuteFailed Failed to execute Build"
+
+	build := newBuild("test")
+	f := &fixture{
+		t:           t,
+		objects:     []runtime.Object{build},
+		kubeobjects: nil,
+		client:      fake.NewSimpleClientset(build),
+		kubeclient:  k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	if err := c.syncHandler(getKey(build, t)); err == nil {
+		t.Errorf("Expect error syncing build")
+	}
+
+	select {
+	case statusEvent := <-eventCh:
+		if !strings.Contains(statusEvent, expectedErrEventMsg) {
+			t.Errorf("Event messsgae; wanted %q, got %q", expectedErrEventMsg, statusEvent)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events published")
 	}
 }

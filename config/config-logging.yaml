@@ -1,4 +1,4 @@
-# Copyright 2018 Google LLC
+# Copyright 2018 Knative Authors LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: config-logging
-  namespace: build-system
+  namespace: knative-build
 data:
   # Common configuration for all knative codebase
   zap-logger-config: |
@@ -47,6 +47,6 @@ data:
 
   # Log level overrides
   loglevel.controller: "info"
-  loglevel.autoscaler: "info"
-  loglevel.queueproxy: "info"
   loglevel.webhook: "info"
+  loglevel.creds-init: "info"
+  loglevel.git-init: "info"
