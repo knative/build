@@ -4,9 +4,7 @@ This repository implements `Build` and `BuildTemplate` custom resources
 for Kubernetes, and a controller for making them work.
 
 If you are interested in contributing, see
-[CONTRIBUTING.md](https://github.com/knative/build/blob/master/CONTRIBUTING.md)
-and
-[DEVELOPMENT.md](https://github.com/knative/build/blob/master/DEVELOPMENT.md).
+[CONTRIBUTING.md](./CONTRIBUTING.md) and [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Objective
 
@@ -21,16 +19,15 @@ This repository provides an implementation of the Build [CRD](
 https://kubernetes.io/docs/concepts/api-extension/custom-resources/) that runs
 Builds on-cluster (by default), because that is the lowest common denominator
 that we expect users to have available. It is also possible to write a
-[pkg/builder](https://github.com/knative/build/blob/master/pkg/builder)
+[pkg/builder](./pkg/builder)
 implementation that delegates Builds to hosted services (e.g. [Google Container
-Builder](https://github.com/knative/build/blob/master/pkg/builder/google)), but
+Builder](./pkg/builder/google)), but
 these are typically more restrictive.
 
 This project as it exists today is not a complete standalone product that could
 be used for CI/CD, but it provides a building block to facilitate the
 expression of Builds as part of larger systems. It might provide a building
-block for CI/CD in [the
-future](https://github.com/knative/build/blob/master/roadmap-2018.md)
+block for CI/CD in [the future](./roadmap-2018.md)
 
 ## Terminology and Conventions
 
