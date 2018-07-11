@@ -55,25 +55,25 @@ var (
 	testCtx    = logging.WithLogger(context.TODO(), testLogger)
 )
 
-//func testBuild(name string) v1alpha1.Build {
-//	return v1alpha1.Build{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Namespace: testNamespace,
-//			Name:      name,
-//		},
-//		Spec: v1alpha1.BuildSpec{},
-//	}
-//}
-//
-//func testBuildTemplate(name string) v1alpha1.BuildTemplate {
-//	return v1alpha1.BuildTemplate{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Namespace: testNamespace,
-//			Name:      name,
-//		},
-//		Spec: v1alpha1.BuildTemplateSpec{},
-//	}
-//}
+func testBuild(name string) v1alpha1.Build {
+	return v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      name,
+		},
+		Spec: v1alpha1.BuildSpec{},
+	}
+}
+
+func testBuildTemplate(name string) v1alpha1.BuildTemplate {
+	return v1alpha1.BuildTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      name,
+		},
+		Spec: v1alpha1.BuildTemplateSpec{},
+	}
+}
 
 func mustMarshal(t *testing.T, in interface{}) []byte {
 	b, err := json.Marshal(in)
@@ -166,245 +166,245 @@ func TestAdmitBuild(t *testing.T) {
 	}
 }
 
-func TestValidateBuild(t *testing.T) {
-	ctx := context.Background()
-	hasDefault := "has-default"
-	empty := ""
-	for _, c := range []struct {
-		desc   string
-		build  *v1alpha1.Build
-		tmpl   *v1alpha1.BuildTemplate
-		reason string // if "", expect success.
-	}{{
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-			},
-		},
-	}, {
-		desc: "Multiple unnamed steps",
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Steps: []corev1.Container{{
-					Image: "gcr.io/foo-bar/baz:latest",
-				}, {
-					Image: "gcr.io/foo-bar/baz:latest",
-				}, {
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-			},
-		},
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}, {
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:oops",
-				}},
-			},
-		},
-		reason: "DuplicateStepName",
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-				Volumes: []corev1.Volume{{
-					Name: "foo",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				}, {
-					Name: "foo",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				}},
-			},
-		},
-		reason: "DuplicateVolumeName",
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Arguments: []v1alpha1.ArgumentSpec{{
-						Name:  "foo",
-						Value: "hello",
-					}, {
-						Name:  "foo",
-						Value: "world",
-					}},
-				},
-			},
-		},
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Parameters: []v1alpha1.ParameterSpec{{
-					Name: "foo",
-				}},
-			},
-		},
-		reason: "DuplicateArgName",
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Name: "foo-bar",
-				},
-				Volumes: []corev1.Volume{{
-					Name: "foo",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				}},
-			},
-		},
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-				Volumes: []corev1.Volume{{
-					Name: "foo",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				}},
-			},
-		},
-		reason: "DuplicateVolumeName",
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Name: "template",
-				},
-			},
-		},
-		reason: "TemplateAndSteps",
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Name: "template",
-					Arguments: []v1alpha1.ArgumentSpec{{
-						Name:  "foo",
-						Value: "hello",
-					}},
-				},
-			},
-		},
-		tmpl: &v1alpha1.BuildTemplate{
-			ObjectMeta: metav1.ObjectMeta{Name: "template"},
-			Spec: v1alpha1.BuildTemplateSpec{
-				Parameters: []v1alpha1.ParameterSpec{{
-					Name: "foo",
-				}, {
-					Name: "bar",
-				}},
-			},
-		},
-		reason: "UnsatisfiedParameter",
-	}, {
-		desc: "Arg doesn't match any parameter",
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Name: "template",
-					Arguments: []v1alpha1.ArgumentSpec{{
-						Name:  "bar",
-						Value: "hello",
-					}},
-				},
-			},
-		},
-		tmpl: &v1alpha1.BuildTemplate{
-			ObjectMeta: metav1.ObjectMeta{Name: "template"},
-			Spec:       v1alpha1.BuildTemplateSpec{},
-		},
-	}, {
-		desc: "Unsatisfied parameter has a default",
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Name: "template",
-					Arguments: []v1alpha1.ArgumentSpec{{
-						Name:  "foo",
-						Value: "hello",
-					}},
-				},
-			},
-		},
-		tmpl: &v1alpha1.BuildTemplate{
-			ObjectMeta: metav1.ObjectMeta{Name: "template"},
-			Spec: v1alpha1.BuildTemplateSpec{
-				Parameters: []v1alpha1.ParameterSpec{{
-					Name: "foo",
-				}, {
-					Name:    "bar",
-					Default: &hasDefault,
-				}},
-			},
-		},
-	}, {
-		desc: "Unsatisfied parameter has empty default",
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Name: "empty-default",
-				},
-			},
-		},
-		tmpl: &v1alpha1.BuildTemplate{
-			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
-			Spec: v1alpha1.BuildTemplateSpec{
-				Parameters: []v1alpha1.ParameterSpec{{
-					Name:    "foo",
-					Default: &empty,
-				}},
-			},
-		},
-	}, {
-		build: &v1alpha1.Build{
-			Spec: v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{},
-			},
-		},
-		reason: "MissingTemplateName",
-	}} {
-		name := c.desc
-		if c.reason != "" {
-			name = "invalid-" + c.reason
-		}
-		t.Run(name, func(t *testing.T) {
-			buildClient := fakebuildclientset.NewSimpleClientset()
-			if c.tmpl != nil {
-				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
-					t.Fatalf("Failed to create template: %v", err)
-				}
-			}
-
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), buildClient, &nop.Builder{}, defaultOptions, testLogger)
-			verr := ac.validateBuild(ctx, nil, nil, c.build)
-			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
-				t.Errorf("validateBuild(%s); got %v, want %q", name, verr, c.reason)
-			}
-		})
-	}
-}
+//func TestValidateBuild(t *testing.T) {
+//	ctx := context.Background()
+//	hasDefault := "has-default"
+//	empty := ""
+//	for _, c := range []struct {
+//		desc   string
+//		build  *v1alpha1.Build
+//		tmpl   *v1alpha1.BuildTemplate
+//		reason string // if "", expect success.
+//	}{{
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//			},
+//		},
+//	}, {
+//		desc: "Multiple unnamed steps",
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Steps: []corev1.Container{{
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}, {
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}, {
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//			},
+//		},
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}, {
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:oops",
+//				}},
+//			},
+//		},
+//		reason: "DuplicateStepName",
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//				Volumes: []corev1.Volume{{
+//					Name: "foo",
+//					VolumeSource: corev1.VolumeSource{
+//						EmptyDir: &corev1.EmptyDirVolumeSource{},
+//					},
+//				}, {
+//					Name: "foo",
+//					VolumeSource: corev1.VolumeSource{
+//						EmptyDir: &corev1.EmptyDirVolumeSource{},
+//					},
+//				}},
+//			},
+//		},
+//		reason: "DuplicateVolumeName",
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Arguments: []v1alpha1.ArgumentSpec{{
+//						Name:  "foo",
+//						Value: "hello",
+//					}, {
+//						Name:  "foo",
+//						Value: "world",
+//					}},
+//				},
+//			},
+//		},
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Parameters: []v1alpha1.ParameterSpec{{
+//					Name: "foo",
+//				}},
+//			},
+//		},
+//		reason: "DuplicateArgName",
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Name: "foo-bar",
+//				},
+//				Volumes: []corev1.Volume{{
+//					Name: "foo",
+//					VolumeSource: corev1.VolumeSource{
+//						EmptyDir: &corev1.EmptyDirVolumeSource{},
+//					},
+//				}},
+//			},
+//		},
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//				Volumes: []corev1.Volume{{
+//					Name: "foo",
+//					VolumeSource: corev1.VolumeSource{
+//						EmptyDir: &corev1.EmptyDirVolumeSource{},
+//					},
+//				}},
+//			},
+//		},
+//		reason: "DuplicateVolumeName",
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Name: "template",
+//				},
+//			},
+//		},
+//		reason: "TemplateAndSteps",
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Name: "template",
+//					Arguments: []v1alpha1.ArgumentSpec{{
+//						Name:  "foo",
+//						Value: "hello",
+//					}},
+//				},
+//			},
+//		},
+//		tmpl: &v1alpha1.BuildTemplate{
+//			ObjectMeta: metav1.ObjectMeta{Name: "template"},
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Parameters: []v1alpha1.ParameterSpec{{
+//					Name: "foo",
+//				}, {
+//					Name: "bar",
+//				}},
+//			},
+//		},
+//		reason: "UnsatisfiedParameter",
+//	}, {
+//		desc: "Arg doesn't match any parameter",
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Name: "template",
+//					Arguments: []v1alpha1.ArgumentSpec{{
+//						Name:  "bar",
+//						Value: "hello",
+//					}},
+//				},
+//			},
+//		},
+//		tmpl: &v1alpha1.BuildTemplate{
+//			ObjectMeta: metav1.ObjectMeta{Name: "template"},
+//			Spec:       v1alpha1.BuildTemplateSpec{},
+//		},
+//	}, {
+//		desc: "Unsatisfied parameter has a default",
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Name: "template",
+//					Arguments: []v1alpha1.ArgumentSpec{{
+//						Name:  "foo",
+//						Value: "hello",
+//					}},
+//				},
+//			},
+//		},
+//		tmpl: &v1alpha1.BuildTemplate{
+//			ObjectMeta: metav1.ObjectMeta{Name: "template"},
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Parameters: []v1alpha1.ParameterSpec{{
+//					Name: "foo",
+//				}, {
+//					Name:    "bar",
+//					Default: &hasDefault,
+//				}},
+//			},
+//		},
+//	}, {
+//		desc: "Unsatisfied parameter has empty default",
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{
+//					Name: "empty-default",
+//				},
+//			},
+//		},
+//		tmpl: &v1alpha1.BuildTemplate{
+//			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Parameters: []v1alpha1.ParameterSpec{{
+//					Name:    "foo",
+//					Default: &empty,
+//				}},
+//			},
+//		},
+//	}, {
+//		build: &v1alpha1.Build{
+//			Spec: v1alpha1.BuildSpec{
+//				Template: &v1alpha1.TemplateInstantiationSpec{},
+//			},
+//		},
+//		reason: "MissingTemplateName",
+//	}} {
+//		name := c.desc
+//		if c.reason != "" {
+//			name = "invalid-" + c.reason
+//		}
+//		t.Run(name, func(t *testing.T) {
+//			buildClient := fakebuildclientset.NewSimpleClientset()
+//			if c.tmpl != nil {
+//				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
+//					t.Fatalf("Failed to create template: %v", err)
+//				}
+//			}
+//
+//			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), buildClient, &nop.Builder{}, defaultOptions, testLogger)
+//			verr := ac.validateBuild(ctx, nil, nil, c.build)
+//			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+//				t.Errorf("validateBuild(%s); got %v, want %q", name, verr, c.reason)
+//			}
+//		})
+//	}
+//}
 
 func TestValidateTemplate(t *testing.T) {
 	ctx := context.Background()
