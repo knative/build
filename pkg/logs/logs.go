@@ -30,6 +30,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const buildExecuteFailed = "BuildExecuteFailed"
+
 // Tail tails the logs for a build.
 func Tail(ctx context.Context, out io.Writer, buildName, namespace string) error {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -66,9 +68,18 @@ func Tail(ctx context.Context, out io.Writer, buildName, namespace string) error
 		return err
 	}
 
-	for i := range pod.Status.InitContainerStatuses {
+	for i, container := range pod.Status.InitContainerStatuses {
 		pod, err := watcher.waitForPod(ctx, func(p *v1.Pod) bool {
-			return p.Status.InitContainerStatuses[i].State.Waiting == nil
+			waiting := p.Status.InitContainerStatuses[i].State.Waiting
+			if waiting == nil {
+				return true
+			}
+
+			if waiting.Message != "" {
+				fmt.Fprintln(out, red(fmt.Sprintf("[%s] %s", container.Name, waiting.Message)))
+			}
+
+			return false
 		})
 		if err != nil {
 			return fmt.Errorf("waiting for container: %v", err)
@@ -213,6 +224,12 @@ func podName(cfg *rest.Config, out io.Writer, buildName, namespace string) (stri
 		cluster := b.Status.Cluster
 		if cluster != nil && cluster.PodName != "" {
 			return cluster.PodName, nil
+		}
+
+		for _, condition := range b.Status.Conditions {
+			if condition.Reason == buildExecuteFailed {
+				return "", fmt.Errorf("build failed: %s", condition.Message)
+			}
 		}
 	}
 }
