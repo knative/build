@@ -55,25 +55,25 @@ var (
 	testCtx    = logging.WithLogger(context.TODO(), testLogger)
 )
 
-func testBuild(name string) v1alpha1.Build {
-	return v1alpha1.Build{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNamespace,
-			Name:      name,
-		},
-		Spec: v1alpha1.BuildSpec{},
-	}
-}
-
-func testBuildTemplate(name string) v1alpha1.BuildTemplate {
-	return v1alpha1.BuildTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNamespace,
-			Name:      name,
-		},
-		Spec: v1alpha1.BuildTemplateSpec{},
-	}
-}
+//func testBuild(name string) v1alpha1.Build {
+//	return v1alpha1.Build{
+//		ObjectMeta: metav1.ObjectMeta{
+//			Namespace: testNamespace,
+//			Name:      name,
+//		},
+//		Spec: v1alpha1.BuildSpec{},
+//	}
+//}
+//
+//func testBuildTemplate(name string) v1alpha1.BuildTemplate {
+//	return v1alpha1.BuildTemplate{
+//		ObjectMeta: metav1.ObjectMeta{
+//			Namespace: testNamespace,
+//			Name:      name,
+//		},
+//		Spec: v1alpha1.BuildTemplateSpec{},
+//	}
+//}
 
 func mustMarshal(t *testing.T, in interface{}) []byte {
 	b, err := json.Marshal(in)
