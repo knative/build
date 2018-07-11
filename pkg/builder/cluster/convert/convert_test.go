@@ -106,7 +106,7 @@ func TestParsing(t *testing.T) {
 			}
 		}
 		// Verify that reverse transformation works.
-		
+
 		b, err := ToCRD(j)
 		if err != nil {
 			t.Errorf("Unable to convert %q to CRD: %v", in, err)
