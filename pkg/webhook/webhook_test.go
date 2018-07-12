@@ -405,183 +405,183 @@ func TestAdmitBuild(t *testing.T) {
 //		})
 //	}
 //}
-
-func TestValidateTemplate(t *testing.T) {
-	ctx := context.Background()
-	hasDefault := "has-default"
-	for _, c := range []struct {
-		desc   string
-		tmpl   *v1alpha1.BuildTemplate
-		reason string // if "", expect success.
-	}{{
-		desc: "Single named step",
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-			},
-		},
-	}, {
-		desc: "Multiple unnamed steps",
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Steps: []corev1.Container{{
-					Image: "gcr.io/foo-bar/baz:latest",
-				}, {
-					Image: "gcr.io/foo-bar/baz:latest",
-				}, {
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-			},
-		},
-	}, {
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}, {
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:oops",
-				}},
-			},
-		},
-		reason: "DuplicateStepName",
-	}, {
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Steps: []corev1.Container{{
-					Name:  "foo",
-					Image: "gcr.io/foo-bar/baz:latest",
-				}},
-				Volumes: []corev1.Volume{{
-					Name: "foo",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				}, {
-					Name: "foo",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				}},
-			},
-		},
-		reason: "DuplicateVolumeName",
-	}, {
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Parameters: []v1alpha1.ParameterSpec{{
-					Name: "foo",
-				}, {
-					Name: "foo",
-				}},
-			},
-		},
-		reason: "DuplicateParamName",
-	}, {
-		tmpl: &v1alpha1.BuildTemplate{
-			Spec: v1alpha1.BuildTemplateSpec{
-				Steps: []corev1.Container{{
-					Name: "step-name-${FOO${BAR}}",
-				}},
-				Parameters: []v1alpha1.ParameterSpec{{
-					Name: "FOO",
-				}, {
-					Name:    "BAR",
-					Default: &hasDefault,
-				}},
-			},
-		},
-		reason: "NestedPlaceholder",
-	}} {
-		name := c.desc
-		if c.reason != "" {
-			name = "invalid-" + c.reason
-		}
-		t.Run(name, func(t *testing.T) {
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
-			verr := ac.validateBuildTemplate(ctx, nil, nil, c.tmpl)
-			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
-				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
-			}
-		})
-	}
-}
-
-func TestAdmitBuildTemplate(t *testing.T) {
-	for _, c := range []struct {
-		desc        string
-		op          admissionv1beta1.Operation
-		kind        string
-		wantAllowed bool
-		new, old    v1alpha1.BuildTemplate
-		wantPatches []jsonpatch.JsonPatchOperation
-	}{{
-		desc:        "delete op",
-		op:          admissionv1beta1.Delete,
-		wantAllowed: true,
-	}, {
-		desc:        "connect op",
-		op:          admissionv1beta1.Connect,
-		wantAllowed: true,
-	}, {
-		desc:        "bad kind",
-		op:          admissionv1beta1.Create,
-		kind:        "Garbage",
-		wantAllowed: false,
-	}, {
-		desc:        "invalid name",
-		op:          admissionv1beta1.Create,
-		kind:        "BuildTemplate",
-		new:         testBuildTemplate("build-template.invalid"),
-		wantAllowed: false,
-	}, {
-		desc:        "invalid name too long",
-		op:          admissionv1beta1.Create,
-		kind:        "BuildTemplate",
-		new:         testBuildTemplate(strings.Repeat("a", 64)),
-		wantAllowed: false,
-	}, {
-		desc:        "create valid",
-		op:          admissionv1beta1.Create,
-		kind:        "BuildTemplate",
-		new:         testBuildTemplate("valid-build-template"),
-		wantAllowed: true,
-		wantPatches: []jsonpatch.JsonPatchOperation{{
-			Operation: "add",
-			Path:      "/spec/generation",
-			Value:     float64(1),
-		}},
-	}, {
-		desc:        "no-op update",
-		op:          admissionv1beta1.Update,
-		kind:        "BuildTemplate",
-		old:         testBuildTemplate("valid-build-template"),
-		new:         testBuildTemplate("valid-build-template"),
-		wantAllowed: true,
-		wantPatches: nil,
-	}} {
-		t.Run(c.desc, func(t *testing.T) {
-			ctx := context.Background()
-			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
-			resp := ac.admit(ctx, &admissionv1beta1.AdmissionRequest{
-				Operation: c.op,
-				Kind:      metav1.GroupVersionKind{Kind: c.kind},
-				OldObject: runtime.RawExtension{Raw: mustMarshal(t, c.old)},
-				Object:    runtime.RawExtension{Raw: mustMarshal(t, c.new)},
-			})
-			if resp.Allowed != c.wantAllowed {
-				t.Errorf("allowed got %t, want %t", resp.Allowed, c.wantAllowed)
-			}
-			if c.wantPatches != nil {
-				gotPatches := mustUnmarshalPatches(t, resp.Patch)
-				if diff := cmp.Diff(gotPatches, c.wantPatches); diff != "" {
-					t.Errorf("patches differed: %s", diff)
-				}
-			}
-		})
-	}
-}
+//
+//func TestValidateTemplate(t *testing.T) {
+//	ctx := context.Background()
+//	hasDefault := "has-default"
+//	for _, c := range []struct {
+//		desc   string
+//		tmpl   *v1alpha1.BuildTemplate
+//		reason string // if "", expect success.
+//	}{{
+//		desc: "Single named step",
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//			},
+//		},
+//	}, {
+//		desc: "Multiple unnamed steps",
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Steps: []corev1.Container{{
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}, {
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}, {
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//			},
+//		},
+//	}, {
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}, {
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:oops",
+//				}},
+//			},
+//		},
+//		reason: "DuplicateStepName",
+//	}, {
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Steps: []corev1.Container{{
+//					Name:  "foo",
+//					Image: "gcr.io/foo-bar/baz:latest",
+//				}},
+//				Volumes: []corev1.Volume{{
+//					Name: "foo",
+//					VolumeSource: corev1.VolumeSource{
+//						EmptyDir: &corev1.EmptyDirVolumeSource{},
+//					},
+//				}, {
+//					Name: "foo",
+//					VolumeSource: corev1.VolumeSource{
+//						EmptyDir: &corev1.EmptyDirVolumeSource{},
+//					},
+//				}},
+//			},
+//		},
+//		reason: "DuplicateVolumeName",
+//	}, {
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Parameters: []v1alpha1.ParameterSpec{{
+//					Name: "foo",
+//				}, {
+//					Name: "foo",
+//				}},
+//			},
+//		},
+//		reason: "DuplicateParamName",
+//	}, {
+//		tmpl: &v1alpha1.BuildTemplate{
+//			Spec: v1alpha1.BuildTemplateSpec{
+//				Steps: []corev1.Container{{
+//					Name: "step-name-${FOO${BAR}}",
+//				}},
+//				Parameters: []v1alpha1.ParameterSpec{{
+//					Name: "FOO",
+//				}, {
+//					Name:    "BAR",
+//					Default: &hasDefault,
+//				}},
+//			},
+//		},
+//		reason: "NestedPlaceholder",
+//	}} {
+//		name := c.desc
+//		if c.reason != "" {
+//			name = "invalid-" + c.reason
+//		}
+//		t.Run(name, func(t *testing.T) {
+//			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+//			verr := ac.validateBuildTemplate(ctx, nil, nil, c.tmpl)
+//			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+//				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
+//			}
+//		})
+//	}
+//}
+//
+//func TestAdmitBuildTemplate(t *testing.T) {
+//	for _, c := range []struct {
+//		desc        string
+//		op          admissionv1beta1.Operation
+//		kind        string
+//		wantAllowed bool
+//		new, old    v1alpha1.BuildTemplate
+//		wantPatches []jsonpatch.JsonPatchOperation
+//	}{{
+//		desc:        "delete op",
+//		op:          admissionv1beta1.Delete,
+//		wantAllowed: true,
+//	}, {
+//		desc:        "connect op",
+//		op:          admissionv1beta1.Connect,
+//		wantAllowed: true,
+//	}, {
+//		desc:        "bad kind",
+//		op:          admissionv1beta1.Create,
+//		kind:        "Garbage",
+//		wantAllowed: false,
+//	}, {
+//		desc:        "invalid name",
+//		op:          admissionv1beta1.Create,
+//		kind:        "BuildTemplate",
+//		new:         testBuildTemplate("build-template.invalid"),
+//		wantAllowed: false,
+//	}, {
+//		desc:        "invalid name too long",
+//		op:          admissionv1beta1.Create,
+//		kind:        "BuildTemplate",
+//		new:         testBuildTemplate(strings.Repeat("a", 64)),
+//		wantAllowed: false,
+//	}, {
+//		desc:        "create valid",
+//		op:          admissionv1beta1.Create,
+//		kind:        "BuildTemplate",
+//		new:         testBuildTemplate("valid-build-template"),
+//		wantAllowed: true,
+//		wantPatches: []jsonpatch.JsonPatchOperation{{
+//			Operation: "add",
+//			Path:      "/spec/generation",
+//			Value:     float64(1),
+//		}},
+//	}, {
+//		desc:        "no-op update",
+//		op:          admissionv1beta1.Update,
+//		kind:        "BuildTemplate",
+//		old:         testBuildTemplate("valid-build-template"),
+//		new:         testBuildTemplate("valid-build-template"),
+//		wantAllowed: true,
+//		wantPatches: nil,
+//	}} {
+//		t.Run(c.desc, func(t *testing.T) {
+//			ctx := context.Background()
+//			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+//			resp := ac.admit(ctx, &admissionv1beta1.AdmissionRequest{
+//				Operation: c.op,
+//				Kind:      metav1.GroupVersionKind{Kind: c.kind},
+//				OldObject: runtime.RawExtension{Raw: mustMarshal(t, c.old)},
+//				Object:    runtime.RawExtension{Raw: mustMarshal(t, c.new)},
+//			})
+//			if resp.Allowed != c.wantAllowed {
+//				t.Errorf("allowed got %t, want %t", resp.Allowed, c.wantAllowed)
+//			}
+//			if c.wantPatches != nil {
+//				gotPatches := mustUnmarshalPatches(t, resp.Patch)
+//				if diff := cmp.Diff(gotPatches, c.wantPatches); diff != "" {
+//					t.Errorf("patches differed: %s", diff)
+//				}
+//			}
+//		})
+//	}
+//}
