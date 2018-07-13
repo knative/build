@@ -333,6 +333,7 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			Containers:         []corev1.Container{nopContainer},
 			ServiceAccountName: build.Spec.ServiceAccountName,
 			Volumes:            volumes,
+			NodeSelector:       build.Spec.NodeSelector,
 		},
 	}, nil
 }
@@ -450,6 +451,7 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 			Steps:              steps,
 			ServiceAccountName: podSpec.ServiceAccountName,
 			Volumes:            volumes,
+			NodeSelector:       podSpec.NodeSelector,
 		},
 	}, nil
 }

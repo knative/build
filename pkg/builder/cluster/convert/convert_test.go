@@ -46,6 +46,7 @@ func TestParsing(t *testing.T) {
 		"testdata/security-context.yaml",
 		"testdata/volumes.yaml",
 		"testdata/custom-source.yaml",
+		"testdata/nodeselector.yaml",
 
 		"testdata/git-revision.yaml",
 
