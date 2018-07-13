@@ -49,7 +49,7 @@ function unit_tests() {
 function integration_tests() {
   # Make sure environment variables are intact.
   restore_override_vars
-  ./tests/e2e-tests.sh
+  ./test/e2e-tests.sh
 }
 
 # Script entry point.
