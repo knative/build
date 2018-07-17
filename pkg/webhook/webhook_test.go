@@ -61,7 +61,9 @@ func testBuild(name string) v1alpha1.Build {
 			Namespace: testNamespace,
 			Name:      name,
 		},
-		Spec: v1alpha1.BuildSpec{},
+		Spec: v1alpha1.BuildSpec{
+			Steps: []corev1.Container{{Image: "hello"}},
+		},
 	}
 }
 
@@ -219,6 +221,13 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 		reason: "DuplicateStepName",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{Name: "foo"}},
+			},
+		},
+		reason: "StepMissingImage",
 	}, {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
@@ -398,6 +407,7 @@ func TestValidateBuild(t *testing.T) {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				// ServiceAccountName will default to "default"
+				Steps: []corev1.Container{{Image: "hello"}},
 			},
 		},
 		sa: &corev1.ServiceAccount{
@@ -434,6 +444,7 @@ func TestValidateBuild(t *testing.T) {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				ServiceAccountName: "serviceaccount",
+				Steps:              []corev1.Container{{Image: "hello"}},
 			},
 		},
 		sa: &corev1.ServiceAccount{
