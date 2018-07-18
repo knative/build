@@ -1,7 +1,9 @@
-# Build CRD
+# Knative Build
 
 This repository implements `Build` and `BuildTemplate` custom resources
 for Kubernetes, and a controller for making them work.
+
+For complete Knative Build documenttion, see [Knative Build](https://github.com/knative/docs/build) or [Knative docs](https://github.com/knative/docs) to learn about Knative.
 
 If you are interested in contributing, see
 [CONTRIBUTING.md](./CONTRIBUTING.md) and [DEVELOPMENT.md](./DEVELOPMENT.md).
