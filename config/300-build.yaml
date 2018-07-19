@@ -21,4 +21,7 @@ spec:
   names:
     kind: Build
     plural: builds
+    categories:
+    - all
+    - knative
   scope: Namespaced
