@@ -35,6 +35,9 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 		return err
 	}
 
+	if b.Spec.Template == nil && len(b.Spec.Steps) == 0 {
+		return validationError("NoTemplateOrSteps", "build must specify either template or steps")
+	}
 	if b.Spec.Template != nil && len(b.Spec.Steps) > 0 {
 		return validationError("TemplateAndSteps", "build cannot specify both template and steps")
 	}
@@ -183,7 +186,11 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplat
 func validateSteps(steps []corev1.Container) error {
 	// Build must not duplicate step names.
 	names := map[string]struct{}{}
-	for _, s := range steps {
+	for i, s := range steps {
+		if s.Image == "" {
+			return validationError("StepMissingImage", "step %d (%q) must specify image", i, s.Name)
+		}
+
 		if s.Name == "" {
 			continue
 		}
