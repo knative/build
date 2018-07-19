@@ -14,35 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+source "$(dirname $(readlink -f ${BASH_SOURCE}))/../test/library.sh"
+
 set -o errexit
 set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT=$(dirname "${BASH_SOURCE}")/..
-
-DIFFROOT="${SCRIPT_ROOT}/pkg"
-TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp/pkg"
-_tmp="${SCRIPT_ROOT}/_tmp"
-
+readonly TMP_DIFFROOT="$(mktemp -d -p ${BUILD_ROOT_DIR})"
+ 
 cleanup() {
-  rm -rf "${_tmp}"
+  rm -rf "${TMP_DIFFROOT}"
 }
+
 trap "cleanup" EXIT SIGINT
 
 cleanup
 
-mkdir -p "${TMP_DIFFROOT}"
-cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}"
+# Save working tree state
+mkdir -p "${TMP_DIFFROOT}/pkg"
+cp -aR "${BUILD_ROOT_DIR}/Gopkg.lock" "${BUILD_ROOT_DIR}/pkg" "${BUILD_ROOT_DIR}/vendor" "${TMP_DIFFROOT}"
 
-"${SCRIPT_ROOT}/hack/update-codegen.sh"
-echo "diffing ${DIFFROOT} against freshly generated codegen"
+"${BUILD_ROOT_DIR}/hack/update-codegen.sh"
+echo "Diffing ${BUILD_ROOT_DIR} against freshly generated codegen"
 ret=0
-diff -Naupr "${DIFFROOT}" "${TMP_DIFFROOT}" || ret=$?
-cp -a "${TMP_DIFFROOT}"/* "${DIFFROOT}"
+diff -Naupr "${BUILD_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=$?
+
+# Restore working tree state
+rm -fr "${BUILD_ROOT_DIR}/Gopkg.lock" "${BUILD_ROOT_DIR}/pkg" "${BUILD_ROOT_DIR}/vendor"
+cp -aR "${TMP_DIFFROOT}"/* "${BUILD_ROOT_DIR}"
+
 if [[ $ret -eq 0 ]]
 then
-  echo "${DIFFROOT} up to date."
+  echo "${BUILD_ROOT_DIR} up to date."
 else
-  echo "${DIFFROOT} is out of date. Please run hack/update-codegen.sh"
+  echo "${BUILD_ROOT_DIR} is out of date. Please run hack/update-codegen.sh"
   exit 1
 fi
