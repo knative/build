@@ -49,7 +49,7 @@ func TestParsing(t *testing.T) {
 		"testdata/nodeselector.yaml",
 
 		"testdata/git-revision.yaml",
-		"testdata/git-subdir.yaml",
+		"testdata/git-subpath.yaml",
 		"testdata/gcs-archive.yaml",
 		"testdata/gcs-manifest.yaml",
 	}
