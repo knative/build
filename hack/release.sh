@@ -41,7 +41,7 @@ echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 export KO_DOCKER_REPO=gcr.io/build-crd
 
 echo "Building build-crd"
-ko resolve -f config/ > release.yaml
+ko resolve -P -f config/ > release.yaml
 
 echo "Publishing release.yaml"
 gsutil cp release.yaml gs://build-crd/latest/release.yaml
