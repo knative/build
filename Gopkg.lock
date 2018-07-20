@@ -170,6 +170,19 @@
   revision = "44d81051d367757e1c7c6a5a86423ece9afcf63c"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/google/licenseclassifier"
+  packages = [
+    ".",
+    "internal/sets",
+    "stringclassifier",
+    "stringclassifier/internal/pq",
+    "stringclassifier/searchset",
+    "stringclassifier/searchset/tokenizer"
+  ]
+  revision = "3c8ad1f0b0644b6646210ee9cf2f34ff907e2e18"
+
+[[projects]]
   name = "github.com/googleapis/gnostic"
   packages = [
     "OpenAPIv2",
@@ -259,6 +272,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mattmoor/dep-collector"
+  packages = ["."]
+  revision = "ea0470924d0dd9363ffae8936f88a22d28551685"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
@@ -274,6 +293,12 @@
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  name = "github.com/sergi/go-diff"
+  packages = ["diffmatchpatch"]
+  revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -751,6 +776,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e4581f2279557b0a2c85f066d2c90cbcf56073b6d546e8e118ead99dd1486638"
+  inputs-digest = "d3dd73501071c54164f1c2d55f3e2eda7e4a12c29bef05b2a5b5516bd95e8b3a"
   solver-name = "gps-cdcl"
   solver-version = 1
