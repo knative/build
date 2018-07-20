@@ -14,7 +14,7 @@
 apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-git-subdir
+  name: test-subdir-exists
   labels:
     expect: succeeded
 spec:
@@ -22,6 +22,8 @@ spec:
     git:
       url: https://github.com/bazelbuild/rules_docker
       revision: master
-    subDir: go
-  template:
-    name: dump-buildfile-template
+    subPath: go
+  steps:
+  - name: dump-buildfile
+    image: ubuntu:latest
+    args: ["cat", "BUILD"]

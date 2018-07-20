@@ -14,7 +14,7 @@
 apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-git-subdir
+  name: test-subdir-nofile
   labels:
     expect: failed
 spec:
@@ -22,6 +22,8 @@ spec:
     git:
       url: https://github.com/bazelbuild/rules_docker
       revision: v0.4.0
-    subDir: babayaga
-  template:
-    name: dump-buildfile-template
+    subPath: go
+  steps:
+  - name: dump-buildfile
+    image: ubuntu:latest
+    args: ["cat", "NON-EXISTENT"]

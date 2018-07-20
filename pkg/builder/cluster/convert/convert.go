@@ -292,10 +292,10 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		// TODO(mattmoor): Check that volumeMounts match volumes.
 		step.VolumeMounts = append(step.VolumeMounts, mounts...)
 		if scm == nil || step.Name == scm.Name {
-			if build.Spec.Source != nil && build.Spec.Source.SubDir != "" {
+			if build.Spec.Source != nil && build.Spec.Source.SubPath != "" {
 				for i, m := range mounts {
 					if m.Name == "workspace" {
-						mounts[i].SubPath = build.Spec.Source.SubDir
+						mounts[i].SubPath = build.Spec.Source.SubPath
 					}
 				}
 			}
@@ -425,7 +425,7 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		}
 	}
 
-	subDir := ""
+	subPath := ""
 	var steps []corev1.Container
 	for _, step := range podSpec.InitContainers {
 		if step.WorkingDir == "/workspace" {
@@ -433,8 +433,8 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		}
 		step.Env = filterImplicitEnvVars(step.Env)
 		for _, m := range step.VolumeMounts {
-			if m.Name == "workspace" && m.SubPath != "" && subDir == "" {
-				subDir = m.SubPath
+			if m.Name == "workspace" && m.SubPath != "" && subPath == "" {
+				subPath = m.SubPath
 			}
 		}
 		step.VolumeMounts = filterImplicitVolumeMounts(step.VolumeMounts)
@@ -462,8 +462,8 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		// The first init container is actually a source step.  Convert
 		// it to our source spec and pop it off the list of steps.
 		scm = src
-		if subDir != "" {
-			scm.SubDir = subDir
+		if subPath != "" {
+			scm.SubPath = subPath
 		}
 		steps = steps[1:]
 	}

@@ -12,10 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 apiVersion: build.knative.dev/v1alpha1
-kind: BuildTemplate
+kind: Build
 metadata:
-  name: dump-buildfile-template
+  name: test-subdir-notexists
+  labels:
+    expect: failed
 spec:
+  source:
+    git:
+      url: https://github.com/bazelbuild/rules_docker
+      revision: v0.4.0
+    subPath: babayaga
   steps:
   - name: dump-buildfile
     image: ubuntu:latest
