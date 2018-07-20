@@ -31,7 +31,6 @@ required = [
   "github.com/google/go-containerregistry/cmd/ko",
 ]
 
-
 # Use HEAD (2018-04-21) to pick up:
 # https://github.com/spf13/cobra/pull/662
 [[override]]
@@ -65,6 +64,11 @@ required = [
 [[constraint]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.10.0"
+
+[[constraint]]
+  name = "github.com/google/go-containerregistry"
+  # HEAD as of 2018-07-19
+  revision = "0eeba96f66fdd1873f2ec7f3764ee3b58c5a050c"
 
 [prune]
   go-tests = true

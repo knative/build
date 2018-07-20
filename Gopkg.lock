@@ -142,28 +142,27 @@
   version = "v0.2.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/google/go-containerregistry"
   packages = [
-    "authn",
     "cmd/ko",
-    "ko/build",
-    "ko/publish",
-    "ko/resolve",
-    "name",
-    "v1",
-    "v1/daemon",
-    "v1/empty",
-    "v1/mutate",
-    "v1/partial",
-    "v1/random",
-    "v1/remote",
-    "v1/remote/transport",
-    "v1/tarball",
-    "v1/types",
-    "v1/v1util"
+    "pkg/authn",
+    "pkg/ko/build",
+    "pkg/ko/publish",
+    "pkg/ko/resolve",
+    "pkg/name",
+    "pkg/v1",
+    "pkg/v1/daemon",
+    "pkg/v1/empty",
+    "pkg/v1/mutate",
+    "pkg/v1/partial",
+    "pkg/v1/random",
+    "pkg/v1/remote",
+    "pkg/v1/remote/transport",
+    "pkg/v1/tarball",
+    "pkg/v1/types",
+    "pkg/v1/v1util"
   ]
-  revision = "8bdfdfc3bd4146f40b7709f6b1b7d979a3385da8"
+  revision = "0eeba96f66fdd1873f2ec7f3764ee3b58c5a050c"
 
 [[projects]]
   name = "github.com/google/gofuzz"
@@ -752,6 +751,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "003354a3c2ea497f3b68f7ba5f0a1813b6592b2a0989ee0a00c7cadbb4d6dc3e"
+  inputs-digest = "e4581f2279557b0a2c85f066d2c90cbcf56073b6d546e8e118ead99dd1486638"
   solver-name = "gps-cdcl"
   solver-version = 1
