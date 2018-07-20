@@ -56,6 +56,7 @@ set -o errexit
 set -o pipefail
 
 header "Building and starting the controller"
+export KO_DOCKER_REPO=${DOCKER_REPO_OVERRIDE}
 ko apply -f config/ || fail_test
 
 # Handle test failures ourselves, so we can dump useful info.
