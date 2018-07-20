@@ -14,14 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/../test/library.sh"
-
 set -o errexit
 set -o nounset
 set -o pipefail
 
+readonly BUILD_ROOT_DIR="$(git rev-parse --show-toplevel)"
 readonly TMP_DIFFROOT="$(mktemp -d -p ${BUILD_ROOT_DIR})"
- 
+
 cleanup() {
   rm -rf "${TMP_DIFFROOT}"
 }
@@ -37,7 +36,7 @@ cp -aR "${BUILD_ROOT_DIR}/Gopkg.lock" "${BUILD_ROOT_DIR}/pkg" "${BUILD_ROOT_DIR}
 "${BUILD_ROOT_DIR}/hack/update-codegen.sh"
 echo "Diffing ${BUILD_ROOT_DIR} against freshly generated codegen"
 ret=0
-diff -Naupr "${BUILD_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=$?
+diff -Naupr "${BUILD_ROOT_DIR}/pkg" "${TMP_DIFFROOT}/pkg" || ret=1
 
 # Restore working tree state
 rm -fr "${BUILD_ROOT_DIR}/Gopkg.lock" "${BUILD_ROOT_DIR}/pkg" "${BUILD_ROOT_DIR}/vendor"
