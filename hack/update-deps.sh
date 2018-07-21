@@ -25,3 +25,6 @@ trap popd EXIT
 
 # Ensure we have everything we need under vendor/
 dep ensure
+
+# Run dep-collector to update our VENDOR-LICENSE
+go run ./vendor/github.com/mattmoor/dep-collector/*.go ./cmd/* > third_party/VENDOR-LICENSE
