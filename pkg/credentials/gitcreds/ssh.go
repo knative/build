@@ -120,7 +120,7 @@ type sshEntry struct {
 }
 
 func (be *sshEntry) path(sshDir string) string {
-	return fmt.Sprintf("%s/id_%s", sshDir, be.secret)
+	return filepath.Join(sshDir, "id_"+be.secret)
 }
 
 func sshKeyScan(domain string) ([]byte, error) {

@@ -103,6 +103,12 @@ type SourceSpec struct {
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GCS    *GCSSourceSpec    `json:"gcs,omitempty"`
 	Custom *corev1.Container `json:"custom,omitempty"`
+
+	// SubPath specifies a pathd within the fetched source which should be
+	// built. This option makes parent directories *inaccessible* to the
+	// build steps. (The specific source type may, in fact, not even fetch
+	// files not in the SubPath.)
+	SubPath string `json:"subPath,omitempty"`
 }
 
 // GitSourceSpec describes a Git repo source input to the Build.
