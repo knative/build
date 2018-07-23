@@ -53,7 +53,7 @@ if (( PUBLISH_RELEASE )); then
 fi
 
 echo "Building build-crd"
-ko resolve ${KO_FLAGS} -P -f config/ > ${OUTPUT_YAML}
+ko resolve ${KO_FLAGS} -f config/ > ${OUTPUT_YAML}
 tag_images_in_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCR} ${TAG}
 
 echo "New release built successfully"
