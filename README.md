@@ -56,6 +56,8 @@ kubectl create clusterrolebinding myname-cluster-admin-binding \
 
 ### Run your first `Build`
 
+Create a file named `build.yaml` with the contents below:
+
 ```yaml
 apiVersion: build.knative.dev/v1alpha1
 kind: Build
