@@ -42,7 +42,7 @@ block for CI/CD in [the future](./roadmap-2018.md)
 
 You can install the latest release of the Build CRD by running:
 ```shell
-kubectl create -f https://storage.googleapis.com/build-crd/latest/release.yaml
+kubectl create -f https://storage.googleapis.com/knative-releases/latest/release-build.yaml
 ```
 
 Your account must have the `cluster-admin` role in order to do this. If your

@@ -21,13 +21,13 @@
 [ -v KNATIVE_TEST_INFRA ] || exit 1
 
 # Set default GCS/GCR
-: ${BUILD_RELEASE_GCS:="build-crd"}
-: ${BUILD_RELEASE_GCR:="gcr.io/build-crd"}
+: ${BUILD_RELEASE_GCS:="knative-releases"}
+: ${BUILD_RELEASE_GCR:="gcr.io/knative-releases"}
 readonly BUILD_RELEASE_GCS
 readonly BUILD_RELEASE_GCR
 
 # Local generated yaml file
-readonly OUTPUT_YAML=release.yaml
+readonly OUTPUT_YAML=release-build.yaml
 
 # Script entry point
 
