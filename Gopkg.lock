@@ -201,7 +201,7 @@
   name = "github.com/knative/pkg"
   packages = ["signals"]
   pruneopts = "NUT"
-  revision = "484160f313516c21c2c619e30a515e4aa600445a"
+  revision = "f4a77d77082cf7efcc4cf8949f8d85e3967ebde1"
 
 [[projects]]
   branch = "master"
