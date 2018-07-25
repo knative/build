@@ -277,8 +277,7 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 	setupContainers := []corev1.Container{*cred}
 	var scm *corev1.Container
-	extraVolumes := append(implicitVolumes, secrets...)
-	mounts := append([]corev1.VolumeMount{}, implicitVolumeMounts...)
+	workspaceSubPath := ""
 
 	if build.Spec.Source != nil {
 		scm, err = sourceToContainer(build.Spec.Source)
@@ -286,23 +285,33 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			return nil, err
 		}
 		setupContainers = append(setupContainers, *scm)
+
+		workspaceSubPath = build.Spec.Source.SubPath
 	}
 
-	// Add the implicit volume mounts to each step container.
 	var initContainers []corev1.Container
 	for i, step := range append(setupContainers, build.Spec.Steps...) {
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
-		step.VolumeMounts = append(step.VolumeMounts, mounts...)
-		if scm == nil || step.Name == scm.Name {
-			if build.Spec.Source != nil && build.Spec.Source.SubPath != "" {
-				for i, m := range mounts {
-					if m.Name == "workspace" {
-						mounts[i].SubPath = build.Spec.Source.SubPath
-					}
+
+		// Add implicit volume mounts, unless the user has requested
+		// their own volume mount at that path.
+		requestedVolumeMounts := map[string]bool{}
+		for _, vm := range step.VolumeMounts {
+			requestedVolumeMounts[vm.MountPath] = true
+		}
+		for _, imp := range implicitVolumeMounts {
+			if !requestedVolumeMounts[imp.MountPath] {
+				// If the build's source specifies a subpath,
+				// use that in the implicit workspace volume
+				// mount.
+				if workspaceSubPath != "" && imp.Name == "workspace" {
+					imp.SubPath = workspaceSubPath
 				}
+				step.VolumeMounts = append(step.VolumeMounts, imp)
 			}
 		}
+
 		if step.WorkingDir == "" {
 			step.WorkingDir = "/workspace"
 		}
@@ -313,23 +322,13 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		}
 		step.Env = append(implicitEnvVars, step.Env...)
 
-		// Add implicit volume mounts, unless the step overrides it.
-		requestedMountPaths := map[string]struct{}{}
-		for _, v := range step.VolumeMounts {
-			requestedMountPaths[v.MountPath] = struct{}{}
-		}
-		for _, imp := range implicitVolumeMounts {
-			if _, found := requestedMountPaths[imp.MountPath]; !found {
-				step.VolumeMounts = append(step.VolumeMounts, imp)
-			}
-		}
-
 		initContainers = append(initContainers, step)
 	}
 
 	// Add our implicit volumes and any volumes needed for secrets to the explicitly
 	// declared user volumes.
-	volumes := append(build.Spec.Volumes, extraVolumes...)
+	volumes := append(build.Spec.Volumes, implicitVolumes...)
+	volumes = append(volumes, secrets...)
 	if err := validateVolumes(volumes); err != nil {
 		return nil, err
 	}
