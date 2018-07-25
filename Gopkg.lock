@@ -720,6 +720,7 @@
     "github.com/josephburnett/k8sflag/pkg/k8sflag",
     "github.com/knative/pkg/signals",
     "github.com/mattbaird/jsonpatch",
+    "github.com/sergi/go-diff/diffmatchpatch",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "k8s.io/api/admission/v1beta1",

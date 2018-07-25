@@ -17,8 +17,10 @@ limitations under the License.
 package convert
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/sergi/go-diff/diffmatchpatch"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
@@ -35,7 +37,7 @@ func read2CRD(f string) (*v1alpha1.Build, error) {
 	return &bs, nil
 }
 
-func TestParsing(t *testing.T) {
+func TestRoundtripn(t *testing.T) {
 	inputs := []string{
 		"testdata/helloworld.yaml",
 		"testdata/two-step.yaml",
@@ -61,13 +63,12 @@ func TestParsing(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unexpected error in read2CRD(%q): %v", in, err)
 			}
-			sa := &corev1.ServiceAccount{
+			cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{Name: "default"},
 				Secrets: []corev1.ObjectReference{{
 					Name: "multi-creds",
 				}},
-			}
-			secret := &corev1.Secret{
+			}, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "multi-creds",
 					Annotations: map[string]string{"build.dev/docker-0": "https://us.gcr.io",
 						"build.dev/docker-1": "https://docker.io",
@@ -79,8 +80,7 @@ func TestParsing(t *testing.T) {
 					"username": []byte("foo"),
 					"password": []byte("BestEver"),
 				},
-			}
-			cs := fakek8s.NewSimpleClientset(sa, secret)
+			})
 			p, err := FromCRD(og, cs)
 			if err != nil {
 				t.Fatalf("Unable to convert %q from CRD: %v", in, err)
@@ -123,15 +123,254 @@ func TestParsing(t *testing.T) {
 				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
 			}
 
-			// Compare the pretty json because we don't care whether slice fields are empty or nil.
-			// e.g. we want omitempty semantics.
-			if ogjson, err := buildtest.PrettyJSON(og); err != nil {
-				t.Errorf("Unexpected failure calling PrettyJSON(og=%v): %v", og, err)
-			} else if bjson, err := buildtest.PrettyJSON(b); err != nil {
-				t.Errorf("Unexpected failure calling PrettyJSON(b=%v): %v", b, err)
-			} else if ogjson != bjson {
-				t.Errorf("Roundtrip: got\n%s\nwant\n%s", bjson, ogjson)
+			if d := diff(og, b); d != "" {
+				t.Errorf("Diff:\n%s", d)
 			}
 		})
 	}
+}
+
+func TestFromCRD(t *testing.T) {
+	subPath := "subpath"
+	implicitVolumeMountsWithSubPath := []corev1.VolumeMount{}
+	for _, vm := range implicitVolumeMounts {
+		if vm.Name == "workspace" {
+			implicitVolumeMountsWithSubPath = append(implicitVolumeMountsWithSubPath, corev1.VolumeMount{
+				Name:      vm.Name,
+				MountPath: vm.MountPath,
+				SubPath:   subPath,
+			})
+		} else {
+			implicitVolumeMountsWithSubPath = append(implicitVolumeMountsWithSubPath, vm)
+		}
+	}
+
+	for _, c := range []struct {
+		desc    string
+		b       v1alpha1.BuildSpec
+		want    *corev1.PodSpec
+		wantErr error
+	}{{
+		desc: "simple",
+		b: v1alpha1.BuildSpec{
+			Steps: []corev1.Container{{
+				Name:  "name",
+				Image: "image",
+			}},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-name",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}, {
+		desc: "source",
+		b: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "github.com/my/repo",
+					Revision: "master",
+				},
+			},
+			Steps: []corev1.Container{{
+				Name:  "name",
+				Image: "image",
+			}},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         initContainerPrefix + gitSource,
+				Image:        *gitImage,
+				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-name",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}, {
+		desc: "git-source-with-subpath",
+		b: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "github.com/my/repo",
+					Revision: "master",
+				},
+				SubPath: subPath,
+			},
+			Steps: []corev1.Container{{
+				Name:  "name",
+				Image: "image",
+			}},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         initContainerPrefix + gitSource,
+				Image:        *gitImage,
+				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-name",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMountsWithSubPath,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}, {
+		desc: "gcs-source-with-subpath",
+		b: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				GCS: &v1alpha1.GCSSourceSpec{
+					Type:     v1alpha1.GCSManifest,
+					Location: "gs://foo/bar",
+				},
+				SubPath: subPath,
+			},
+			Steps: []corev1.Container{{
+				Name:  "name",
+				Image: "image",
+			}},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         initContainerPrefix + gcsSource,
+				Image:        *gcsFetcherImage,
+				Args:         []string{"--type", "Manifest", "--location", "gs://foo/bar"},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-name",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMountsWithSubPath,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}, {
+		desc: "custom-source-with-subpath",
+		b: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				Custom: &corev1.Container{
+					Image: "image",
+				},
+				SubPath: subPath,
+			},
+			Steps: []corev1.Container{{
+				Name:  "name",
+				Image: "image",
+			}},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         initContainerPrefix + customSource,
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMountsWithSubPath, // *with* subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-name",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMountsWithSubPath,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}} {
+		t.Run(c.desc, func(t *testing.T) {
+			cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			})
+			got, err := FromCRD(&v1alpha1.Build{Spec: c.b}, cs)
+			if err != c.wantErr {
+				t.Fatalf("FromCRD: %v", err)
+			}
+
+			if d := diff(got.Spec, c.want); d != "" {
+				t.Errorf("Diff:\n%s", d)
+			}
+		})
+	}
+}
+
+func diff(l, r interface{}) string {
+	lb, err := json.MarshalIndent(l, "", " ")
+	if err != nil {
+		panic(err.Error())
+	}
+	rb, err := json.MarshalIndent(r, "", " ")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(string(lb), string(rb), true)
+	for _, d := range diffs {
+		if d.Type != diffmatchpatch.DiffEqual {
+			return dmp.DiffPrettyText(diffs)
+		}
+	}
+	return ""
 }
