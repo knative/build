@@ -40,8 +40,8 @@ Configure `ko` to point to your registry:
 # will be pushed, including hostname.
 export KO_DOCKER_REPO=us.gcr.io/project
 
-# Install "ko" from our vendor snapshot.
-go install ./vendor/github.com/google/go-containerregistry/cmd/ko
+# Install the "ko" cli
+go get -u github.com/google/go-containerregistry/cmd/ko
 
 # Check that "ko" is on your path
 which ko
