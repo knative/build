@@ -33,13 +33,25 @@ $ git remote add ${USER} https://github.com/${USER}/build
 
 Configure `ko` to point to your registry:
 
+For a gcr.io project (like "myproject"), it will need to have Container
+Registry API enabled first.
 ```shell
 # You can put these definitions in .bashrc, so this is one-time setup.
 #
 # KO_DOCKER_REPO is the image repository where the images for build
 # will be pushed, including hostname.
-export KO_DOCKER_REPO=us.gcr.io/project
+export KO_DOCKER_REPO=us.gcr.io/<myproject>
+```
 
+For a local registry (using insecure http://) it needs to be on localhost:
+```shell
+docker run -it -d -p 5000:5000 registry:2
+export KO_DOCKER_REPO=localhost:5000/<myproject>
+```
+
+Then ensure `ko` is set up:
+
+```shell
 # Install the "ko" cli
 go get -u github.com/google/go-containerregistry/cmd/ko
 
