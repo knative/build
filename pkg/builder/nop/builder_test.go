@@ -107,7 +107,7 @@ func TestOperationFromStatus(t *testing.T) {
 	builder := Builder{}
 	op, err := builder.OperationFromStatus(&v1alpha1.BuildStatus{
 		Google: &v1alpha1.GoogleSpec{
-			Operation: OperationName,
+			Operation: operationName,
 		},
 	})
 	if err != nil {

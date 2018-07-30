@@ -19,7 +19,7 @@ package convert
 import (
 	"testing"
 
-	"google.golang.org/api/cloudbuild/v1"
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/knative/build/pkg/buildtest"
@@ -36,9 +36,9 @@ func TestBadSteps(t *testing.T) {
 		Env: []string{"should-be-key-equals-value"},
 	}}
 	for _, bs := range badSteps {
-		c, err := ToContainerFromStep(&bs)
+		c, err := toContainerFromStep(&bs)
 		if err == nil {
-			t.Errorf("ToContainerFromStep(%v); wanted error, got %v", bs, c)
+			t.Errorf("toContainerFromStep(%v); wanted error, got %v", bs, c)
 		}
 	}
 }
@@ -73,9 +73,8 @@ func TestBadContainers(t *testing.T) {
 		},
 	}}
 	for _, bc := range badContainers {
-		s, err := ToStepFromContainer(&bc)
-		if err == nil {
-			t.Errorf("ToStepFromContainer(%v); wanted error, got %v", bc, s)
+		if s, err := toStepFromContainer(&bc); err == nil {
+			t.Errorf("toStepFromContainer(%v); wanted error, got %v", bc, s)
 		}
 	}
 }
@@ -87,11 +86,11 @@ func TestStepRoundtripping(t *testing.T) {
 	}
 
 	for _, step := range bs.Steps {
-		c, err := ToContainerFromStep(step)
+		c, err := toContainerFromStep(step)
 		if err != nil {
 			t.Errorf("Rountripping(%v); unexpected error: %v", step, err)
 		}
-		result, err := ToStepFromContainer(c)
+		result, err := toStepFromContainer(c)
 		if err != nil {
 			t.Errorf("Rountripping(%v); unexpected error: %v", step, err)
 		}

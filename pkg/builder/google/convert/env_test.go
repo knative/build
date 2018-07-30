@@ -24,7 +24,7 @@ import (
 )
 
 func TestGoodString(t *testing.T) {
-	ev, err := ToEnvVarFromString("key=value")
+	ev, err := toEnvVarFromString("key=value")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestGoodString(t *testing.T) {
 }
 
 func TestComplexGoodString(t *testing.T) {
-	ev, err := ToEnvVarFromString("key=value=another-value")
+	ev, err := toEnvVarFromString("key=value=another-value")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -50,14 +50,14 @@ func TestComplexGoodString(t *testing.T) {
 }
 
 func TestBadString(t *testing.T) {
-	ev, err := ToEnvVarFromString("asdf")
+	ev, err := toEnvVarFromString("asdf")
 	if err == nil {
-		t.Errorf("ToEnvVarFromString(asdf); wanted error, got: %v", ev)
+		t.Errorf("toEnvVarFromString(asdf); wanted error, got: %v", ev)
 	}
 	// Make sure the list variety fails too.
-	evs, err := ToEnvFromAssociativeList([]string{"asdf"})
+	evs, err := toEnvFromAssociativeList([]string{"asdf"})
 	if err == nil {
-		t.Errorf("ToEnvFromAssociativeList(asdf); wanted error, got: %v", evs)
+		t.Errorf("toEnvFromAssociativeList(asdf); wanted error, got: %v", evs)
 	}
 }
 
@@ -70,14 +70,14 @@ func TestDownwardAPI(t *testing.T) {
 			},
 		},
 	}
-	s, err := ToStringFromEnvVar(&ev)
+	s, err := toStringFromEnvVar(&ev)
 	if err == nil {
-		t.Errorf("ToEnvVarFromString(%v); wanted error, got: %v", ev, s)
+		t.Errorf("toEnvVarFromString(%v); wanted error, got: %v", ev, s)
 	}
 	// Make sure the list variety fails too.
-	al, err := ToAssociativeListFromEnv([]corev1.EnvVar{ev})
+	al, err := toAssociativeListFromEnv([]corev1.EnvVar{ev})
 	if err == nil {
-		t.Errorf("ToAssociativeListFromEnv(%v); wanted error, got: %v", ev, al)
+		t.Errorf("toAssociativeListFromEnv(%v); wanted error, got: %v", ev, al)
 	}
 }
 
@@ -87,11 +87,11 @@ func TestEnvRoundtrip(t *testing.T) {
 		"BAZ=blah",
 		"PATH=/usr/bin:/bin:/user/me/bin",
 	}
-	ev, err := ToEnvFromAssociativeList(inputs)
+	ev, err := toEnvFromAssociativeList(inputs)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	result, err := ToAssociativeListFromEnv(ev)
+	result, err := toAssociativeListFromEnv(ev)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

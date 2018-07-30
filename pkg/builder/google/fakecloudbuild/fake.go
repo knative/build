@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package fakecloudbuild implements a Fake Cloud Build API for testing.
 package fakecloudbuild
 
 import (
@@ -21,14 +23,23 @@ import (
 	"net/http/httptest"
 	"regexp"
 
-	"google.golang.org/api/cloudbuild/v1"
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 )
 
-const (
-	OperationName = "projects/we-don't-care/operations/blah"
+// OperationName is the name of a fake operation.
+const OperationName = "projects/we-don't-care/operations/blah"
+
+var (
+	reBuildsCreate = regexp.MustCompile("^/v1/projects/[^/]+/builds")
+	reOperations   = regexp.MustCompile("^/v1/projects/[^/]+/operations/[^/]+")
+
+	// ErrorMessage is the error message to set on Operations.
+	ErrorMessage = ""
 )
 
+// Closer is an interface exposing a Close method.
 type Closer interface {
+	// Close closes the Closer.
 	Close()
 }
 
@@ -44,6 +55,7 @@ func (t hijackTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return http.DefaultTransport.RoundTrip(req)
 }
 
+// New returns a new fake Cloud Build API client.
 func New() (*cloudbuild.Service, Closer) {
 	httns := httptest.NewServer(&server{})
 
@@ -55,14 +67,6 @@ func New() (*cloudbuild.Service, Closer) {
 	}
 	return cb, httns
 }
-
-var (
-	reBuildsCreate = regexp.MustCompile("^/v1/projects/[^/]+/builds")
-	reOperations   = regexp.MustCompile("^/v1/projects/[^/]+/operations/[^/]+")
-
-	// The error message to set on Operations
-	ErrorMessage = ""
-)
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {

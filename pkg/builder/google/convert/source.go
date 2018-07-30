@@ -27,7 +27,7 @@ import (
 	"github.com/knative/build/pkg/builder/validation"
 )
 
-func ToGCSFromStorageSource(og *cloudbuild.StorageSource) *v1alpha1.GCSSourceSpec {
+func toGCSFromStorageSource(og *cloudbuild.StorageSource) *v1alpha1.GCSSourceSpec {
 	loc := fmt.Sprintf("gs://%s/%s", og.Bucket, og.Object)
 	if og.Generation != 0 {
 		loc += fmt.Sprintf("#%d", og.Generation)
@@ -38,7 +38,7 @@ func ToGCSFromStorageSource(og *cloudbuild.StorageSource) *v1alpha1.GCSSourceSpe
 	}
 }
 
-func ToStorageSourceFromGCS(og *v1alpha1.GCSSourceSpec) (*cloudbuild.StorageSource, error) {
+func toStorageSourceFromGCS(og *v1alpha1.GCSSourceSpec) (*cloudbuild.StorageSource, error) {
 	if og.Type != v1alpha1.GCSArchive {
 		return nil, validation.NewError("UnsupportedSource", "only GCS archive source is supported, got %q", og.Type)
 	}

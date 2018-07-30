@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package convert provides methods to translate a Build CRD type to a Cloud
+// Build API Build message.
 package convert
 
 import (
@@ -28,9 +31,7 @@ import (
 	"github.com/knative/build/pkg/builder/validation"
 )
 
-const (
-	customSource = "custom-source"
-)
+const customSource = "custom-source"
 
 var (
 	emptyVolumeSource = corev1.VolumeSource{
@@ -50,12 +51,10 @@ func remarshal(in, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(bts, &out); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(bts, &out)
 }
 
+// FromCRD translates a Build CRD to a GCB Build.
 func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 	if u.ServiceAccountName != "" {
 		return nil, fmt.Errorf("Unsupported: ServiceAccountName with Google builder, got: %v", u.ServiceAccountName)
@@ -68,7 +67,7 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 		case u.Source.Git != nil:
 			return nil, errors.New("Unsupported: Git source with Google builder")
 		case u.Source.GCS != nil:
-			ss, err := ToStorageSourceFromGCS(u.Source.GCS)
+			ss, err := toStorageSourceFromGCS(u.Source.GCS)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +75,7 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 				StorageSource: ss,
 			}
 		case u.Source.Custom != nil:
-			step, err := ToStepFromContainer(u.Source.Custom)
+			step, err := toStepFromContainer(u.Source.Custom)
 			if err != nil {
 				return nil, err
 			}
@@ -103,7 +102,7 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 		}
 	}
 	for _, c := range u.Steps {
-		step, err := ToStepFromContainer(&c)
+		step, err := toStepFromContainer(&c)
 		if err != nil {
 			return nil, err
 		}
@@ -120,6 +119,7 @@ func FromCRD(u *v1alpha1.BuildSpec) (*cloudbuild.Build, error) {
 	return &bld, nil
 }
 
+// ToCRD translates a GCB Build to a Build CRD.
 func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 	bld := v1alpha1.BuildSpec{
 		Steps: make([]corev1.Container, 0, len(u.Steps)),
@@ -132,11 +132,11 @@ func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 			return nil, errors.New("Unsupported: Git source with Google builder")
 		case u.Source.StorageSource != nil:
 			bld.Source = &v1alpha1.SourceSpec{
-				GCS: ToGCSFromStorageSource(u.Source.StorageSource),
+				GCS: toGCSFromStorageSource(u.Source.StorageSource),
 			}
 		}
 	case steps[0].Id == customSource:
-		c, err := ToContainerFromStep(steps[0])
+		c, err := toContainerFromStep(steps[0])
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +150,7 @@ func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 	}
 	volumeNames := make(map[string]bool)
 	for _, step := range steps {
-		c, err := ToContainerFromStep(step)
+		c, err := toContainerFromStep(step)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func ToCRD(u *cloudbuild.Build) (*v1alpha1.BuildSpec, error) {
 	}
 
 	// Create emptyDir volume entries, which is all GCB supports.
-	for k, _ := range volumeNames {
+	for k := range volumeNames {
 		bld.Volumes = append(bld.Volumes, corev1.Volume{
 			Name:         k,
 			VolumeSource: emptyVolumeSource,

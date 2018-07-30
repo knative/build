@@ -17,21 +17,20 @@ limitations under the License.
 package convert
 
 import (
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
-
-	"google.golang.org/api/cloudbuild/v1"
 
 	"github.com/knative/build/pkg/builder/validation"
 )
 
-func ToVolumeMountFromVolume(og *cloudbuild.Volume) (*corev1.VolumeMount, error) {
+func toVolumeMountFromVolume(og *cloudbuild.Volume) (*corev1.VolumeMount, error) {
 	return &corev1.VolumeMount{
 		Name:      og.Name,
 		MountPath: og.Path,
 	}, nil
 }
 
-func ToVolumeFromVolumeMount(og *corev1.VolumeMount) (*cloudbuild.Volume, error) {
+func toVolumeFromVolumeMount(og *corev1.VolumeMount) (*cloudbuild.Volume, error) {
 	if og.ReadOnly {
 		return nil, validation.NewError("ReadOnly", "container builder does not support ReadOnly volumes, got: %v", og)
 	}
@@ -48,10 +47,10 @@ func ToVolumeFromVolumeMount(og *corev1.VolumeMount) (*cloudbuild.Volume, error)
 	}, nil
 }
 
-func ToVolumeMountsFromVolumes(og []*cloudbuild.Volume) ([]corev1.VolumeMount, error) {
+func toVolumeMountsFromVolumes(og []*cloudbuild.Volume) ([]corev1.VolumeMount, error) {
 	al := make([]corev1.VolumeMount, 0, len(og))
 	for _, v := range og {
-		vm, err := ToVolumeMountFromVolume(v)
+		vm, err := toVolumeMountFromVolume(v)
 		if err != nil {
 			return nil, err
 		}
@@ -60,10 +59,10 @@ func ToVolumeMountsFromVolumes(og []*cloudbuild.Volume) ([]corev1.VolumeMount, e
 	return al, nil
 }
 
-func ToVolumesFromVolumeMounts(og []corev1.VolumeMount) ([]*cloudbuild.Volume, error) {
+func toVolumesFromVolumeMounts(og []corev1.VolumeMount) ([]*cloudbuild.Volume, error) {
 	al := make([]*cloudbuild.Volume, 0, len(og))
 	for _, vm := range og {
-		v, err := ToVolumeFromVolumeMount(&vm)
+		v, err := toVolumeFromVolumeMount(&vm)
 		if err != nil {
 			return nil, err
 		}
