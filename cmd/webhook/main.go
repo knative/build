@@ -31,8 +31,8 @@ import (
 	gcb "github.com/knative/build/pkg/builder/google"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	"github.com/knative/build/pkg/logging"
-	"github.com/knative/build/pkg/signals"
 	"github.com/knative/build/pkg/webhook"
+	"github.com/knative/pkg/signals"
 )
 
 var (
