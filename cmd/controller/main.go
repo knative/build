@@ -44,7 +44,7 @@ import (
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
-	"github.com/knative/build/pkg/signals"
+	"github.com/knative/pkg/signals"
 )
 
 const (
