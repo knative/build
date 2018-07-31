@@ -17,19 +17,18 @@ limitations under the License.
 package convert
 
 import (
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
-
-	"google.golang.org/api/cloudbuild/v1"
 
 	"github.com/knative/build/pkg/builder/validation"
 )
 
-func ToContainerFromStep(og *cloudbuild.BuildStep) (*corev1.Container, error) {
-	e, err := ToEnvFromAssociativeList(og.Env)
+func toContainerFromStep(og *cloudbuild.BuildStep) (*corev1.Container, error) {
+	e, err := toEnvFromAssociativeList(og.Env)
 	if err != nil {
 		return nil, err
 	}
-	vms, err := ToVolumeMountsFromVolumes(og.Volumes)
+	vms, err := toVolumeMountsFromVolumes(og.Volumes)
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +47,12 @@ func ToContainerFromStep(og *cloudbuild.BuildStep) (*corev1.Container, error) {
 	}, nil
 }
 
-func ToStepFromContainer(og *corev1.Container) (*cloudbuild.BuildStep, error) {
-	al, err := ToAssociativeListFromEnv(og.Env)
+func toStepFromContainer(og *corev1.Container) (*cloudbuild.BuildStep, error) {
+	al, err := toAssociativeListFromEnv(og.Env)
 	if err != nil {
 		return nil, err
 	}
-	vs, err := ToVolumesFromVolumeMounts(og.VolumeMounts)
+	vs, err := toVolumesFromVolumeMounts(og.VolumeMounts)
 	if err != nil {
 		return nil, err
 	}

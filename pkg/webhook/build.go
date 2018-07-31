@@ -79,11 +79,7 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 	}
 
 	// Do builder-implementation-specific validation.
-	if err := ac.builder.Validate(b, tmpl); err != nil {
-		return err
-	}
-
-	return nil
+	return ac.builder.Validate(b, tmpl)
 }
 
 var errInvalidBuild = errors.New("failed to convert to Build")

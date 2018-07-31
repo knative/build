@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package builder provides common methods for Builder implementations.
 package builder
 
 import (
@@ -79,7 +81,7 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) (*v1alpha1.B
 	}
 
 	if buildTmpl := build.Spec.Template; buildTmpl != nil && len(buildTmpl.Env) > 0 {
-		// Apply variable expansion to the build's overriden
+		// Apply variable expansion to the build's overridden
 		// environment variables
 		for i, e := range buildTmpl.Env {
 			buildTmpl.Env[i].Value = applyReplacements(e.Value)

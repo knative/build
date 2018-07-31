@@ -35,10 +35,12 @@ func init() {
 	buildscheme.AddToScheme(scheme.Scheme)
 }
 
+// Interface is the interface of a controller.
 type Interface interface {
 	Run(threadiness int, stopCh <-chan struct{}) error
 }
 
+// Constructor defines the method signature for a controller constructor.
 type Constructor func(
 	builder.Interface,
 	kubernetes.Interface,

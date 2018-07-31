@@ -25,7 +25,7 @@ import (
 	"github.com/knative/build/pkg/builder/validation"
 )
 
-func ToEnvVarFromString(og string) (*corev1.EnvVar, error) {
+func toEnvVarFromString(og string) (*corev1.EnvVar, error) {
 	parts := strings.SplitN(og, "=", 2)
 	if len(parts) != 2 {
 		return nil, validation.NewError("MalformedEnv", "expected \"name=value\" form for entry, but got: %q", og)
@@ -36,17 +36,17 @@ func ToEnvVarFromString(og string) (*corev1.EnvVar, error) {
 	}, nil
 }
 
-func ToStringFromEnvVar(og *corev1.EnvVar) (string, error) {
+func toStringFromEnvVar(og *corev1.EnvVar) (string, error) {
 	if og.ValueFrom != nil {
 		return "", validation.NewError("ValueFrom", "container builder does not support the downward API, got: %v", og)
 	}
 	return fmt.Sprintf("%s=%s", og.Name, og.Value), nil
 }
 
-func ToEnvFromAssociativeList(og []string) ([]corev1.EnvVar, error) {
+func toEnvFromAssociativeList(og []string) ([]corev1.EnvVar, error) {
 	al := make([]corev1.EnvVar, 0, len(og))
 	for _, s := range og {
-		envVar, err := ToEnvVarFromString(s)
+		envVar, err := toEnvVarFromString(s)
 		if err != nil {
 			return nil, err
 		}
@@ -55,10 +55,10 @@ func ToEnvFromAssociativeList(og []string) ([]corev1.EnvVar, error) {
 	return al, nil
 }
 
-func ToAssociativeListFromEnv(og []corev1.EnvVar) ([]string, error) {
+func toAssociativeListFromEnv(og []corev1.EnvVar) ([]string, error) {
 	al := make([]string, 0, len(og))
 	for _, envVar := range og {
-		s, err := ToStringFromEnvVar(&envVar)
+		s, err := toStringFromEnvVar(&envVar)
 		if err != nil {
 			return nil, err
 		}

@@ -57,6 +57,7 @@ type Interface interface {
 	OperationFromStatus(*v1alpha1.BuildStatus) (Operation, error)
 }
 
+// IsDone returns true if the build's status indicates the build is done.
 func IsDone(status *v1alpha1.BuildStatus) bool {
 	if status == nil || len(status.Conditions) == 0 {
 		return false
@@ -69,6 +70,7 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 	return false
 }
 
+// ErrorMessage returns the error message from the status.
 func ErrorMessage(status *v1alpha1.BuildStatus) (string, bool) {
 	if status == nil || len(status.Conditions) == 0 {
 		return "", false

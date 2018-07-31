@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package nop provides a no-op builder implementation.
 package nop
 
 import (
@@ -25,22 +27,18 @@ import (
 	buildercommon "github.com/knative/build/pkg/builder"
 )
 
-const (
-	OperationName = "nop"
-)
+const operationName = "nop"
 
 var (
-	StartTime      = metav1.NewTime(time.Unix(0, 0))
-	CompletionTime = metav1.NewTime(time.Unix(30, 0))
+	startTime      = metav1.NewTime(time.Unix(0, 0))
+	completionTime = metav1.NewTime(time.Unix(30, 0))
 )
 
 type operation struct {
 	builder *Builder
 }
 
-func (nb *operation) Name() string {
-	return OperationName
-}
+func (nb *operation) Name() string { return operationName }
 
 func (nb *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	// Masquerade as the Google builder.
@@ -49,7 +47,7 @@ func (nb *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 		status.Google = &v1alpha1.GoogleSpec{}
 	}
 	status.Google.Operation = nb.Name()
-	status.StartTime = StartTime
+	status.StartTime = startTime
 	status.SetCondition(&v1alpha1.BuildCondition{
 		Type:   v1alpha1.BuildSucceeded,
 		Status: corev1.ConditionUnknown,
@@ -65,8 +63,8 @@ func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		Google: &v1alpha1.GoogleSpec{
 			Operation: nb.Name(),
 		},
-		StartTime:      StartTime,
-		CompletionTime: CompletionTime,
+		StartTime:      startTime,
+		CompletionTime: completionTime,
 	}
 
 	if nb.builder.ErrorMessage != "" {
@@ -98,9 +96,14 @@ func (nb *build) Execute() (buildercommon.Operation, error) {
 	return &operation{builder: nb.builder}, nil
 }
 
+// Builder is a no-op Builder implementation.
 type Builder struct {
+	// ErrorMessage is the error message that should be returned by builds
+	// executed by this builder.
 	ErrorMessage string
-	Err          error
+
+	// Err is the error that should be returned from calls to this builder.
+	Err error
 }
 
 func (nb *Builder) Builder() v1alpha1.BuildProvider {
@@ -108,7 +111,10 @@ func (nb *Builder) Builder() v1alpha1.BuildProvider {
 	return v1alpha1.GoogleBuildProvider
 }
 
+// Validate does nothing.
 func (nb *Builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error { return nil }
+
+// BuildFromSpec returns the converted build, or the builder's predefined error.
 func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {
 	b := &build{builder: nb}
 	if nb.Err != nil {
@@ -117,6 +123,7 @@ func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {
 	return b, nil
 }
 
+// OperationFromStatus returns the no-op operation.
 func (nb *Builder) OperationFromStatus(*v1alpha1.BuildStatus) (buildercommon.Operation, error) {
 	return &operation{builder: nb}, nil
 }

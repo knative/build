@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"google.golang.org/api/cloudbuild/v1"
+	cloudbuild "google.golang.org/api/cloudbuild/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -47,14 +47,13 @@ func TestBadVolumeMounts(t *testing.T) {
 		},
 	}
 	for _, vm := range badVolumeMounts {
-		v, err := ToVolumeFromVolumeMount(&vm)
+		v, err := toVolumeFromVolumeMount(&vm)
 		if err == nil {
-			t.Errorf("ToVolumeFromVolumeMount(%v); wanted error, got %v", vm, v)
+			t.Errorf("toVolumeFromVolumeMount(%v); wanted error, got %v", vm, v)
 		}
 		// Make sure the list variety fails too.
-		vs, err := ToVolumesFromVolumeMounts([]corev1.VolumeMount{vm})
-		if err == nil {
-			t.Errorf("ToVolumesFromVolumeMounts(%v); wanted error, got %v", vm, vs)
+		if vs, err := toVolumesFromVolumeMounts([]corev1.VolumeMount{vm}); err == nil {
+			t.Errorf("toVolumesFromVolumeMounts(%v); wanted error, got %v", vm, vs)
 		}
 	}
 }
@@ -74,11 +73,11 @@ func TestVolumeRoundtrip(t *testing.T) {
 			Path: "/another/path/to/somewhere",
 		},
 	}
-	vms, err := ToVolumeMountsFromVolumes(inputs)
+	vms, err := toVolumeMountsFromVolumes(inputs)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	result, err := ToVolumesFromVolumeMounts(vms)
+	result, err := toVolumesFromVolumeMounts(vms)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

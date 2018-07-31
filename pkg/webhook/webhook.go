@@ -216,11 +216,11 @@ func NewAdmissionController(client kubernetes.Interface, buildClient buildclient
 		logger:      logger,
 	}
 	ac.handlers = map[string]genericCRDHandler{
-		"Build": genericCRDHandler{
+		"Build": {
 			Factory:   &v1alpha1.Build{},
 			Validator: ac.validateBuild,
 		},
-		"BuildTemplate": genericCRDHandler{
+		"BuildTemplate": {
 			Factory:   &v1alpha1.BuildTemplate{},
 			Validator: ac.validateBuildTemplate,
 		},

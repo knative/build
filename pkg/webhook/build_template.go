@@ -44,10 +44,7 @@ func (ac *AdmissionController) validateBuildTemplate(ctx context.Context, _ *[]j
 	if err := validateParameters(tmpl.Spec.Parameters); err != nil {
 		return err
 	}
-	if err := validatePlaceholders(tmpl.Spec.Steps); err != nil {
-		return err
-	}
-	return nil
+	return validatePlaceholders(tmpl.Spec.Steps)
 }
 
 var errInvalidBuildTemplate = errors.New("failed to convert to BuildTemplate")
