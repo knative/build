@@ -18,20 +18,20 @@ metadata:
 spec:
   steps:
   # Use the build's declared argument value.
-  - image: ubuntu
+  - image: ${IMAGE}
     command: ['bash']
     args: ['-c', '[[ ${FOO} == "foo" ]]']
   # Use the template parameter's default value.
-  - image: ubuntu
+  - image: ${IMAGE}
     command: ['bash']
     args: ['-c', '[[ ${BAR} == "bar" ]]']
   # Use the build's declared argument value, overriding the parameter's default
   # value.
-  - image: ubuntu
+  - image: ${IMAGE}
     command: ['bash']
     args: ['-c', '[[ ${BAZ} == "bazzzzz" ]]']
   # This is just an environment variable, not a template parameter.
-  - image: ubuntu
+  - image: ${IMAGE}
     command: ['bash']
     args: ['-c', '[[ $FOO == "foo" ]]']
     env:
@@ -39,6 +39,8 @@ spec:
       value: foo
 
   parameters:
+  - name: IMAGE
+    default: ubuntu
   - name: FOO
   - name: BAR
     default: bar

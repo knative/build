@@ -63,6 +63,7 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) (*v1alpha1.B
 	steps := build.Spec.Steps
 	for i := range steps {
 		steps[i].Name = applyReplacements(steps[i].Name)
+		steps[i].Image = applyReplacements(steps[i].Image)
 		for ia, a := range steps[i].Args {
 			steps[i].Args[ia] = applyReplacements(a)
 		}

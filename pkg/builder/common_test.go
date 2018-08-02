@@ -98,8 +98,9 @@ func TestApplyTemplate(t *testing.T) {
 		tmpl: &v1alpha1.BuildTemplate{
 			Spec: v1alpha1.BuildTemplateSpec{
 				Steps: []corev1.Container{{
-					Name: "hello ${FOO}",
-					Args: []string{"hello", "to the ${FOO}"},
+					Name:  "hello ${FOO}",
+					Image: "busybox:${FOO}",
+					Args:  []string{"hello", "to the ${FOO}"},
 					Env: []corev1.EnvVar{{
 						Name:  "FOO",
 						Value: "is ${FOO}",
@@ -120,8 +121,9 @@ func TestApplyTemplate(t *testing.T) {
 		want: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Steps: []corev1.Container{{
-					Name: "hello world",
-					Args: []string{"hello", "to the world"},
+					Name:  "hello world",
+					Image: "busybox:world",
+					Args:  []string{"hello", "to the world"},
 					Env: []corev1.EnvVar{{
 						Name:  "FOO",
 						Value: "is world",
@@ -245,8 +247,9 @@ func TestApplyTemplate(t *testing.T) {
 		tmpl: &v1alpha1.BuildTemplate{
 			Spec: v1alpha1.BuildTemplateSpec{
 				Steps: []corev1.Container{{
-					Name: "hello ${FOO}",
-					Args: []string{"hello", "to the ${FOO}"},
+					Name:  "hello ${FOO}",
+					Image: "busybox:${FOO}",
+					Args:  []string{"hello", "to the ${FOO}"},
 					Env: []corev1.EnvVar{{
 						Name:  "FOO",
 						Value: "is ${FOO}",
@@ -263,8 +266,9 @@ func TestApplyTemplate(t *testing.T) {
 		want: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Steps: []corev1.Container{{
-					Name: "hello world",
-					Args: []string{"hello", "to the world"},
+					Name:  "hello world",
+					Image: "busybox:world",
+					Args:  []string{"hello", "to the world"},
 					Env: []corev1.EnvVar{{
 						Name:  "FOO",
 						Value: "is world",
