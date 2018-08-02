@@ -180,6 +180,8 @@ type BuildStatus struct {
 	StepStates []corev1.ContainerState `json:"stepStates,omitEmpty"`
 	// Conditions describes the set of conditions of this build.
 	Conditions []BuildCondition `json:"conditions,omitempty"`
+
+	StepsCompleted []string `json:"stepsCompleted"`
 }
 
 // ClusterSpec provides information about the on-cluster build, if applicable.

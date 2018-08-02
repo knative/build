@@ -208,6 +208,11 @@ func (in *BuildStatus) DeepCopyInto(out *BuildStatus) {
 		*out = make([]BuildCondition, len(*in))
 		copy(*out, *in)
 	}
+	if in.StepsCompleted != nil {
+		in, out := &in.StepsCompleted, &out.StepsCompleted
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

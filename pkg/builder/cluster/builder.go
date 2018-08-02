@@ -54,7 +54,11 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.Cluster.PodName = op.Name()
 	status.StartTime = op.startTime
 	status.StepStates = nil
+	status.StepsCompleted = nil
 	for _, s := range op.statuses {
+		if s.State.Terminated != nil {
+			status.StepsCompleted = append(status.StepsCompleted, s.Name)
+		}
 		status.StepStates = append(status.StepStates, s.State)
 	}
 	status.SetCondition(&v1alpha1.BuildCondition{
@@ -79,7 +83,11 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	op.statuses = pod.Status.InitContainerStatuses
 
 	states := []corev1.ContainerState{}
+	stepsCompleted := []string{}
 	for _, status := range pod.Status.InitContainerStatuses {
+		if status.State.Terminated != nil {
+			stepsCompleted = append(stepsCompleted, status.Name)
+		}
 		states = append(states, status.State)
 	}
 
@@ -92,6 +100,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		StartTime:      op.startTime,
 		CompletionTime: metav1.Now(),
 		StepStates:     states,
+		StepsCompleted: stepsCompleted,
 	}
 	if pod.Status.Phase == corev1.PodFailed {
 		msg := getFailureMessage(pod)
