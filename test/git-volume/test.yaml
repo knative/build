@@ -21,7 +21,7 @@ spec:
   steps:
   - name: git
     image: gcr.io/cloud-builders/git
-    workingdir: /path/to/git/rules_docker
+    workingDir: /path/to/git/rules_docker
     args: ["status"]
     volumeMounts:
     - name: source
