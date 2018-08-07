@@ -3,7 +3,6 @@
 
 required = [
   "k8s.io/apimachinery/pkg/util/sets/types",
-  "k8s.io/apimachinery/pkg/apimachinery/registered",
   "k8s.io/code-generator/cmd/deepcopy-gen",
   "k8s.io/code-generator/cmd/defaulter-gen",
   "k8s.io/code-generator/cmd/client-gen",
@@ -25,25 +24,33 @@ required = [
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
 
-[[override]]
-  name = "github.com/Azure/go-autorest"
-  version = "v9.1.0"
-
 [[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.11.0"
+
+[[override]]
+  name = "github.com/json-iterator/go"
+  # This is the commit at which k8s depends on this in 1.11
+  # It seems to be broken at HEAD.
+  revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
+
+[[override]]
+  name = "github.com/Azure/go-autorest"
+  # This is the commit at which k8s depends on this in 1.11
+  # It seems to be broken at HEAD.
+  revision = "1ff28809256a84bb6966640ff3d0371af82ccba4"
 
 [prune]
   go-tests = true
