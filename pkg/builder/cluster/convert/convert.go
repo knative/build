@@ -65,7 +65,7 @@ var (
 		Name:    "nop",
 		Image:   "busybox",
 		Command: []string{"/bin/echo"},
-		Args:    []string{"Nothing to push"},
+		Args:    []string{"Build successful"},
 	}
 )
 
@@ -87,7 +87,7 @@ const (
 	initContainerPrefix        = "build-step-"
 	unnamedInitContainerPrefix = "build-step-unnamed-"
 	// A label with the following is added to the pod to identify the pods belonging to a build.
-	buildNameLabelKey = "build-name"
+	buildNameLabelKey = "build.knative.dev/buildName"
 	// Name of the credential initialization container.
 	credsInit = "credential-initializer"
 	// Names for source containers.
