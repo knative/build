@@ -228,7 +228,7 @@ func TestErrFlows(t *testing.T) {
 	select {
 	case statusEvent := <-eventCh:
 		if !strings.Contains(statusEvent, expectedErrEventMsg) {
-			t.Errorf("Event messsgae; wanted %q, got %q", expectedErrEventMsg, statusEvent)
+			t.Errorf("Event message; wanted %q, got %q", expectedErrEventMsg, statusEvent)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatalf("No events published")
