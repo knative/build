@@ -26,17 +26,11 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/knative/build/pkg"
-	"github.com/knative/build/pkg/builder"
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
-	gcb "github.com/knative/build/pkg/builder/google"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	"github.com/knative/build/pkg/logging"
 	"github.com/knative/build/pkg/webhook"
 	"github.com/knative/pkg/signals"
-)
-
-var (
-	builderName = flag.String("builder", "", "The builder implementation to use to execute builds (supports: cluster, google).")
 )
 
 func main() {
@@ -64,16 +58,8 @@ func main() {
 		log.Fatalf("Error building Build clientset: %s", err.Error())
 	}
 
-	var bldr builder.Interface
-	switch *builderName {
-	case "cluster":
-		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-		bldr = onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
-	case "google":
-		bldr = gcb.NewBuilder(nil, "")
-	default:
-		logger.Fatalf("Unrecognized builder: %v (supported: google, cluster)", builderName)
-	}
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
 
 	options := webhook.ControllerOptions{
 		ServiceName:      "build-webhook",

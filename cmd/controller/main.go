@@ -18,25 +18,16 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"time"
-
-	"go.uber.org/zap"
-	cloudbuild "google.golang.org/api/cloudbuild/v1"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"cloud.google.com/go/compute/metadata"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-
-	"github.com/knative/build/pkg/builder"
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
-	gcb "github.com/knative/build/pkg/builder/google"
 	"github.com/knative/build/pkg/controller"
 	"github.com/knative/build/pkg/controller/build"
 	"github.com/knative/build/pkg/controller/buildtemplate"
@@ -47,37 +38,12 @@ import (
 	"github.com/knative/pkg/signals"
 )
 
-const (
-	threadsPerController = 2
-)
+const threadsPerController = 2
 
 var (
-	kubeconfig  = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	masterURL   = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	builderName = flag.String("builder", "", "The builder implementation to use to execute builds (supports: cluster, google).")
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 )
-
-func newCloudBuilder(logger *zap.SugaredLogger) builder.Interface {
-	client := &http.Client{
-		Transport: &oauth2.Transport{
-			// If no account is specified, "default" is used.
-			Source: google.ComputeTokenSource(""),
-		},
-	}
-	cb, err := cloudbuild.New(client)
-	if err != nil {
-		logger.Fatalf("Unable to initialize cloudbuild client: %v", err)
-	}
-	project, err := metadata.ProjectID()
-	if err != nil {
-		logger.Fatalf("Unable to determine project-id, are you running on GCE? error: %v", err)
-	}
-	return gcb.NewBuilder(cb, project)
-}
-
-func newOnClusterBuilder(kubeclientset kubernetes.Interface, kubeinformers kubeinformers.SharedInformerFactory, logger *zap.SugaredLogger) builder.Interface {
-	return onclusterbuilder.NewBuilder(kubeclientset, kubeinformers, logger)
-}
 
 func main() {
 	flag.Parse()
@@ -113,15 +79,7 @@ func main() {
 		buildtemplate.NewController,
 	}
 
-	var bldr builder.Interface
-	switch *builderName {
-	case "cluster":
-		bldr = newOnClusterBuilder(kubeClient, kubeInformerFactory, logger)
-	case "google":
-		bldr = newCloudBuilder(logger)
-	default:
-		logger.Fatalf("Unrecognized builder: %v (supported: google, cluster)", builderName)
-	}
+	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
 
 	// Build all of our controllers, with the clients constructed above.
 	controllers := make([]controller.Interface, 0, len(ctors))

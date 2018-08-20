@@ -15,6 +15,7 @@ apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
   name: test-configmap
+  namespace: undefined
   labels:
     expect: succeeded
 spec:

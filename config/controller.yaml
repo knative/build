@@ -28,7 +28,6 @@ spec:
       - name: build-controller
         image: github.com/knative/build/cmd/controller
         args: [
-          "-builder", "cluster",
           "-logtostderr",
           "-stderrthreshold", "INFO",
           "-creds-image", "github.com/knative/build/cmd/creds-init",
