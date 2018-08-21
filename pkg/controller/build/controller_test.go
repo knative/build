@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/builder/google"
-	"github.com/knative/build/pkg/builder/google/fakecloudbuild"
 	"github.com/knative/build/pkg/builder/nop"
 	"go.uber.org/zap"
 
@@ -102,8 +100,6 @@ func getKey(build *v1alpha1.Build, t *testing.T) string {
 }
 
 func TestBasicFlows(t *testing.T) {
-	fb, cls := fakecloudbuild.New()
-	defer cls.Close()
 	tests := []struct {
 		bldr                 builder.Interface
 		setup                func()
@@ -114,16 +110,9 @@ func TestBasicFlows(t *testing.T) {
 	}, {
 		bldr:                 &nop.Builder{ErrorMessage: "boom"},
 		expectedErrorMessage: "boom",
-	}, {
-		bldr:                 google.NewBuilder(fb, "a-project"),
-		expectedErrorMessage: noErrorMessage,
-	}, {
-		bldr:                 google.NewBuilder(fb, "a-project"),
-		expectedErrorMessage: "kaboom!",
 	}}
 
 	for idx, test := range tests {
-		fakecloudbuild.ErrorMessage = test.expectedErrorMessage
 		build := newBuild("test")
 		f := &fixture{
 			t:           t,
