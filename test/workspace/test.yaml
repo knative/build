@@ -20,10 +20,22 @@ metadata:
 spec:
   steps:
   - name: write
-    image: ubuntu:latest
-    command: ["/bin/bash"]
-    args: ["-c", "echo some stuff > /workspace/stuff"]
+    image: ubuntu
+    command: ['bash']
+    args: ['-c', 'echo some stuff > /workspace/stuff']
   - name: read
-    image: ubuntu:latest
-    command: ["/bin/bash"]
-    args: ["-c", "cat /workspace/stuff"]
+    image: ubuntu
+    args: ['cat', '/workspace/stuff']
+
+  - name: override-workspace
+    image: ubuntu
+    command: ['bash']
+    # /workspace/stuff *doesn't* exist.
+    args: ['-c', '[[ ! -f /workspace/stuff ]]']
+    volumeMounts:
+    - name: empty
+      mountPath: /workspace
+
+  volumes:
+  - name: empty
+    emptyDir: {}
