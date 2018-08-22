@@ -22,7 +22,10 @@
 [ -f /workspace/presubmit-tests.sh ] \
   && source /workspace/presubmit-tests.sh \
   || eval "$(docker run --entrypoint sh gcr.io/knative-tests/test-infra/prow-tests -c 'cat presubmit-tests.sh')"
-[ -v KNATIVE_TEST_INFRA ] || exit 1
+
+if [ -z "${KNATIVE_TEST_INFRA}" ]; then
+  exit 1
+fi
 
 function build_tests() {
   header "Running build tests"
