@@ -21,6 +21,7 @@ package convert
 import (
 	"flag"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -307,10 +308,10 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		// their own volume mount at that path.
 		requestedVolumeMounts := map[string]bool{}
 		for _, vm := range step.VolumeMounts {
-			requestedVolumeMounts[vm.MountPath] = true
+			requestedVolumeMounts[filepath.Clean(vm.MountPath)] = true
 		}
 		for _, imp := range implicitVolumeMounts {
-			if !requestedVolumeMounts[imp.MountPath] {
+			if !requestedVolumeMounts[filepath.Clean(imp.MountPath)] {
 				// If the build's source specifies a subpath,
 				// use that in the implicit workspace volume
 				// mount.

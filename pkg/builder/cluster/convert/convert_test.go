@@ -37,7 +37,7 @@ func read2CRD(f string) (*v1alpha1.Build, error) {
 	return &bs, nil
 }
 
-func TestRoundtripn(t *testing.T) {
+func TestRoundtrip(t *testing.T) {
 	inputs := []string{
 		"testdata/helloworld.yaml",
 		"testdata/two-step.yaml",
