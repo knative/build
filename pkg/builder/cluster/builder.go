@@ -172,7 +172,7 @@ func (b *builder) Builder() v1alpha1.BuildProvider {
 	return v1alpha1.ClusterBuildProvider
 }
 
-func (b *builder) Validate(u *v1alpha1.Build, tmpl *v1alpha1.BuildTemplate) error {
+func (b *builder) Validate(u *v1alpha1.Build, tmpl v1alpha1.BuildTemplateInterface) error {
 	_, err := convert.FromCRD(u, b.kubeclient)
 	return err
 }

@@ -48,7 +48,7 @@ type Interface interface {
 	Builder() v1alpha1.BuildProvider
 
 	// Validate a Build for this flavor of builder.
-	Validate(*v1alpha1.Build, *v1alpha1.BuildTemplate) error
+	Validate(*v1alpha1.Build, v1alpha1.BuildTemplateInterface) error
 
 	// Construct a Build for this flavor of builder from our CRD specification.
 	BuildFromSpec(*v1alpha1.Build) (Build, error)

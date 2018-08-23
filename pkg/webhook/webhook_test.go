@@ -77,6 +77,16 @@ func testBuildTemplate(name string) v1alpha1.BuildTemplate {
 	}
 }
 
+func testClusterBuildTemplate(name string) v1alpha1.ClusterBuildTemplate {
+	return v1alpha1.ClusterBuildTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      name,
+		},
+		Spec: v1alpha1.BuildTemplateSpec{},
+	}
+}
+
 func mustMarshal(t *testing.T, in interface{}) []byte {
 	b, err := json.Marshal(in)
 	if err != nil {

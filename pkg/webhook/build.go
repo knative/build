@@ -53,7 +53,7 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
 	var volumes []corev1.Volume
-	var tmpl *v1alpha1.BuildTemplate
+	var tmpl v1alpha1.BuildTemplateInterface
 	if b.Spec.Template != nil {
 		tmplName := b.Spec.Template.Name
 		if tmplName == "" {
@@ -61,15 +61,21 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 		}
 
 		// Look up the template in the Build's namespace.
-		tmpl, err = ac.buildClient.BuildV1alpha1().BuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
-		if err != nil {
-			return err
+		if b.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
+			tmpl, err = ac.buildClient.BuildV1alpha1().ClusterBuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+		} else {
+			tmpl, err = ac.buildClient.BuildV1alpha1().BuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-
 		if err := validateArguments(b.Spec.Template.Arguments, tmpl); err != nil {
 			return err
 		}
-		volumes = tmpl.Spec.Volumes
+		volumes = tmpl.TemplateSpec().Volumes
 	}
 	if err := validateSteps(b.Spec.Steps); err != nil {
 		return err
@@ -146,7 +152,7 @@ func (ac *AdmissionController) validateSecrets(b *v1alpha1.Build) error {
 	return nil
 }
 
-func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplate) error {
+func validateArguments(args []v1alpha1.ArgumentSpec, tmpl v1alpha1.BuildTemplateInterface) error {
 	// Build must not duplicate argument names.
 	seen := map[string]struct{}{}
 	for _, a := range args {
@@ -159,7 +165,7 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl *v1alpha1.BuildTemplat
 	// defaults must be satisfied by the build's parameters.
 	if tmpl != nil {
 		tmplParams := map[string]string{} // value is the param description.
-		for _, p := range tmpl.Spec.Parameters {
+		for _, p := range tmpl.TemplateSpec().Parameters {
 			if p.Default == nil {
 				tmplParams[p.Name] = p.Description
 			}

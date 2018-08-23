@@ -58,7 +58,7 @@ const (
 	buildWebhookDeployment = "build-webhook"
 )
 
-var resources = []string{"builds", "buildtemplates"}
+var resources = []string{"builds", "buildtemplates", "clusterbuildtemplates"}
 
 // ControllerOptions contains the configuration for the webhook
 type ControllerOptions struct {
@@ -131,6 +131,7 @@ type genericCRD interface {
 
 var _ genericCRD = (*v1alpha1.Build)(nil)
 var _ genericCRD = (*v1alpha1.BuildTemplate)(nil)
+var _ genericCRD = (*v1alpha1.ClusterBuildTemplate)(nil)
 
 // getAPIServerExtensionCACert gets the Kubernetes aggregate apiserver
 // client CA cert used by validator.
@@ -223,6 +224,10 @@ func NewAdmissionController(client kubernetes.Interface, buildClient buildclient
 		"BuildTemplate": {
 			Factory:   &v1alpha1.BuildTemplate{},
 			Validator: ac.validateBuildTemplate,
+		},
+		"ClusterBuildTemplate": {
+			Factory:   &v1alpha1.ClusterBuildTemplate{},
+			Validator: ac.validateClusterBuildTemplate,
 		},
 	}
 	return ac
