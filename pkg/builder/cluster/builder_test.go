@@ -201,12 +201,12 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 	// so trigger the update event manually.
 	builder.updatePodEvent(nil, pod)
 
-	// If we get a message from our Wait(), then we didn't properly ignore the
+	// If we do not get a message from our Wait(), then we ignored the
 	// benign update.  If we still haven't heard anything after 5 seconds, then
-	// keep going.
-	checksComplete.WaitUntil(5*time.Second, func() {
-		t.Fatal("Wait() returned even though our update was benign!")
-	}, buildtest.WaitNop)
+	// throw an error.
+	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
+		t.Fatal("timed out in op.Wait()")
+	})
 
 	// Now make it look done.
 	pod.Status.Phase = corev1.PodSucceeded
