@@ -14,7 +14,7 @@
 apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-custom-source
+  name: test-custom-source-cluster
   labels:
     expect: succeeded
 spec:
@@ -28,4 +28,4 @@ spec:
       ]
   template:
     name: dump-build-template
-    kind: BuildTemplate
+    kind: ClusterBuildTemplate

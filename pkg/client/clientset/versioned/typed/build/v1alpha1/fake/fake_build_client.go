@@ -33,6 +33,10 @@ func (c *FakeBuildV1alpha1) BuildTemplates(namespace string) v1alpha1.BuildTempl
 	return &FakeBuildTemplates{c, namespace}
 }
 
+func (c *FakeBuildV1alpha1) ClusterBuildTemplates(namespace string) v1alpha1.ClusterBuildTemplateInterface {
+	return &FakeClusterBuildTemplates{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeBuildV1alpha1) RESTClient() rest.Interface {

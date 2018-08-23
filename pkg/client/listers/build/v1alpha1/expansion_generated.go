@@ -30,3 +30,11 @@ type BuildTemplateListerExpansion interface{}
 // BuildTemplateNamespaceListerExpansion allows custom methods to be added to
 // BuildTemplateNamespaceLister.
 type BuildTemplateNamespaceListerExpansion interface{}
+
+// ClusterBuildTemplateListerExpansion allows custom methods to be added to
+// ClusterBuildTemplateLister.
+type ClusterBuildTemplateListerExpansion interface{}
+
+// ClusterBuildTemplateNamespaceListerExpansion allows custom methods to be added to
+// ClusterBuildTemplateNamespaceLister.
+type ClusterBuildTemplateNamespaceListerExpansion interface{}
