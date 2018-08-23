@@ -102,12 +102,19 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		StepStates:     states,
 		StepsCompleted: stepsCompleted,
 	}
+
 	if pod.Status.Phase == corev1.PodFailed {
 		msg := getFailureMessage(pod)
 		bs.SetCondition(&v1alpha1.BuildCondition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Message: msg,
+		})
+	} else if pod.Status.Phase == corev1.PodPending {
+		bs.SetCondition(&v1alpha1.BuildCondition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionUnknown,
+			Message: "Pending",
 		})
 	} else {
 		bs.SetCondition(&v1alpha1.BuildCondition{
@@ -236,21 +243,23 @@ func (b *builder) addPodEvent(obj interface{}) {
 		return
 	}
 
-	// We only take action on pods that have completed, in some way.
-	if !isDone(pod) {
-		return
-	}
-
-	// Once we have a complete Pod to act on, take the lock and see if anyone's watching.
+	// Once we have a Pod to act on, take the lock and see if anyone's watching.
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	key := getKey(pod.Namespace, pod.Name)
+
 	if ch, ok := b.callbacks[key]; ok {
-		// Send the person listening the message and remove this callback from our map.
+		// Send the person listening the message.
 		ch <- pod
 		delete(b.callbacks, key)
 	} else {
-		b.logger.Errorf("Saw %q complete, but nothing was watching for it!", key)
+		b.logger.Errorf("Saw %q update, but nothing was watching for it!", key)
+	}
+
+	//Remove this callback from our map
+	if isDone(pod) {
+		b.logger.Debugf("Build finished, deleting the key %q", key)
+		delete(b.callbacks, key)
 	}
 }
 
