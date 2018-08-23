@@ -27,5 +27,5 @@ spec:
         "another-directory",
       ]
   template:
-    name: dump-build-template
+    name: dump-cluster-build-template
     kind: ClusterBuildTemplate
