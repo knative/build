@@ -111,10 +111,12 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 			Message: msg,
 		})
 	} else if pod.Status.Phase == corev1.PodPending {
+		msg := getWaitingMessage(pod)
 		bs.SetCondition(&v1alpha1.BuildCondition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionUnknown,
 			Message: "Pending",
+			Reason:  msg,
 		})
 	} else {
 		bs.SetCondition(&v1alpha1.BuildCondition{
@@ -279,6 +281,33 @@ func (b *builder) deletePodEvent(obj interface{}) {
 func isDone(pod *corev1.Pod) bool {
 	return pod.Status.Phase == corev1.PodSucceeded ||
 		pod.Status.Phase == corev1.PodFailed
+}
+
+func getWaitingMessage(pod *corev1.Pod) string {
+	// First, try to surface reason for pending/unknown about the actual build step.
+	for _, status := range pod.Status.InitContainerStatuses {
+		wait := status.State.Waiting
+		if wait != nil {
+			return fmt.Sprintf("build step %q is pending with reason %q",
+				status.Name, wait.Message)
+		}
+	}
+	// Try to surface underlying reason by inspecting pod's recent status if condition is not true
+	for i, podStatus := range pod.Status.Conditions {
+		if podStatus.Status != corev1.ConditionTrue {
+			return fmt.Sprintf("pod status %q:%q; message: %q",
+				pod.Status.Conditions[i].Type,
+				pod.Status.Conditions[i].Status,
+				pod.Status.Conditions[i].Message)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	// Lastly fall back on a generic pending message.
+	return "Pending"
 }
 
 func getFailureMessage(pod *corev1.Pod) string {
