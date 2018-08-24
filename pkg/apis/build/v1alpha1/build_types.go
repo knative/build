@@ -63,7 +63,7 @@ type BuildSpec struct {
 
 	// Template, if specified, references a BuildTemplate resource to use to
 	// populate fields in the build, and optional Arguments to pass to the
-	// template.
+	// template. The default Kind of template is BuildTemplate
 	Template *TemplateInstantiationSpec `json:"template,omitempty"`
 
 	// NodeSelector is a selector which must be true for the pod to fit on a node.
@@ -73,6 +73,16 @@ type BuildSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
+// TemplateKind defines the type of BuildTemplate used by the build.
+type TemplateKind string
+
+const (
+	// BuildTemplateKind indicates that the template type has a namepace scope.
+	BuildTemplateKind TemplateKind = "BuildTemplate"
+	// ClusterBuildTemplateKind indicates that template type has a cluster scope.
+	ClusterBuildTemplateKind TemplateKind = "ClusterBuildTemplate"
+)
+
 // TemplateInstantiationSpec specifies how a BuildTemplate is instantiated into
 // a Build.
 type TemplateInstantiationSpec struct {
@@ -80,6 +90,10 @@ type TemplateInstantiationSpec struct {
 	//
 	// The template is assumed to exist in the Build's namespace.
 	Name string `json:"name"`
+
+	// The Kind of the template to be used, possible values are BuildTemplate
+	// or ClusterBuildTemplate. If nothing is specified, the default if is BuildTemplate
+	Kind TemplateKind `json:"kind,omitempty"`
 
 	// Arguments, if specified, lists values that should be applied to the
 	// parameters specified by the template.

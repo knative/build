@@ -31,6 +31,7 @@ import (
 	"github.com/knative/build/pkg/controller"
 	"github.com/knative/build/pkg/controller/build"
 	"github.com/knative/build/pkg/controller/buildtemplate"
+	"github.com/knative/build/pkg/controller/clusterbuildtemplate"
 	"github.com/knative/build/pkg/logging"
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
@@ -77,6 +78,7 @@ func main() {
 	ctors := []controller.Constructor{
 		build.NewController,
 		buildtemplate.NewController,
+		clusterbuildtemplate.NewController,
 	}
 
 	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)

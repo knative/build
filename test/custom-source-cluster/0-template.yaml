@@ -12,20 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 apiVersion: build.knative.dev/v1alpha1
-kind: Build
+kind: ClusterBuildTemplate
 metadata:
-  name: test-custom-source
-  labels:
-    expect: succeeded
+  name: dump-cluster-build-template
 spec:
-  source:
-    custom:
-      image: gcr.io/cloud-builders/git:latest
-      args: [
-        "clone", "https://github.com/bazelbuild/rules_docker.git",
-        # Clone into another-directory/...
-        "another-directory",
-      ]
-  template:
-    name: dump-build-template
-    kind: BuildTemplate
+  steps:
+  - name: dump-build
+    image: ubuntu:latest
+    args: ["cat", "/workspace/another-directory/BUILD"]

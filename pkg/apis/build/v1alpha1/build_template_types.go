@@ -23,6 +23,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TemplateSpec returnes the Spec used by the template
+func (bt *BuildTemplate) TemplateSpec() BuildTemplateSpec {
+	return bt.Spec
+}
+
+// Copy performes a deep copy
+func (bt *BuildTemplate) Copy() BuildTemplateInterface {
+	return bt.DeepCopy()
+}
+
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

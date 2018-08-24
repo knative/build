@@ -25,8 +25,8 @@ import (
 	"github.com/knative/build/pkg/logging"
 )
 
-func (ac *AdmissionController) validateBuildTemplate(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {
-	_, tmpl, err := unmarshalBuildTemplates(ctx, old, new)
+func (ac *AdmissionController) validateClusterBuildTemplate(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {
+	_, tmpl, err := unmarshalClusterBuildTemplates(ctx, old, new)
 	if err != nil {
 		return err
 	}
@@ -36,26 +36,26 @@ func (ac *AdmissionController) validateBuildTemplate(ctx context.Context, _ *[]j
 	return nil
 }
 
-var errInvalidBuildTemplate = errors.New("failed to convert to BuildTemplate")
+var errInvalidClusterBuildTemplate = errors.New("failed to convert to ClusterBuildTemplate")
 
-func unmarshalBuildTemplates(ctx context.Context, old, new genericCRD) (*v1alpha1.BuildTemplate, *v1alpha1.BuildTemplate, error) {
+func unmarshalClusterBuildTemplates(ctx context.Context, old, new genericCRD) (*v1alpha1.ClusterBuildTemplate, *v1alpha1.ClusterBuildTemplate, error) {
 	logger := logging.FromContext(ctx)
 
-	var oldbt *v1alpha1.BuildTemplate
+	var oldbt *v1alpha1.ClusterBuildTemplate
 	if old != nil {
 		ok := false
-		oldbt, ok = old.(*v1alpha1.BuildTemplate)
+		oldbt, ok = old.(*v1alpha1.ClusterBuildTemplate)
 		if !ok {
-			return nil, nil, errInvalidBuildTemplate
+			return nil, nil, errInvalidClusterBuildTemplate
 		}
 	}
-	logger.Infof("OLD BuildTemplate is\n%+v", oldbt)
+	logger.Infof("OLD ClusterBuildTemplate is\n%+v", oldbt)
 
-	newbt, ok := new.(*v1alpha1.BuildTemplate)
+	newbt, ok := new.(*v1alpha1.ClusterBuildTemplate)
 	if !ok {
-		return nil, nil, errInvalidBuildTemplate
+		return nil, nil, errInvalidClusterBuildTemplate
 	}
-	logger.Infof("NEW BuildTemplate is\n%+v", newbt)
+	logger.Infof("NEW ClusterBuildTemplate is\n%+v", newbt)
 
 	return oldbt, newbt, nil
 }

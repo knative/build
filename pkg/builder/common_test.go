@@ -31,7 +31,7 @@ func TestApplyTemplate(t *testing.T) {
 	empty := ""
 	for i, c := range []struct {
 		build *v1alpha1.Build
-		tmpl  *v1alpha1.BuildTemplate
+		tmpl  v1alpha1.BuildTemplateInterface
 		want  *v1alpha1.Build // if nil, expect error.
 	}{{
 		// Build's Steps are overwritten. This doesn't pass
@@ -540,6 +540,58 @@ func TestApplyTemplate(t *testing.T) {
 						Name:  "SOME_ENV_VAR",
 						Value: "foo",
 					}},
+				},
+			},
+		},
+	}, {
+		// A cluster build template
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Kind: v1alpha1.ClusterBuildTemplateKind,
+				},
+			},
+		},
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "hello",
+				}},
+			},
+		},
+		want: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name: "hello",
+				}},
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Kind: v1alpha1.ClusterBuildTemplateKind,
+				},
+			},
+		},
+	}, {
+		// A build template with kind BuildTemplate
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Kind: v1alpha1.BuildTemplateKind,
+				},
+			},
+		},
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "hello",
+				}},
+			},
+		},
+		want: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Steps: []corev1.Container{{
+					Name: "hello",
+				}},
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Kind: v1alpha1.BuildTemplateKind,
 				},
 			},
 		},
