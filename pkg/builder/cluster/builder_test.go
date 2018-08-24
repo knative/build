@@ -39,7 +39,7 @@ const (
 	namespace            = ""
 	expectedErrorMessage = "stuff broke"
 	expectedErrorReason  = "it was bad"
-	expectedPendingMsg   = "Build step \"\" is pending with reason \"\""
+	expectedPendingMsg   = "build step \"\" is pending with reason \"stuff broke\""
 )
 
 func newBuilder(cs kubernetes.Interface) *builder {
@@ -403,7 +403,8 @@ func TestPodPendingFlow(t *testing.T) {
 	pod.Status.InitContainerStatuses = []corev1.ContainerStatus{{
 		State: corev1.ContainerState{
 			Waiting: &corev1.ContainerStateWaiting{
-				Reason: expectedErrorReason,
+				Message: expectedErrorMessage,
+				Reason:  expectedErrorReason,
 			},
 		},
 	}}
@@ -592,7 +593,7 @@ func TestBasicFlowWithCredentials(t *testing.T) {
 func statusMessage(status *v1alpha1.BuildStatus) string {
 	for _, cond := range status.Conditions {
 		if cond.Type == v1alpha1.BuildSucceeded && cond.Status == corev1.ConditionUnknown {
-			return cond.Message
+			return cond.Reason
 		}
 	}
 	return ""

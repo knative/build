@@ -287,7 +287,7 @@ func getWaitingMessage(pod *corev1.Pod) string {
 	// First, try to surface reason for pending/unknown about the actual build step.
 	for _, status := range pod.Status.InitContainerStatuses {
 		wait := status.State.Waiting
-		if wait != nil {
+		if wait != nil && wait.Message != "" {
 			return fmt.Sprintf("build step %q is pending with reason %q",
 				status.Name, wait.Message)
 		}
