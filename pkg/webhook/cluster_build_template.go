@@ -30,20 +30,10 @@ func (ac *AdmissionController) validateClusterBuildTemplate(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
-	if err := validateSteps(tmpl.Spec.Steps); err != nil {
+	if err := validateTemplate(tmpl); err != nil {
 		return err
 	}
-
-	if err := validateVolumes(tmpl.Spec.Volumes); err != nil {
-		return err
-	}
-
-	if err := validateParameters(tmpl.Spec.Parameters); err != nil {
-		return err
-	}
-
-	return validatePlaceholders(tmpl.Spec.Steps)
+	return nil
 }
 
 var errInvalidClusterBuildTemplate = errors.New("failed to convert to ClusterBuildTemplate")

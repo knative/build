@@ -112,7 +112,7 @@ func (nb *Builder) Builder() v1alpha1.BuildProvider {
 }
 
 // Validate does nothing.
-func (nb *Builder) Validate(u *v1alpha1.Build, tmpl v1alpha1.BuildTemplateInterface) error { return nil }
+func (nb *Builder) Validate(u *v1alpha1.Build) error { return nil }
 
 // BuildFromSpec returns the converted build, or the builder's predefined error.
 func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {

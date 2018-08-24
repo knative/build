@@ -66,12 +66,15 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 			if err != nil {
 				return err
 			}
-		} else {
+		} else if b.Spec.Template.Kind == v1alpha1.BuildTemplateKind || b.Spec.Template.Kind == "" {
 			tmpl, err = ac.buildClient.BuildV1alpha1().BuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
+		} else {
+			return validationError("Incorrect Template Kind", "the template kind can only be \"BuildTemplate\" or \"ClusterBuildTemplate\" with \"BuildTemplate\" used as the default if nothing is specified.")
 		}
+
 		if err := validateArguments(b.Spec.Template.Arguments, tmpl); err != nil {
 			return err
 		}
@@ -85,7 +88,7 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 	}
 
 	// Do builder-implementation-specific validation.
-	return ac.builder.Validate(b, tmpl)
+	return ac.builder.Validate(b)
 }
 
 var errInvalidBuild = errors.New("failed to convert to Build")
