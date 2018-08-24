@@ -34,8 +34,9 @@ type Build struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BuildSpec   `json:"spec"`
-	Status BuildStatus `json:"status"`
+	Spec    BuildSpec   `json:"spec"`
+	Status  BuildStatus `json:"status"`
+	Timeout string      `json:"timeout,omitempty"`
 }
 
 // BuildSpec is the spec for a Build resource.

@@ -69,6 +69,14 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	return nil
 }
 
+func (op *operation) Terminate() error {
+	err := op.builder.kubeclient.CoreV1().Pods(op.namespace).Delete(op.name, &metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	podCh := make(chan *corev1.Pod)
 	defer close(podCh)

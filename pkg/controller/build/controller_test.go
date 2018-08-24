@@ -66,7 +66,8 @@ func newBuild(name string) *v1alpha1.Build {
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: v1alpha1.BuildSpec{},
+		Spec:    v1alpha1.BuildSpec{},
+		Timeout: "20m",
 	}
 }
 

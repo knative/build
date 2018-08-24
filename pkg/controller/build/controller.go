@@ -18,6 +18,7 @@ package build
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"go.uber.org/zap"
@@ -274,8 +275,39 @@ func (c *Controller) syncHandler(key string) error {
 			if err != nil {
 				return err
 			}
-			if err := c.waitForOperationAsync(build, op); err != nil {
-				return err
+
+			// Check if build has timed out
+			if builder.IsTimeout(&build.Status, build.Timeout) {
+				//cleanup operation and update status
+				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q ", build.Name, build.Timeout)
+
+				err = op.Terminate()
+				if err != nil {
+					c.logger.Errorf("Failed to terminate pod: %v", err)
+					return err
+				}
+
+				build.Status.SetCondition(&v1alpha1.BuildCondition{
+					Type:    v1alpha1.BuildSucceeded,
+					Status:  corev1.ConditionFalse,
+					Reason:  "BuildTimeout",
+					Message: timeoutMsg,
+				})
+
+				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildTimeout", timeoutMsg)
+
+				if _, err := c.updateStatus(build); err != nil {
+					return err
+				}
+
+				c.logger.Infof("%v", timeoutMsg)
+
+				return NewBuildTimeoutError(timeoutMsg)
+			} else {
+				// if not timed out then wait async
+				if err := c.waitForOperationAsync(build, op); err != nil {
+					return err
+				}
 			}
 		} else {
 			build.Status.Builder = c.builder.Builder()
@@ -345,6 +377,15 @@ func (c *Controller) waitForOperationAsync(build *v1alpha1.Build, op builder.Ope
 		}
 	}()
 	return nil
+}
+
+func NewBuildTimeoutError(message string) *errors.StatusError {
+	return &errors.StatusError{metav1.Status{
+		Status:  metav1.StatusFailure,
+		Code:    http.StatusServiceUnavailable,
+		Reason:  metav1.StatusReasonServiceUnavailable,
+		Message: message,
+	}}
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Build) (*v1alpha1.Build, error) {

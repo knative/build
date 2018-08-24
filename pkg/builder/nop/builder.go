@@ -56,6 +56,10 @@ func (nb *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	return nil
 }
 
+func (nb *operation) Terminate() error {
+	return nil
+}
+
 func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	bs := &v1alpha1.BuildStatus{
 		// Masquerade as the Google builder.
