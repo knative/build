@@ -193,6 +193,7 @@ func TestValidateBuild(t *testing.T) {
 		desc    string
 		build   *v1alpha1.Build
 		tmpl    *v1alpha1.BuildTemplate
+		ctmpl   *v1alpha1.ClusterBuildTemplate
 		sa      *corev1.ServiceAccount
 		secrets []*corev1.Secret
 		reason  string // if "", expect success.
@@ -393,10 +394,30 @@ func TestValidateBuild(t *testing.T) {
 			Spec: v1alpha1.BuildSpec{
 				Template: &v1alpha1.TemplateInstantiationSpec{
 					Name: "empty-default",
+					Kind: "BuildTemplate",
 				},
 			},
 		},
 		tmpl: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name:    "foo",
+					Default: &empty,
+				}},
+			},
+		},
+	}, {
+		desc: "build template cluster",
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "empty-default",
+					Kind: "ClusterBuildTemplate",
+				},
+			},
+		},
+		ctmpl: &v1alpha1.ClusterBuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
 			Spec: v1alpha1.BuildTemplateSpec{
 				Parameters: []v1alpha1.ParameterSpec{{
@@ -480,6 +501,10 @@ func TestValidateBuild(t *testing.T) {
 			if c.tmpl != nil {
 				if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
 					t.Fatalf("Failed to create BuildTemplate: %v", err)
+				}
+			} else if c.ctmpl != nil {
+				if _, err := buildClient.BuildV1alpha1().ClusterBuildTemplates().Create(c.ctmpl); err != nil {
+					t.Fatalf("Failed to create ClusterBuildTemplate: %v", err)
 				}
 			}
 			// Create ServiceAccount or create the default ServiceAccount.
@@ -615,6 +640,111 @@ func TestValidateTemplate(t *testing.T) {
 	}
 }
 
+func TestValidateClusterBuildTemplate(t *testing.T) {
+	ctx := context.Background()
+	hasDefault := "has-default"
+	for _, c := range []struct {
+		desc   string
+		tmpl   *v1alpha1.ClusterBuildTemplate
+		reason string // if "", expect success.
+	}{{
+		desc: "Single named step",
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		desc: "Multiple unnamed steps",
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:oops",
+				}},
+			},
+		},
+		reason: "DuplicateStepName",
+	}, {
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+				Volumes: []corev1.Volume{{
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}, {
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		},
+		reason: "DuplicateVolumeName",
+	}, {
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "foo",
+				}, {
+					Name: "foo",
+				}},
+			},
+		},
+		reason: "DuplicateParamName",
+	}, {
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "step-name-${FOO${BAR}}",
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}, {
+					Name:    "BAR",
+					Default: &hasDefault,
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}} {
+		name := c.desc
+		if c.reason != "" {
+			name = "invalid-" + c.reason
+		}
+		t.Run(name, func(t *testing.T) {
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+			verr := ac.validateClusterBuildTemplate(ctx, nil, nil, c.tmpl)
+			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
+			}
+		})
+	}
+}
+
 func TestAdmitBuildTemplate(t *testing.T) {
 	for _, c := range []struct {
 		desc        string
@@ -665,6 +795,81 @@ func TestAdmitBuildTemplate(t *testing.T) {
 		kind:        "BuildTemplate",
 		old:         testBuildTemplate("valid-build-template"),
 		new:         testBuildTemplate("valid-build-template"),
+		wantAllowed: true,
+		wantPatches: nil,
+	}} {
+		t.Run(c.desc, func(t *testing.T) {
+			ctx := context.Background()
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+			resp := ac.admit(ctx, &admissionv1beta1.AdmissionRequest{
+				Operation: c.op,
+				Kind:      metav1.GroupVersionKind{Kind: c.kind},
+				OldObject: runtime.RawExtension{Raw: mustMarshal(t, c.old)},
+				Object:    runtime.RawExtension{Raw: mustMarshal(t, c.new)},
+			})
+			if resp.Allowed != c.wantAllowed {
+				t.Errorf("allowed got %t, want %t", resp.Allowed, c.wantAllowed)
+			}
+			if c.wantPatches != nil {
+				gotPatches := mustUnmarshalPatches(t, resp.Patch)
+				if diff := cmp.Diff(gotPatches, c.wantPatches); diff != "" {
+					t.Errorf("patches differed: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestAdmitClusterBuildTemplate(t *testing.T) {
+	for _, c := range []struct {
+		desc        string
+		op          admissionv1beta1.Operation
+		kind        string
+		wantAllowed bool
+		new, old    v1alpha1.ClusterBuildTemplate
+		wantPatches []jsonpatch.JsonPatchOperation
+	}{{
+		desc:        "delete op",
+		op:          admissionv1beta1.Delete,
+		wantAllowed: true,
+	}, {
+		desc:        "connect op",
+		op:          admissionv1beta1.Connect,
+		wantAllowed: true,
+	}, {
+		desc:        "bad kind",
+		op:          admissionv1beta1.Create,
+		kind:        "Garbage",
+		wantAllowed: false,
+	}, {
+		desc:        "invalid name",
+		op:          admissionv1beta1.Create,
+		kind:        "ClusterBuildTemplate",
+		new:         testClusterBuildTemplate("build-template.invalid"),
+		wantAllowed: false,
+	}, {
+		desc:        "invalid name too long",
+		op:          admissionv1beta1.Create,
+		kind:        "ClusterBuildTemplate",
+		new:         testClusterBuildTemplate(strings.Repeat("a", 64)),
+		wantAllowed: false,
+	}, {
+		desc:        "create valid",
+		op:          admissionv1beta1.Create,
+		kind:        "ClusterBuildTemplate",
+		new:         testClusterBuildTemplate("valid-build-template"),
+		wantAllowed: true,
+		wantPatches: []jsonpatch.JsonPatchOperation{{
+			Operation: "add",
+			Path:      "/spec/generation",
+			Value:     float64(1),
+		}},
+	}, {
+		desc:        "no-op update",
+		op:          admissionv1beta1.Update,
+		kind:        "ClusterBuildTemplate",
+		old:         testClusterBuildTemplate("valid-build-template"),
+		new:         testClusterBuildTemplate("valid-build-template"),
 		wantAllowed: true,
 		wantPatches: nil,
 	}} {

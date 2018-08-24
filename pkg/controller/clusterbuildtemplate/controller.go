@@ -189,7 +189,7 @@ func (c *Controller) processNextWorkItem() bool {
 		var key string
 		var ok bool
 		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
+		// form name. We do this as the delayed nature of the
 		// workqueue means the items in the informer cache may actually be
 		// more up to date that when the item was initially put onto the
 		// workqueue.
@@ -201,7 +201,7 @@ func (c *Controller) processNextWorkItem() bool {
 			runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		// Run the syncHandler, passing it the namespace/name string of the
+		// Run the syncHandler, passing it the name string of the
 		// ClusterBuildTemplate resource to be synced.
 		if err := c.syncHandler(key); err != nil {
 			return fmt.Errorf("error syncing '%s': %s", key, err.Error())
@@ -222,7 +222,7 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 // enqueueTemplate takes a ClusterBuildTemplate resource and converts it into a
-// namespace/name string which is then put onto the work queue. This method
+// name string which is then put onto the work queue. This method
 // should *not* be passed resources of any type other than ClusterBuildTemplate.
 func (c *Controller) enqueueTemplate(obj interface{}) {
 	var key string
@@ -238,15 +238,8 @@ func (c *Controller) enqueueTemplate(obj interface{}) {
 // converge the two. It then updates the Status block of the ClusterBuildTemplate
 // resource with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
-	}
-
-	// Get the ClusterBuildTemplate resource with this namespace/name
-	tmpl, err := c.clusterBuildTemplatesLister.ClusterBuildTemplates(namespace).Get(name)
+	// Get the ClusterBuildTemplate resource with this key
+	tmpl, err := c.clusterBuildTemplatesLister.Get(key)
 	if err != nil {
 		// The ClusterBuildTemplate resource may no longer exist, in which case we stop
 		// processing.

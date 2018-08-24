@@ -52,5 +52,5 @@ func (v *version) BuildTemplates() BuildTemplateInformer {
 
 // ClusterBuildTemplates returns a ClusterBuildTemplateInformer.
 func (v *version) ClusterBuildTemplates() ClusterBuildTemplateInformer {
-	return &clusterBuildTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterBuildTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

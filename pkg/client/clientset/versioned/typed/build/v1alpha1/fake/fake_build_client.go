@@ -33,8 +33,8 @@ func (c *FakeBuildV1alpha1) BuildTemplates(namespace string) v1alpha1.BuildTempl
 	return &FakeBuildTemplates{c, namespace}
 }
 
-func (c *FakeBuildV1alpha1) ClusterBuildTemplates(namespace string) v1alpha1.ClusterBuildTemplateInterface {
-	return &FakeClusterBuildTemplates{c, namespace}
+func (c *FakeBuildV1alpha1) ClusterBuildTemplates() v1alpha1.ClusterBuildTemplateInterface {
+	return &FakeClusterBuildTemplates{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

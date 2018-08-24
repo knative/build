@@ -26,8 +26,8 @@ import (
 type ClusterBuildTemplateLister interface {
 	// List lists all ClusterBuildTemplates in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterBuildTemplate, err error)
-	// ClusterBuildTemplates returns an object that can list and get ClusterBuildTemplates.
-	ClusterBuildTemplates(namespace string) ClusterBuildTemplateNamespaceLister
+	// Get retrieves the ClusterBuildTemplate from the index for a given name.
+	Get(name string) (*v1alpha1.ClusterBuildTemplate, error)
 	ClusterBuildTemplateListerExpansion
 }
 
@@ -49,38 +49,9 @@ func (s *clusterBuildTemplateLister) List(selector labels.Selector) (ret []*v1al
 	return ret, err
 }
 
-// ClusterBuildTemplates returns an object that can list and get ClusterBuildTemplates.
-func (s *clusterBuildTemplateLister) ClusterBuildTemplates(namespace string) ClusterBuildTemplateNamespaceLister {
-	return clusterBuildTemplateNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterBuildTemplateNamespaceLister helps list and get ClusterBuildTemplates.
-type ClusterBuildTemplateNamespaceLister interface {
-	// List lists all ClusterBuildTemplates in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterBuildTemplate, err error)
-	// Get retrieves the ClusterBuildTemplate from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.ClusterBuildTemplate, error)
-	ClusterBuildTemplateNamespaceListerExpansion
-}
-
-// clusterBuildTemplateNamespaceLister implements the ClusterBuildTemplateNamespaceLister
-// interface.
-type clusterBuildTemplateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterBuildTemplates in the indexer for a given namespace.
-func (s clusterBuildTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterBuildTemplate, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterBuildTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterBuildTemplate from the indexer for a given namespace and name.
-func (s clusterBuildTemplateNamespaceLister) Get(name string) (*v1alpha1.ClusterBuildTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterBuildTemplate from the index for a given name.
+func (s *clusterBuildTemplateLister) Get(name string) (*v1alpha1.ClusterBuildTemplate, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

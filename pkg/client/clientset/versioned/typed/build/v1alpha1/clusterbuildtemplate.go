@@ -27,7 +27,7 @@ import (
 // ClusterBuildTemplatesGetter has a method to return a ClusterBuildTemplateInterface.
 // A group's client should implement this interface.
 type ClusterBuildTemplatesGetter interface {
-	ClusterBuildTemplates(namespace string) ClusterBuildTemplateInterface
+	ClusterBuildTemplates() ClusterBuildTemplateInterface
 }
 
 // ClusterBuildTemplateInterface has methods to work with ClusterBuildTemplate resources.
@@ -46,14 +46,12 @@ type ClusterBuildTemplateInterface interface {
 // clusterBuildTemplates implements ClusterBuildTemplateInterface
 type clusterBuildTemplates struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterBuildTemplates returns a ClusterBuildTemplates
-func newClusterBuildTemplates(c *BuildV1alpha1Client, namespace string) *clusterBuildTemplates {
+func newClusterBuildTemplates(c *BuildV1alpha1Client) *clusterBuildTemplates {
 	return &clusterBuildTemplates{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -61,7 +59,6 @@ func newClusterBuildTemplates(c *BuildV1alpha1Client, namespace string) *cluster
 func (c *clusterBuildTemplates) Get(name string, options v1.GetOptions) (result *v1alpha1.ClusterBuildTemplate, err error) {
 	result = &v1alpha1.ClusterBuildTemplate{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -74,7 +71,6 @@ func (c *clusterBuildTemplates) Get(name string, options v1.GetOptions) (result 
 func (c *clusterBuildTemplates) List(opts v1.ListOptions) (result *v1alpha1.ClusterBuildTemplateList, err error) {
 	result = &v1alpha1.ClusterBuildTemplateList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -86,7 +82,6 @@ func (c *clusterBuildTemplates) List(opts v1.ListOptions) (result *v1alpha1.Clus
 func (c *clusterBuildTemplates) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -96,7 +91,6 @@ func (c *clusterBuildTemplates) Watch(opts v1.ListOptions) (watch.Interface, err
 func (c *clusterBuildTemplates) Create(clusterBuildTemplate *v1alpha1.ClusterBuildTemplate) (result *v1alpha1.ClusterBuildTemplate, err error) {
 	result = &v1alpha1.ClusterBuildTemplate{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		Body(clusterBuildTemplate).
 		Do().
@@ -108,7 +102,6 @@ func (c *clusterBuildTemplates) Create(clusterBuildTemplate *v1alpha1.ClusterBui
 func (c *clusterBuildTemplates) Update(clusterBuildTemplate *v1alpha1.ClusterBuildTemplate) (result *v1alpha1.ClusterBuildTemplate, err error) {
 	result = &v1alpha1.ClusterBuildTemplate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		Name(clusterBuildTemplate.Name).
 		Body(clusterBuildTemplate).
@@ -120,7 +113,6 @@ func (c *clusterBuildTemplates) Update(clusterBuildTemplate *v1alpha1.ClusterBui
 // Delete takes name of the clusterBuildTemplate and deletes it. Returns an error if one occurs.
 func (c *clusterBuildTemplates) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		Name(name).
 		Body(options).
@@ -131,7 +123,6 @@ func (c *clusterBuildTemplates) Delete(name string, options *v1.DeleteOptions) e
 // DeleteCollection deletes a collection of objects.
 func (c *clusterBuildTemplates) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -143,7 +134,6 @@ func (c *clusterBuildTemplates) DeleteCollection(options *v1.DeleteOptions, list
 func (c *clusterBuildTemplates) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ClusterBuildTemplate, err error) {
 	result = &v1alpha1.ClusterBuildTemplate{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clusterbuildtemplates").
 		SubResource(subresources...).
 		Name(name).

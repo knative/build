@@ -288,7 +288,7 @@ func (c *Controller) syncHandler(key string) error {
 			var tmpl v1alpha1.BuildTemplateInterface
 			if build.Spec.Template != nil {
 				if build.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
-					tmpl, err = c.clusterBuildTemplatesLister.ClusterBuildTemplates(namespace).Get(build.Spec.Template.Name)
+					tmpl, err = c.clusterBuildTemplatesLister.Get(build.Spec.Template.Name)
 					if err != nil {
 						// The ClusterBuildTemplate resource may not exist.
 						if errors.IsNotFound(err) {

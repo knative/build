@@ -62,7 +62,7 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 
 		// Look up the template in the Build's namespace.
 		if b.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
-			tmpl, err = ac.buildClient.BuildV1alpha1().ClusterBuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
+			tmpl, err = ac.buildClient.BuildV1alpha1().ClusterBuildTemplates().Get(tmplName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}

@@ -38,33 +38,32 @@ type ClusterBuildTemplateInformer interface {
 type clusterBuildTemplateInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewClusterBuildTemplateInformer constructs a new informer for ClusterBuildTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterBuildTemplateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterBuildTemplateInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterBuildTemplateInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterBuildTemplateInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredClusterBuildTemplateInformer constructs a new informer for ClusterBuildTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterBuildTemplateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterBuildTemplateInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.BuildV1alpha1().ClusterBuildTemplates(namespace).List(options)
+				return client.BuildV1alpha1().ClusterBuildTemplates().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.BuildV1alpha1().ClusterBuildTemplates(namespace).Watch(options)
+				return client.BuildV1alpha1().ClusterBuildTemplates().Watch(options)
 			},
 		},
 		&build_v1alpha1.ClusterBuildTemplate{},
@@ -74,7 +73,7 @@ func NewFilteredClusterBuildTemplateInformer(client versioned.Interface, namespa
 }
 
 func (f *clusterBuildTemplateInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterBuildTemplateInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredClusterBuildTemplateInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *clusterBuildTemplateInformer) Informer() cache.SharedIndexInformer {

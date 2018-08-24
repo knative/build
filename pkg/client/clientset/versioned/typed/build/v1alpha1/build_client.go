@@ -42,8 +42,8 @@ func (c *BuildV1alpha1Client) BuildTemplates(namespace string) BuildTemplateInte
 	return newBuildTemplates(c, namespace)
 }
 
-func (c *BuildV1alpha1Client) ClusterBuildTemplates(namespace string) ClusterBuildTemplateInterface {
-	return newClusterBuildTemplates(c, namespace)
+func (c *BuildV1alpha1Client) ClusterBuildTemplates() ClusterBuildTemplateInterface {
+	return newClusterBuildTemplates(c)
 }
 
 // NewForConfig creates a new BuildV1alpha1Client for the given config.

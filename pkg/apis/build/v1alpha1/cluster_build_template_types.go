@@ -34,6 +34,7 @@ func (bt *ClusterBuildTemplate) Copy() BuildTemplateInterface {
 
 // +genclient
 // +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusterBuildTemplate is a template that can used to easily create Builds.
