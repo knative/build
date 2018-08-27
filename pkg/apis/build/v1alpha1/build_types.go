@@ -34,9 +34,8 @@ type Build struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec    BuildSpec   `json:"spec"`
-	Status  BuildStatus `json:"status"`
-	Timeout string      `json:"timeout,omitempty"`
+	Spec   BuildSpec   `json:"spec"`
+	Status BuildStatus `json:"status"`
 }
 
 // BuildSpec is the spec for a Build resource.
@@ -72,6 +71,10 @@ type BuildSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Time after which the build times out.
+	// Defaults to 10minutes.
+	Timeout string `json:"timeout,omitempty"`
 }
 
 // TemplateInstantiationSpec specifies how a BuildTemplate is instantiated into

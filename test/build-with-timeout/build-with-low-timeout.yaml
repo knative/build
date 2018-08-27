@@ -17,8 +17,8 @@ metadata:
   name: test-with-low-timeout
   labels:
     expect: failed
-timeout: 50s
 spec:
+  timeout: 50s
   steps:
   - name: step1
     image: ubuntu

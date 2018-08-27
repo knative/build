@@ -277,12 +277,11 @@ func (c *Controller) syncHandler(key string) error {
 			}
 
 			// Check if build has timed out
-			if builder.IsTimeout(&build.Status, build.Timeout) {
+			if builder.IsTimeout(&build.Status, build.Spec.Timeout) {
 				//cleanup operation and update status
-				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Timeout)
+				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout)
 
-				err = op.Terminate()
-				if err != nil {
+				if err := op.Terminate(); err != nil {
 					c.logger.Errorf("Failed to terminate pod: %v", err)
 					return err
 				}
@@ -297,6 +296,7 @@ func (c *Controller) syncHandler(key string) error {
 				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildTimeout", timeoutMsg)
 
 				if _, err := c.updateStatus(build); err != nil {
+					c.logger.Errorf("Failed to update status for pod: %v", err)
 					return err
 				}
 

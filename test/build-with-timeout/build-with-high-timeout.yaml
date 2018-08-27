@@ -17,8 +17,8 @@ metadata:
   name: test-with-high-timeout
   labels:
     expect: succeeded
-timeout: 500s
 spec:
+  timeout: 500s
   steps:
   - name: step1
     image: ubuntu
