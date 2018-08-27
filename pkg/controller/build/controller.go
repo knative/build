@@ -279,7 +279,7 @@ func (c *Controller) syncHandler(key string) error {
 			// Check if build has timed out
 			if builder.IsTimeout(&build.Status, build.Timeout) {
 				//cleanup operation and update status
-				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q ", build.Name, build.Timeout)
+				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Timeout)
 
 				err = op.Terminate()
 				if err != nil {
@@ -302,7 +302,7 @@ func (c *Controller) syncHandler(key string) error {
 
 				c.logger.Infof("%v", timeoutMsg)
 
-				return NewBuildTimeoutError(timeoutMsg)
+				return newBuildTimeoutError(timeoutMsg)
 			} else {
 				// if not timed out then wait async
 				if err := c.waitForOperationAsync(build, op); err != nil {
@@ -379,11 +379,11 @@ func (c *Controller) waitForOperationAsync(build *v1alpha1.Build, op builder.Ope
 	return nil
 }
 
-func NewBuildTimeoutError(message string) *errors.StatusError {
+func newBuildTimeoutError(message string) *errors.StatusError {
 	return &errors.StatusError{metav1.Status{
 		Status:  metav1.StatusFailure,
-		Code:    http.StatusServiceUnavailable,
-		Reason:  metav1.StatusReasonServiceUnavailable,
+		Code:    http.StatusGatewayTimeout,
+		Reason:  metav1.StatusReasonTimeout,
 		Message: message,
 	}}
 }
