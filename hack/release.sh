@@ -36,6 +36,10 @@ run_validation_tests ./test/presubmit-tests.sh
 
 banner "Building the release"
 
+# Build and push the base image for creds-init and git images.
+docker build -t $BUILD_RELEASE_GCR/build-base -f images/Dockerfile images/
+docker push $BUILD_RELEASE_GCR/build-base
+
 # Set the repository
 export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
 # Build should not try to deploy anything, use a bogus value for cluster.
