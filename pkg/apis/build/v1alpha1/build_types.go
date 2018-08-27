@@ -71,6 +71,10 @@ type BuildSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Time after which the build times out. Defaults to 10 minutes.
+	//  Go's ParseDuration documentation for expected format: https://golang.org/pkg/time/#ParseDuration
+	Timeout string `json:"timeout,omitempty"`
 }
 
 // TemplateKind defines the type of BuildTemplate used by the build.

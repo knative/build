@@ -66,7 +66,9 @@ func newBuild(name string) *v1alpha1.Build {
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: v1alpha1.BuildSpec{},
+		Spec: v1alpha1.BuildSpec{
+			Timeout: "20m",
+		},
 	}
 }
 
@@ -142,6 +144,8 @@ func TestBasicFlows(t *testing.T) {
 		if err != nil {
 			t.Errorf("error fetching build: %v", err)
 		}
+		// Update status to current time
+		first.Status.StartTime = metav1.Now()
 
 		if builder.IsDone(&first.Status) {
 			t.Errorf("First IsDone(%d); wanted not done, got done.", idx)
@@ -221,5 +225,79 @@ func TestErrFlows(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatalf("No events published")
+	}
+}
+
+func TestTimeoutFlows(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	build := newBuild("test")
+	addBuffer, err := time.ParseDuration("10m")
+	if err != nil {
+		t.Errorf("Error parsing duration")
+	}
+
+	build.Status.StartTime.Time = metav1.Now().Time.Add(-addBuffer)
+	build.Spec.Timeout = "1s"
+
+	f := &fixture{
+		t:           t,
+		objects:     []runtime.Object{build},
+		kubeobjects: nil,
+		client:      fake.NewSimpleClientset(build),
+		kubeclient:  k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	if err := c.syncHandler(getKey(build, t)); err != nil {
+		t.Errorf("Not Expect error when syncing build")
+	}
+
+	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
+	first, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	// Update status to current time
+	//	first.Status.StartTime = metav1.Now()
+	first.Status.StartTime.Time = metav1.Now().Time.Add(-addBuffer)
+	first.Spec.Timeout = "1s"
+
+	if builder.IsDone(&first.Status) {
+		t.Error("First IsDone; wanted not done, got done.")
+	}
+	if msg, failed := builder.ErrorMessage(&first.Status); failed {
+		t.Errorf("First ErrorMessage(%v); wanted not failed, got failed", msg)
+	}
+
+	// We have to manually update the index, or the controller won't see the update.
+	f.updateIndex(i, []*v1alpha1.Build{first})
+
+	// Run a second iteration of the syncHandler.
+	if err := c.syncHandler(getKey(build, t)); err == nil {
+		t.Errorf("Expect syncing build to error with timeout")
+	}
+
+	expectedTimeoutMsg := "Warning BuildTimeout Build \"test\" failed to finish within \"1s\""
+	for i := 0; i < 2; i++ {
+		select {
+		case statusEvent := <-eventCh:
+			// Check 2nd event for timeout error msg. First event will sync build successfully
+			if !strings.Contains(statusEvent, expectedTimeoutMsg) && i != 0 {
+				t.Errorf("Event message; wanted %q got %q", expectedTimeoutMsg, statusEvent)
+			}
+		case <-time.After(4 * time.Second):
+			t.Fatalf("No events published")
+		}
 	}
 }

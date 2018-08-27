@@ -17,6 +17,8 @@ limitations under the License.
 package builder
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -34,6 +36,9 @@ type Operation interface {
 	// Wait blocks until the Operation completes, returning either a status for the build or an error.
 	// TODO(mattmoor): This probably shouldn't be BuildStatus, but some sort of smaller-scope thing.
 	Wait() (*v1alpha1.BuildStatus, error)
+
+	// Terminate cleans up this particular operation and returns an error if it fails
+	Terminate() error
 }
 
 // Build defines the interface for launching a build and getting an Operation by which to track it to completion.
@@ -68,6 +73,27 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 		}
 	}
 	return false
+}
+
+// IsTimedOut returns true if the build's status indicates that build is timedout.
+func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
+	var timeout time.Duration
+	var err error
+
+	if status == nil {
+		return false
+	}
+
+	if buildTimeout == "" {
+		timeout = 10 * time.Minute
+	} else {
+		timeout, err = time.ParseDuration(buildTimeout)
+		if err != nil {
+			return false
+		}
+	}
+
+	return time.Since(status.StartTime.Time).Seconds() > timeout.Seconds()
 }
 
 // ErrorMessage returns the error message from the status.

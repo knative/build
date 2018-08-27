@@ -277,8 +277,38 @@ func (c *Controller) syncHandler(key string) error {
 			if err != nil {
 				return err
 			}
-			if err := c.waitForOperationAsync(build, op); err != nil {
-				return err
+
+			// Check if build has timed out
+			if builder.IsTimeout(&build.Status, build.Spec.Timeout) {
+				//cleanup operation and update status
+				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout)
+
+				if err := op.Terminate(); err != nil {
+					c.logger.Errorf("Failed to terminate pod: %v", err)
+					return err
+				}
+
+				build.Status.SetCondition(&v1alpha1.BuildCondition{
+					Type:    v1alpha1.BuildSucceeded,
+					Status:  corev1.ConditionFalse,
+					Reason:  "BuildTimeout",
+					Message: timeoutMsg,
+				})
+
+				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildTimeout", timeoutMsg)
+
+				if _, err := c.updateStatus(build); err != nil {
+					c.logger.Errorf("Failed to update status for pod: %v", err)
+					return err
+				}
+
+				c.logger.Errorf("Timeout: %v", timeoutMsg)
+				return fmt.Errorf("Build %q timed out after %s", build.Name, build.Spec.Timeout)
+			} else {
+				// if not timed out then wait async
+				if err := c.waitForOperationAsync(build, op); err != nil {
+					return err
+				}
 			}
 		} else {
 			build.Status.Builder = c.builder.Builder()
