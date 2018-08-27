@@ -300,7 +300,7 @@ func (c *Controller) syncHandler(key string) error {
 					return err
 				}
 
-				c.logger.Infof("%v", timeoutMsg)
+				c.logger.Errorf("Timeout: %v", timeoutMsg)
 
 				return newBuildTimeoutError(timeoutMsg)
 			} else {
