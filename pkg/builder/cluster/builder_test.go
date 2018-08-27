@@ -130,6 +130,17 @@ func TestBasicFlow(t *testing.T) {
 	checksComplete.WaitUntil(5*time.Second, buildtest.WaitNop, func() {
 		t.Fatal("timed out in op.Wait()")
 	})
+
+	// Trigger termination of pod
+	err = op.Terminate()
+	if err != nil {
+		t.Errorf("Expected no error while terminating operation")
+	}
+	// Verify pod is not available
+	_, err = podsclient.Get(op.Name(), metav1.GetOptions{})
+	if err == nil {
+		t.Fatalf("Expected 'not found' error while fetching Pod")
+	}
 }
 
 func TestNonFinalUpdateFlow(t *testing.T) {
