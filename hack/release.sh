@@ -39,8 +39,16 @@ echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@@@@     BUILDING THE RELEASE    @@@@"
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
-# Set the repository to the official one:
-export KO_DOCKER_REPO=gcr.io/build-crd
+# Build and push the base image for creds-init and git images.
+docker build -t $BUILD_RELEASE_GCR/build-base -f images/Dockerfile images/
+docker push $BUILD_RELEASE_GCR/build-base
+
+# Set the repository
+export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
+# Build should not try to deploy anything, use a bogus value for cluster.
+export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
+export K8S_USER_OVERRIDE=USER_NOT_SET
+export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
 # If this is a prow job, authenticate against GCR.
 (( IS_PROW )) && gcr_auth
