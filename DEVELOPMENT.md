@@ -92,6 +92,7 @@ ko apply -f config/
 # Next, make sure that you have no builds or build templates in your current namespace:
 kubectl delete builds --all
 kubectl delete buildtemplates --all
+kubectl delete clusterbuildtemplates --all
 
 # Launch the test suite (this can be cleaned up with "ko delete -R -f test/")
 ko apply -R -f test/
