@@ -72,8 +72,8 @@ type BuildSpec struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// Time after which the build times out.
-	// Defaults to 10minutes.
+	// Time after which the build times out. Defaults to 10minutes.
+	//  Go's ParseDuration documentation for expected format: https://golang.org/pkg/time/#ParseDuration
 	Timeout string `json:"timeout,omitempty"`
 }
 

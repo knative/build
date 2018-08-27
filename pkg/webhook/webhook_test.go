@@ -196,6 +196,38 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
+		reason: "invalid build timeout",
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Timeout: "garbagetimeout",
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		reason: "maximum timeout",
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Timeout: "48h",
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Timeout: "1m",
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
 		desc: "Multiple unnamed steps",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{

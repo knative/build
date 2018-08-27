@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mattbaird/jsonpatch"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +45,10 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 
 	if b.Spec.Template != nil && b.Spec.Template.Name == "" {
 		return validationError("MissingTemplateName", "template instantiation is missing template name: %v", b.Spec.Template)
+	}
+
+	if err := validateTimeout(b.Spec.Timeout); err != nil {
+		return err
 	}
 
 	if err := ac.validateSecrets(b); err != nil {
@@ -221,4 +226,23 @@ func validationError(reason, format string, fmtArgs ...interface{}) error {
 		reason:  reason,
 		message: fmt.Sprintf(format, fmtArgs...),
 	}
+}
+
+func validateTimeout(timeout string) error {
+	maxTimeout := time.Duration(24 * time.Hour)
+
+	if timeout == "" {
+		return nil
+	} else {
+		timeout, err := time.ParseDuration(timeout)
+		if err != nil {
+			return validationError("InvalidTimeFormat", "invalid build timeout %q err %#v. Refer https://golang.org/pkg/time/#ParseDuration for time format documentation", timeout, err)
+		}
+
+		// time out should not greater than 24 hours
+		if timeout.Hours() > maxTimeout.Hours() {
+			return validationError("InvalidTimeout", "build timeout exceeded 24h")
+		}
+	}
+	return nil
 }
