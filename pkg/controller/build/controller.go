@@ -18,7 +18,6 @@ package build
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"go.uber.org/zap"
@@ -301,8 +300,7 @@ func (c *Controller) syncHandler(key string) error {
 				}
 
 				c.logger.Errorf("Timeout: %v", timeoutMsg)
-
-				return newBuildTimeoutError(timeoutMsg)
+				return fmt.Errorf("Build %q timed out after %s", build.Name, build.Spec.Timeout)
 			} else {
 				// if not timed out then wait async
 				if err := c.waitForOperationAsync(build, op); err != nil {
@@ -377,15 +375,6 @@ func (c *Controller) waitForOperationAsync(build *v1alpha1.Build, op builder.Ope
 		}
 	}()
 	return nil
-}
-
-func newBuildTimeoutError(message string) *errors.StatusError {
-	return &errors.StatusError{metav1.Status{
-		Status:  metav1.StatusFailure,
-		Code:    http.StatusGatewayTimeout,
-		Reason:  metav1.StatusReasonTimeout,
-		Message: message,
-	}}
 }
 
 func (c *Controller) updateStatus(u *v1alpha1.Build) (*v1alpha1.Build, error) {

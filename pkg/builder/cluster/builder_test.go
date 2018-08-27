@@ -137,8 +137,7 @@ func TestBasicFlow(t *testing.T) {
 		t.Errorf("Expected no error while terminating operation")
 	}
 	// Verify pod is not available
-	_, err = podsclient.Get(op.Name(), metav1.GetOptions{})
-	if err == nil {
+	if _, err = podsclient.Get(op.Name(), metav1.GetOptions{}); err == nil {
 		t.Fatalf("Expected 'not found' error while fetching Pod")
 	}
 }
