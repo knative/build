@@ -17,7 +17,6 @@ limitations under the License.
 package builder
 
 import (
-	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -86,7 +85,6 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 	if buildTimeout == "" {
 		buildTimeout = defaultTimeout
 	}
-	fmt.Printf("timeout %v \n", buildTimeout)
 
 	buildtimeout, err := time.ParseDuration(buildTimeout)
 	if err != nil {
