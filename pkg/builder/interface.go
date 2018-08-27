@@ -93,10 +93,6 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 		return false
 	}
 
-	fmt.Printf("timeout start %v \n timeout %v \n value comp %v \n", time.Since(status.StartTime.Time).Seconds(),
-		buildtimeout.Seconds(),
-		time.Since(status.StartTime.Time).Seconds() > buildtimeout.Seconds())
-
 	return time.Since(status.StartTime.Time).Seconds() > buildtimeout.Seconds()
 }
 

@@ -143,6 +143,8 @@ func TestBasicFlows(t *testing.T) {
 		if err != nil {
 			t.Errorf("error fetching build: %v", err)
 		}
+		// Update status to current time
+		first.Status.StartTime = metav1.Now()
 
 		if builder.IsDone(&first.Status) {
 			t.Errorf("First IsDone(%d); wanted not done, got done.", idx)
