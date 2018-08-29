@@ -52,7 +52,7 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	}
 	status.Cluster.Namespace = op.namespace
 	status.Cluster.PodName = op.Name()
-	status.StartTime = op.startTime
+	status.CreationTime = op.startTime
 	status.StepStates = nil
 	status.StepsCompleted = nil
 	for _, s := range op.statuses {
@@ -101,7 +101,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 			Namespace: op.namespace,
 			PodName:   op.Name(),
 		},
-		StartTime:      op.startTime,
+		CreationTime:   op.startTime,
 		CompletionTime: metav1.Now(),
 		StepStates:     states,
 		StepsCompleted: stepsCompleted,
@@ -217,7 +217,7 @@ func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercomm
 		builder:   b,
 		namespace: status.Cluster.Namespace,
 		name:      status.Cluster.PodName,
-		startTime: status.StartTime,
+		startTime: status.CreationTime,
 		statuses:  statuses,
 	}, nil
 }

@@ -45,8 +45,8 @@ func TestBasicFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
 	}
-	if bs.StartTime.IsZero() {
-		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	if bs.CreationTime.IsZero() {
+		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
 	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
@@ -67,8 +67,8 @@ func TestBasicFlow(t *testing.T) {
 	if msg, failed := buildercommon.ErrorMessage(status); failed {
 		t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)
 	}
-	if status.StartTime.IsZero() {
-		t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
+	if status.CreationTime.IsZero() {
+		t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 	}
 	if status.CompletionTime.IsZero() {
 		t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)

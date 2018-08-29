@@ -145,7 +145,7 @@ func TestBasicFlows(t *testing.T) {
 			t.Errorf("error fetching build: %v", err)
 		}
 		// Update status to current time
-		first.Status.StartTime = metav1.Now()
+		first.Status.CreationTime = metav1.Now()
 
 		if builder.IsDone(&first.Status) {
 			t.Errorf("First IsDone(%d); wanted not done, got done.", idx)
@@ -237,7 +237,7 @@ func TestTimeoutFlows(t *testing.T) {
 		t.Errorf("Error parsing duration")
 	}
 
-	build.Status.StartTime.Time = metav1.Now().Time.Add(-addBuffer)
+	build.Status.CreationTime.Time = metav1.Now().Time.Add(-addBuffer)
 	build.Spec.Timeout = "1s"
 
 	f := &fixture{
@@ -268,9 +268,9 @@ func TestTimeoutFlows(t *testing.T) {
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
+
 	// Update status to current time
-	//	first.Status.StartTime = metav1.Now()
-	first.Status.StartTime.Time = metav1.Now().Time.Add(-addBuffer)
+	first.Status.CreationTime.Time = metav1.Now().Time.Add(-addBuffer)
 	first.Spec.Timeout = "1s"
 
 	if builder.IsDone(&first.Status) {

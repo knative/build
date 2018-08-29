@@ -189,8 +189,10 @@ type BuildStatus struct {
 	// Google provides additional information if the builder is Google.
 	Google *GoogleSpec `json:"google,omitempty"`
 
-	// StartTime is the time the build started.
-	StartTime metav1.Time `json:"startTime,omitEmpty"`
+	// Creation is the time the build is created.
+	CreationTime metav1.Time `json:"creationTime,omitEmpty"`
+	// StartTime is the time the build is actually started.
+	StartTime metav1.Time `json:"resource,omitEmpty"`
 	// CompletionTime is the time the build completed.
 	CompletionTime metav1.Time `json:"completionTime,omitEmpty"`
 
@@ -198,7 +200,7 @@ type BuildStatus struct {
 	StepStates []corev1.ContainerState `json:"stepStates,omitEmpty"`
 	// Conditions describes the set of conditions of this build.
 	Conditions []BuildCondition `json:"conditions,omitempty"`
-
+	// StepsCompleted lists the name of build steps completed.
 	StepsCompleted []string `json:"stepsCompleted"`
 }
 
