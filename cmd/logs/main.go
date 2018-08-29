@@ -21,7 +21,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/knative/build/pkg/logs"
+	"github.com/knative/build/pkg/logging"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
@@ -36,7 +36,7 @@ func main() {
 	buildName := flag.Args()[0]
 	ctx := context.Background()
 
-	if err := logs.Tail(ctx, os.Stdout, buildName, *namespace); err != nil {
+	if err := logging.Tail(ctx, os.Stdout, buildName, *namespace); err != nil {
 		log.Fatalln(err)
 	}
 }
