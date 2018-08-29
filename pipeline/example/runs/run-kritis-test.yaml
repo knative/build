@@ -1,0 +1,37 @@
+apiVersion: kan.k8s.io/v1beta1
+kind: TaskRun
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: unit-test-kritis-featureX
+spec:
+    taskRef:
+        name: make
+    inputs:
+        sources:
+            - name: 'kritis'
+              type: 'github'
+              url:  'github.com/grafeas/kritis'
+              branch: 'featureX'
+              commit: 'HEAD'
+        params:
+            - name: 'makeTarget'
+              type: 'string'
+              value: 'test'
+    results:
+        runs:
+        - name: 'runsBucket'
+          type: 'gcs'
+          url: 'gcs://somebucket/results/runs'
+        logs:
+        - name: 'logBucket'
+          type: 'gcs'
+          url: 'gcs://somebucket/results/logs'
+        tests:
+        - name: 'testBucket'
+          type: 'gcs'
+          url: 'gcs://somebucket/results/tests'
+  # TODO(bobcatfish) per step or per task status?
+  # this gets written by the controller, not specified by the user
+    status:
+        exitCode: 0
