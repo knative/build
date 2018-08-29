@@ -68,10 +68,13 @@ func TestBasicFlow(t *testing.T) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
 	}
 	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
+		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
 	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	}
+	if !bs.StartTime.IsZero() {
+		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&bs)
 	if err != nil {
@@ -101,11 +104,14 @@ func TestBasicFlow(t *testing.T) {
 		if msg, failed := buildercommon.ErrorMessage(status); failed {
 			t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)
 		}
-		if status.CreationTime.IsZero() {
-			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
-		}
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
+		}
+		if status.StartTime.IsZero() {
+			t.Errorf("bs.StartTime; want non-zero, got %v", status.StartTime)
+		}
+		if status.CreationTime.IsZero() {
+			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 		}
 	}()
 	// Wait until the test thread is ready for us to update things.
@@ -117,6 +123,8 @@ func TestBasicFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error fetching Pod: %v", err)
 	}
+	pod.Status.StartTime = &metav1.Time{Time: time.Now()}
+
 	// Now modify it to look done.
 	pod.Status.Phase = corev1.PodSucceeded
 	pod, err = podsclient.Update(pod)
@@ -163,10 +171,13 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
 	}
 	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
+		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
 	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	}
+	if !bs.StartTime.IsZero() {
+		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&bs)
 	if err != nil {
@@ -203,6 +214,8 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 	}
 	// Make a non-terminal modification
 	pod.Status.Phase = corev1.PodRunning
+	pod.Status.StartTime = &metav1.Time{Time: time.Now()}
+
 	pod, err = podsclient.Update(pod)
 	if err != nil {
 		t.Fatalf("Unexpected error updating Pod: %v", err)
@@ -255,10 +268,13 @@ func TestFailureFlow(t *testing.T) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
 	}
 	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
+		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
 	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	}
+	if !bs.StartTime.IsZero() {
+		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&bs)
 	if err != nil {
@@ -294,6 +310,9 @@ func TestFailureFlow(t *testing.T) {
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
 		}
+		if status.StartTime.IsZero() {
+			t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
+		}
 		if len(status.StepStates) != 1 {
 			t.Errorf("StepStates contained %d states, want 1: %+v", len(status.StepStates), status.StepStates)
 		} else if status.StepStates[0].Terminated.Reason != expectedErrorReason {
@@ -319,6 +338,7 @@ func TestFailureFlow(t *testing.T) {
 			},
 		},
 	}}
+	pod.Status.StartTime = &metav1.Time{Time: time.Now()}
 	pod, err = podsclient.Update(pod)
 	if err != nil {
 		t.Fatalf("Unexpected error updating Pod: %v", err)
@@ -353,10 +373,13 @@ func TestPodPendingFlow(t *testing.T) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
 	}
 	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
+		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
 	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	}
+	if !bs.StartTime.IsZero() {
+		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&bs)
 	if err != nil {
@@ -389,6 +412,9 @@ func TestPodPendingFlow(t *testing.T) {
 		if status.CreationTime.IsZero() {
 			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 		}
+		if status.StartTime.IsZero() {
+			t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
+		}
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
 		}
@@ -418,6 +444,7 @@ func TestPodPendingFlow(t *testing.T) {
 			},
 		},
 	}}
+	pod.Status.StartTime = &metav1.Time{Time: time.Now()}
 	pod, err = podsclient.Update(pod)
 	if err != nil {
 		t.Fatalf("Unexpected error updating Pod: %v", err)
@@ -460,7 +487,10 @@ func TestStepFailureFlow(t *testing.T) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
 	}
 	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
+		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
+	}
+	if !bs.StartTime.IsZero() {
+		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
 	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
@@ -498,6 +528,9 @@ func TestStepFailureFlow(t *testing.T) {
 		if status.CreationTime.IsZero() {
 			t.Errorf("status.CreationTime; got %v, want non-zero", status.CreationTime)
 		}
+		if status.StartTime.IsZero() {
+			t.Errorf("status.StartTime; got %v, want non-zero", status.StartTime)
+		}
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; got %v, want non-zero", status.CompletionTime)
 		}
@@ -523,6 +556,7 @@ func TestStepFailureFlow(t *testing.T) {
 		ImageID: "docker-pullable://ubuntu@sha256:deadbeef",
 	}}
 	pod.Status.Message = "don't expect this!"
+	pod.Status.StartTime = &metav1.Time{Time: time.Now()}
 
 	pod, err = podsclient.Update(pod)
 	if err != nil {

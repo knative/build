@@ -53,6 +53,7 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.Cluster.Namespace = op.namespace
 	status.Cluster.PodName = op.Name()
 	status.CreationTime = op.startTime
+	status.StartTime = op.builder.podCreationTime
 	status.StepStates = nil
 	status.StepsCompleted = nil
 	for _, s := range op.statuses {
@@ -73,6 +74,12 @@ func (op *operation) Terminate() error {
 	return op.builder.kubeclient.CoreV1().Pods(op.namespace).Delete(op.name, &metav1.DeleteOptions{})
 }
 
+func getTime(m *metav1.Time) metav1.Time {
+	if m != nil {
+		return *m
+	}
+	return metav1.Time{}
+}
 func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	podCh := make(chan *corev1.Pod)
 	defer close(podCh)
@@ -102,6 +109,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 			PodName:   op.Name(),
 		},
 		CreationTime:   op.startTime,
+		StartTime:      op.builder.podCreationTime,
 		CompletionTime: metav1.Now(),
 		StepStates:     states,
 		StepsCompleted: stepsCompleted,
@@ -177,8 +185,9 @@ type builder struct {
 	// send a completion notification when we see that Pod complete.
 	// On success, an empty string is sent.
 	// On failure, the Message of the failure PodCondition is sent.
-	callbacks map[string]chan *corev1.Pod
-	logger    *zap.SugaredLogger
+	callbacks       map[string]chan *corev1.Pod
+	logger          *zap.SugaredLogger
+	podCreationTime metav1.Time
 }
 
 func (b *builder) Builder() v1alpha1.BuildProvider {
@@ -212,7 +221,7 @@ func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercomm
 	for _, state := range status.StepStates {
 		statuses = append(statuses, corev1.ContainerStatus{State: state})
 	}
-
+	b.podCreationTime = status.CreationTime
 	return &operation{
 		builder:   b,
 		namespace: status.Cluster.Namespace,
@@ -253,6 +262,7 @@ func (b *builder) addPodEvent(obj interface{}) {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	key := getKey(pod.Namespace, pod.Name)
+	b.podCreationTime = getTime(pod.Status.StartTime)
 
 	if ch, ok := b.callbacks[key]; ok {
 		// Send the person listening the message.

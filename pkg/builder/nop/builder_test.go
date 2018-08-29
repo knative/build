@@ -48,6 +48,9 @@ func TestBasicFlow(t *testing.T) {
 	if bs.CreationTime.IsZero() {
 		t.Errorf("bs.CreationTime; want non-zero, got %v", bs.CreationTime)
 	}
+	if bs.StartTime.IsZero() {
+		t.Errorf("status.StartTime; want non-zero, got %v", bs.StartTime)
+	}
 	if !bs.CompletionTime.IsZero() {
 		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
 	}
@@ -69,6 +72,9 @@ func TestBasicFlow(t *testing.T) {
 	}
 	if status.CreationTime.IsZero() {
 		t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
+	}
+	if status.StartTime.IsZero() {
+		t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
 	}
 	if status.CompletionTime.IsZero() {
 		t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
