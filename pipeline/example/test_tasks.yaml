@@ -1,0 +1,59 @@
+apiVersion: kan.k8s.io/v1beta1
+kind: Task
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: make
+spec:
+    inputs:
+        sources:
+            - name: workspace
+        params:
+            - name: makeTarget
+              type: string
+    outputs:
+        artifacts:
+            - name: testResults
+              format: junit
+              location: logs/tests.xml
+    buildSpec:
+        steps:
+            - name: runMake
+            image: ubuntu
+            args: ['make', '${makeTarget}']
+--
+apiVersion: kan.k8s.io/v1beta1
+kind: Task
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: integration-test-in-docker
+spec:
+    inputs:
+        sources:
+            - name: workspace
+        params:
+            - name: testImage
+              type: string
+            - name: testArgs
+              type: string
+    outputs:
+        artifacts:
+            - name: testResults
+              location: integration/logs/tests.xml
+    buildSpec:
+        steps:
+            - name: runTests
+            image: '${testImage}'
+            args: ['${testArgs}']
+        volumes:
+            - name: gac
+            source: ${workspace}/config/gac.json
+            destination: gac.json
+            - name: cloudconfig
+            source: ${workspace}/config/gcloud
+            destination: /root/.config/gcloud
+            - name: dockerSocket
+            source: /var/run/docker.sock
+            destination: /var/run/docker.sock
+
