@@ -232,12 +232,13 @@ func TestTimeoutFlows(t *testing.T) {
 	bldr := &nop.Builder{}
 
 	build := newBuild("test")
-	addBuffer, err := time.ParseDuration("10m")
+	buffer, err := time.ParseDuration("10m")
 	if err != nil {
 		t.Errorf("Error parsing duration")
 	}
 
-	build.Status.CreationTime.Time = metav1.Now().Time.Add(-addBuffer)
+	// Set creation time to Now()-10min
+	build.Status.CreationTime.Time = metav1.Now().Time.Add(buffer)
 	build.Spec.Timeout = "1s"
 
 	f := &fixture{
@@ -269,8 +270,8 @@ func TestTimeoutFlows(t *testing.T) {
 		t.Errorf("error fetching build: %v", err)
 	}
 
-	// Update status to current time
-	first.Status.CreationTime.Time = metav1.Now().Time.Add(-addBuffer)
+	// Update status to past time by substracting buffer time
+	first.Status.CreationTime.Time = metav1.Now().Time.Add(-buffer)
 	first.Spec.Timeout = "1s"
 
 	if builder.IsDone(&first.Status) {
