@@ -74,12 +74,13 @@ func (op *operation) Terminate() error {
 	return op.builder.kubeclient.CoreV1().Pods(op.namespace).Delete(op.name, &metav1.DeleteOptions{})
 }
 
-func getTime(m *metav1.Time) metav1.Time {
-	if m != nil {
-		return *m
+func getStartTime(m *metav1.Time) metav1.Time {
+	if m == nil {
+		return metav1.Time{}
 	}
-	return metav1.Time{}
+	return *m
 }
+
 func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	podCh := make(chan *corev1.Pod)
 	defer close(podCh)
@@ -262,7 +263,7 @@ func (b *builder) addPodEvent(obj interface{}) {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	key := getKey(pod.Namespace, pod.Name)
-	b.podCreationTime = getTime(pod.Status.StartTime)
+	b.podCreationTime = getStartTime(pod.Status.StartTime)
 
 	if ch, ok := b.callbacks[key]; ok {
 		// Send the person listening the message.
