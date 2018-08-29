@@ -237,8 +237,6 @@ func TestTimeoutFlows(t *testing.T) {
 		t.Errorf("Error parsing duration")
 	}
 
-	// Set creation time to Now()-10min
-	build.Status.CreationTime.Time = metav1.Now().Time.Add(buffer)
 	build.Spec.Timeout = "1s"
 
 	f := &fixture{
