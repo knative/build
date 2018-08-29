@@ -21,16 +21,16 @@ import (
 	"fmt"
 	"sync"
 
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	buildercommon "github.com/knative/build/pkg/builder"
+	"github.com/knative/build/pkg/builder/cluster/convert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-
-	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	buildercommon "github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/builder/cluster/convert"
 )
 
 type operation struct {
@@ -71,7 +71,10 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 }
 
 func (op *operation) Terminate() error {
-	return op.builder.kubeclient.CoreV1().Pods(op.namespace).Delete(op.name, &metav1.DeleteOptions{})
+	if err := op.builder.kubeclient.CoreV1().Pods(op.namespace).Delete(op.name, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 func getStartTime(m *metav1.Time) metav1.Time {
