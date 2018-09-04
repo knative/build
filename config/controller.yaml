@@ -33,3 +33,10 @@ spec:
           "-creds-image", "github.com/knative/build/cmd/creds-init",
           "-git-image", "github.com/knative/build/cmd/git-init",
         ]
+        volumeMounts:
+        - name: config-logging
+          mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging

@@ -69,5 +69,6 @@ required = [
   non-go = false
 
 [[constraint]]
-  branch = "master"
   name = "github.com/knative/pkg"
+  revision = "6eff182b8784a136e0ce20e47c5efbfe40ae6059"
+
