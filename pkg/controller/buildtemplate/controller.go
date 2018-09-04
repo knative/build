@@ -35,7 +35,7 @@ import (
 
 	"github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/controller"
-	"github.com/knative/build/pkg/logging/logkey"
+	"github.com/knative/pkg/logging/logkey"
 
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"

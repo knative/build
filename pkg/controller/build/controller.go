@@ -36,7 +36,7 @@ import (
 
 	"github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/controller"
-	"github.com/knative/build/pkg/logging/logkey"
+	"github.com/knative/pkg/logging/logkey"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 

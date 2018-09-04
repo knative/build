@@ -45,8 +45,8 @@ import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/builder"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
-	"github.com/knative/build/pkg/logging"
-	"github.com/knative/build/pkg/logging/logkey"
+	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/logging/logkey"
 )
 
 const (

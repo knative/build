@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/knative/build/pkg/logging"
+	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 )
 
@@ -53,7 +53,7 @@ func runOrFail(logger *zap.SugaredLogger, cmd string, args ...string) {
 
 func main() {
 	flag.Parse()
-	logger := logging.NewLoggerFromDefaultConfigMap("loglevel.git-init").Named("git-init")
+	logger, _ := logging.NewLogger("", "git-init")
 	defer logger.Sync()
 
 	// HACK HACK HACK

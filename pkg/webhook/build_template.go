@@ -22,7 +22,7 @@ import (
 	"github.com/mattbaird/jsonpatch"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/logging"
+	"github.com/knative/pkg/logging"
 )
 
 func (ac *AdmissionController) validateBuildTemplate(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {
