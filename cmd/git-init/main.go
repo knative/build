@@ -18,11 +18,9 @@ package main
 import (
 	"bytes"
 	"flag"
-	"log"
 	"os"
 	"os/exec"
 
-	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 )
@@ -55,16 +53,7 @@ func runOrFail(logger *zap.SugaredLogger, cmd string, args ...string) {
 
 func main() {
 	flag.Parse()
-	cm, err := configmap.Load("/etc/config-logging")
-	if err != nil {
-		log.Fatalf("Error loading logging configuration %v", err)
-	}
-
-	config, err := logging.NewConfigFromMap(cm)
-	if err != nil {
-		log.Fatalf("Error parsing logging configuration: %v", err)
-	}
-	logger, _ := logging.NewLoggerFromConfig(config, "git-init")
+	logger, _ := logging.NewLogger("", "git-init")
 	defer logger.Sync()
 
 	// HACK HACK HACK
@@ -72,7 +61,7 @@ func main() {
 	// As a workaround, symlink /root/.ssh to where we expect the $HOME to land.
 	// This means SSH auth only works for our built-in git support, and not
 	// custom steps.
-	err = os.Symlink("/builder/home/.ssh", "/root/.ssh")
+	err := os.Symlink("/builder/home/.ssh", "/root/.ssh")
 	if err != nil {
 		logger.Fatalf("Unexpected error creating symlink: %v", err)
 	}
