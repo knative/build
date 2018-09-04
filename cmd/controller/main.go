@@ -18,8 +18,10 @@ package main
 
 import (
 	"flag"
+	"log"
 	"time"
 
+	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -32,14 +34,19 @@ import (
 	"github.com/knative/build/pkg/controller/build"
 	"github.com/knative/build/pkg/controller/buildtemplate"
 	"github.com/knative/build/pkg/controller/clusterbuildtemplate"
-	"github.com/knative/build/pkg/logging"
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
 )
 
-const threadsPerController = 2
+const (
+	threadsPerController = 2
+	logLevelKey          = "controller"
+)
 
 var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
@@ -48,8 +55,17 @@ var (
 
 func main() {
 	flag.Parse()
-	logger := logging.NewLoggerFromDefaultConfigMap("loglevel.controller").Named("controller")
+	loggingConfigMap, err := configmap.Load("/etc/config-logging")
+	if err != nil {
+		log.Fatalf("Error loading logging configuration: %v", err)
+	}
+	loggingConfig, err := logging.NewConfigFromMap(loggingConfigMap)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	logger, _ := logging.NewLoggerFromConfig(loggingConfig, logLevelKey)
 	defer logger.Sync()
+	logger = logger.With(zap.String(logkey.ControllerType, logLevelKey))
 
 	logger.Info("Starting the Build Controller")
 

@@ -28,15 +28,32 @@ import (
 	"github.com/knative/build/pkg"
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
-	"github.com/knative/build/pkg/logging"
 	"github.com/knative/build/pkg/webhook"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
 )
 
+const (
+	logLevelKey = "webhook"
+)
+
 func main() {
+
 	flag.Parse()
-	logger := logging.NewLoggerFromDefaultConfigMap("loglevel.webhook").Named("webhook")
+	cm, err := configmap.Load("/etc/config-logging")
+	if err != nil {
+		log.Fatalf("Error loading logging configuration %v", err)
+	}
+
+	config, err := logging.NewConfigFromMap(cm)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	logger, _ := logging.NewLoggerFromConfig(config, logLevelKey)
 	defer logger.Sync()
+	logger = logger.With(zap.String(logkey.ControllerType, "webhook"))
 
 	logger.Info("Starting the Configuration Webhook")
 

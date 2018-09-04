@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/logging"
+	"github.com/knative/pkg/logging"
 )
 
 func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {

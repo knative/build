@@ -67,3 +67,7 @@ required = [
   name = "github.com/knative/test-infra"
   unused-packages = false
   non-go = false
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/knative/pkg"

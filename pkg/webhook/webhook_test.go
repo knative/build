@@ -34,7 +34,7 @@ import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/builder/nop"
 	fakebuildclientset "github.com/knative/build/pkg/client/clientset/versioned/fake"
-	"github.com/knative/build/pkg/logging"
+	"github.com/knative/pkg/logging"
 )
 
 const (

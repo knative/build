@@ -17,16 +17,29 @@ package main
 
 import (
 	"flag"
+	"log"
 
 	"github.com/knative/build/pkg/credentials"
 	"github.com/knative/build/pkg/credentials/dockercreds"
 	"github.com/knative/build/pkg/credentials/gitcreds"
-	"github.com/knative/build/pkg/logging"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging"
 )
 
 func main() {
 	flag.Parse()
-	logger := logging.NewLoggerFromDefaultConfigMap("loglevel.creds-init").Named("creds-init")
+	cm, err := configmap.Load("/etc/config-logging")
+	if err != nil {
+		log.Fatalf("Error loading logging configuration %v", err)
+	}
+
+	config, err := logging.NewConfigFromMap(cm)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+
+	// ignore atomic level because we are not watching this config for any updates
+	logger, _ := logging.NewLoggerFromConfig(config, "creds-init")
 	defer logger.Sync()
 
 	builders := []credentials.Builder{dockercreds.NewBuilder(), gitcreds.NewBuilder()}
