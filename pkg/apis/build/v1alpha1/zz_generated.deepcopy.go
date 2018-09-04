@@ -194,6 +194,7 @@ func (in *BuildStatus) DeepCopyInto(out *BuildStatus) {
 			**out = **in
 		}
 	}
+	in.CreationTime.DeepCopyInto(&out.CreationTime)
 	in.StartTime.DeepCopyInto(&out.StartTime)
 	in.CompletionTime.DeepCopyInto(&out.CompletionTime)
 	if in.StepStates != nil {
