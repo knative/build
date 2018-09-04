@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"sync"
 
-	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	buildercommon "github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/builder/cluster/convert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +29,9 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	buildercommon "github.com/knative/build/pkg/builder"
 )
 
 type operation struct {
