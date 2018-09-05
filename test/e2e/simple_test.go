@@ -67,6 +67,11 @@ func TestSimpleBuild(t *testing.T) {
 	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
 	defer span.End()
 
+	// Emit a metric for null-build latency (i.e., time to schedule and execute
+	// and finish watching a build).
+	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
+	defer span.End()
+
 	buildName := "simple-build"
 
 	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
