@@ -30,12 +30,6 @@
   version = "v3.2.0"
 
 [[projects]]
-  name = "github.com/fsnotify/fsnotify"
-  packages = ["."]
-  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
-  version = "v1.4.7"
-
-[[projects]]
   name = "github.com/ghodss/yaml"
   packages = ["."]
   revision = "73d445a93680fa1a78ae23a5839bad48f32ba1ee"
@@ -153,7 +147,10 @@
     "configmap",
     "logging",
     "logging/logkey",
-    "signals"
+    "signals",
+    "test",
+    "test/logging",
+    "test/spoof"
   ]
   revision = "6eff182b8784a136e0ce20e47c5efbfe40ae6059"
 
@@ -161,7 +158,7 @@
   branch = "master"
   name = "github.com/knative/test-infra"
   packages = ["."]
-  revision = "4a4a682ee1fd31f33e450406393c3553b9ec5c2a"
+  revision = "51872094d69a5b0266fd92a38978819e20ee70c8"
 
 [[projects]]
   branch = "master"
@@ -203,6 +200,22 @@
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+
+[[projects]]
+  name = "go.opencensus.io"
+  packages = [
+    ".",
+    "internal",
+    "internal/tagencoding",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
+    "trace",
+    "trace/internal"
+  ]
+  revision = "7b558058b7cc960667590e5413ef55157b06652e"
+  version = "v0.15.0"
 
 [[projects]]
   name = "go.uber.org/atomic"
@@ -630,6 +643,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "908cce7bf838c1d6d50b0ac1b34633d951103be803a9f264a236f9b161635d92"
+  inputs-digest = "6b21e80fab9e53ed239939bbd3cb91a62eb2d5f6b582142703959dd484747ceb"
   solver-name = "gps-cdcl"
   solver-version = 1
