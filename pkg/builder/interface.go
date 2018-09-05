@@ -92,7 +92,7 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 			return false
 		}
 	}
-	return time.Since(status.CreationTime.Time).Seconds() > timeout.Seconds()
+	return time.Since(status.StartTime.Time).Seconds() > timeout.Seconds()
 }
 
 // ErrorMessage returns the error message from the status.
