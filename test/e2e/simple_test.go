@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 	} else if kuberrors.IsAlreadyExists(err) {
 		log.Printf("Namespace %q already exists", buildTestNamespace)
 	} else {
-		log.Fatalf("Creating namespace %q: %v", buildTestNamespace, err)
+		log.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
 	}
 
 	defer func() {
@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 
 	// Delete the test namespace to be recreated next time.
 	if err := clients.kubeClient.Kube.CoreV1().Namespaces().Delete(buildTestNamespace, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
-		log.Fatalf("Deleting namespace %q: %v", buildTestNamespace, err)
+		log.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
 	}
 	log.Printf("Deleted namespace %q", buildTestNamespace)
 
@@ -88,11 +88,11 @@ func TestSimpleBuild(t *testing.T) {
 			}},
 		},
 	}); err != nil {
-		t.Fatalf("Create: %v", err)
+		t.Fatalf("Error creating build: %v", err)
 	}
 
 	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
-		t.Fatalf("watchBuild: %v", err)
+		t.Fatalf("Error watching build: %v", err)
 	}
 }
 
@@ -113,7 +113,7 @@ func TestFailingBuild(t *testing.T) {
 			}},
 		},
 	}); err != nil {
-		t.Fatalf("Create: %v", err)
+		t.Fatalf("Error creating build: %v", err)
 	}
 
 	if _, err := clients.buildClient.watchBuild(buildName); err == nil {

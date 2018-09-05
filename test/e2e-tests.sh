@@ -65,11 +65,12 @@ kubectl delete buildtemplates --all
 
 # Run the tests
 
-header "Running tests"
-ko apply -R -f test/ || fail_test
-
+local failed=0
 header "Running Go e2e tests"
-GOCACHE=off go test -tags e2e ./test/e2e/... || fail_test
+report_go_test -tags e2e ./test/e2e/... -count=1 || failed=1
+header "Running tests"
+ko apply -R -f test/ || failed=1
+(( failed )) && abort_test
 
 # Wait for tests to finish.
 tests_finished=0

@@ -4,16 +4,16 @@
 
 To run all e2e tests:
 ```
-GOCACHE=off go test -tags e2e ./test/e2e/...
+go test -tags e2e ./test/e2e/... -count=1
 ```
 
-`GOCACHE=off` disables Go's test cache, so that tests results will not be
-cached and the test will always run.
+`-count=1` is the idiomatic way to bypass test caching, so that tests will
+always run.
 
 To run a single e2e test:
 
 ```
-GOCACHE=off go test -tags e2e ./test/e2e/... -test.run=<regex>
+go test -tags e2e ./test/e2e/... -count=1 -test.run=<regex>
 ```
 
 ## What the tests do
