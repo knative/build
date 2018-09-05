@@ -43,6 +43,50 @@ function abort_test() {
   fail_test
 }
 
+function run_yaml_tests() {
+  header "Running YAML E2E tests"
+  ko apply -R -f test/ || return 1
+
+  # Wait for tests to finish.
+  local tests_finished=0
+  for i in {1..60}; do
+    local finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
+    if [[ ! "$finished" == *"Unknown"* ]]; then
+      tests_finished=1
+      break
+    fi
+    sleep 5
+  done
+  if (( ! tests_finished )); then
+    echo "ERROR: tests timed out"
+    return 1
+  fi
+
+  # Check that tests passed.
+  for expected_status in succeeded failed; do
+    results="$(kubectl get builds -l expect=${expected_status} \
+        --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
+    case $expected_status in
+      succeeded)
+        want=succeededtrue
+        ;;
+      failed)
+        want=succeededfalse
+        ;;
+      *)
+        echo "ERROR: Invalid expected status '${expected_status}'"
+        return 1
+    esac
+    for result in ${results}; do
+      if [[ ! "${result,,}" == *"=${want}" ]]; then
+        echo "ERROR: test ${result} but should be ${want}"
+        return 1
+      fi
+    done
+  done
+  return 0
+}
+
 # Script entry point.
 
 initialize $@
@@ -65,47 +109,12 @@ kubectl delete buildtemplates --all
 
 # Run the tests
 
-local failed=0
+failed=0
+
 header "Running Go e2e tests"
 report_go_test -tags e2e ./test/e2e/... -count=1 || failed=1
 
-header "Running YAML e2e tests"
-ko apply -R -f test/ || failed=1
+run_yaml_tests || failed=1
 
-# Wait for tests to finish.
-tests_finished=0
-for i in {1..60}; do
-  finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
-  if [[ ! "$finished" == *"Unknown"* ]]; then
-    tests_finished=1
-    break
-  fi
-  sleep 5
-done
-(( tests_finished )) || abort_test "ERROR: tests timed out"
-
-# Check that tests passed.
-for expected_status in succeeded failed; do
-  results="$(kubectl get builds -l expect=${expected_status} \
-      --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
-  case $expected_status in
-    succeeded)
-      want=succeededtrue
-      ;;
-    failed)
-      want=succeededfalse
-      ;;
-    *)
-      echo "Invalid expected status '${expected_status}'"
-      fail_test
-  esac
-  for result in ${results}; do
-    if [[ ! "${result,,}" == *"=${want}" ]]; then
-      echo "ERROR: test ${result} but should be ${want}"
-      failed=1
-    fi
-  done
-done
 (( failed )) && abort_test "ERROR: one or more tests failed"
-
 success
