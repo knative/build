@@ -305,12 +305,10 @@ func (c *Controller) syncHandler(key string) error {
 
 				c.logger.Errorf("Timeout: %v", timeoutMsg)
 				return nil
-			} else {
-				// if not timed out then wait async
-				if err := c.waitForOperationAsync(build, op); err != nil {
-					return err
-				}
 			}
+
+			// if not timed out then wait async
+			go c.waitForOperation(build, op)
 		} else {
 			build.Status.Builder = c.builder.Builder()
 			// If the build hasn't even started, then start it and record the operation in our status.
@@ -377,18 +375,17 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) waitForOperationAsync(build *v1alpha1.Build, op builder.Operation) error {
-	go func() {
-		status, err := op.Wait()
-		if err != nil {
-			c.logger.Errorf("Error while waiting for operation: %v", err)
-			return
-		}
-		build.Status = *status
-		if _, err := c.updateStatus(build); err != nil {
-			c.logger.Errorf("Error updating build status: %v", err)
-		}
-	}()
+func (c *Controller) waitForOperation(build *v1alpha1.Build, op builder.Operation) error {
+	status, err := op.Wait()
+	if err != nil {
+		c.logger.Errorf("Error while waiting for operation: %v", err)
+		return err
+	}
+	build.Status = *status
+	if _, err := c.updateStatus(build); err != nil {
+		c.logger.Errorf("Error updating build status: %v", err)
+		return err
+	}
 	return nil
 }
 
