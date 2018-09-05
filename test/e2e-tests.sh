@@ -68,9 +68,9 @@ kubectl delete buildtemplates --all
 local failed=0
 header "Running Go e2e tests"
 report_go_test -tags e2e ./test/e2e/... -count=1 || failed=1
-header "Running tests"
+
+header "Running YAML e2e tests"
 ko apply -R -f test/ || failed=1
-(( failed )) && abort_test
 
 # Wait for tests to finish.
 tests_finished=0
@@ -85,7 +85,6 @@ done
 (( tests_finished )) || abort_test "ERROR: tests timed out"
 
 # Check that tests passed.
-tests_passed=1
 for expected_status in succeeded failed; do
   results="$(kubectl get builds -l expect=${expected_status} \
       --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
@@ -103,10 +102,10 @@ for expected_status in succeeded failed; do
   for result in ${results}; do
     if [[ ! "${result,,}" == *"=${want}" ]]; then
       echo "ERROR: test ${result} but should be ${want}"
-      tests_passed=0
+      failed=1
     fi
   done
 done
-(( tests_passed )) || abort_test "ERROR: one or more tests failed"
+(( failed )) && abort_test "ERROR: one or more tests failed"
 
 success
