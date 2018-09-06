@@ -45,7 +45,7 @@ function abort_test() {
 
 function run_yaml_tests() {
   header "Running YAML E2E tests"
-  echo ">> Startting tests"
+  echo ">> Starting tests"
   ko apply -R -f test/ || return 1
 
   # Wait for tests to finish.
