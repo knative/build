@@ -45,9 +45,11 @@ function abort_test() {
 
 function run_yaml_tests() {
   header "Running YAML E2E tests"
+  echo ">> Startting tests"
   ko apply -R -f test/ || return 1
 
   # Wait for tests to finish.
+  echo ">> Waiting for tests to finish"
   local tests_finished=0
   for i in {1..60}; do
     local finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
@@ -63,6 +65,8 @@ function run_yaml_tests() {
   fi
 
   # Check that tests passed.
+  local retval=0
+  echo ">> Checking test results"
   for expected_status in succeeded failed; do
     results="$(kubectl get builds -l expect=${expected_status} \
         --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
@@ -75,16 +79,18 @@ function run_yaml_tests() {
         ;;
       *)
         echo "ERROR: Invalid expected status '${expected_status}'"
-        return 1
+        retval=1
+        ;;
     esac
     for result in ${results}; do
       if [[ ! "${result,,}" == *"=${want}" ]]; then
         echo "ERROR: test ${result} but should be ${want}"
-        return 1
+        retval=1
       fi
     done
   done
-  return 0
+  [[ ${retval} -eq 0 ]] && echo ">> All YAML tests passed"
+  return ${retval}
 }
 
 # Script entry point.
