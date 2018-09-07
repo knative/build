@@ -179,3 +179,30 @@ func TestBuildLowTimeout(t *testing.T) {
 		)
 	}
 }
+
+// TestPendingBuild tests that a build with non existent node selector will remain in pending
+// state until watch timeout.
+func TestPendingBuild(t *testing.T) {
+	clients := setup(t)
+
+	buildName := "pending-build"
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			NodeSelector: map[string]string{"disk": "fake-ssd"},
+			Steps: []corev1.Container{{
+				Image: "busybox",
+				Args:  []string{"false"}, // fails.
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+		t.Fatalf("watchBuild did not return watch timeout error")
+	}
+}

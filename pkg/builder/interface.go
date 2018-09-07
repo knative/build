@@ -86,6 +86,7 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 	}
 
 	if buildTimeout == "" {
+		// Set default timeout to 10 minute if build timeout is not set
 		timeout = 10 * time.Minute
 	} else {
 		timeout, err = time.ParseDuration(buildTimeout)
