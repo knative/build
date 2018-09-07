@@ -282,8 +282,8 @@ func TestTimeoutFlows(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{first})
 
 	// Run a second iteration of the syncHandler.
-	if err := c.syncHandler(getKey(build, t)); err == nil {
-		t.Errorf("Expect syncing build to error with timeout")
+	if err := c.syncHandler(getKey(build, t)); err != nil {
+		t.Errorf("Unexpected error while syncing build: %v", err)
 	}
 
 	expectedTimeoutMsg := "Warning BuildTimeout Build \"test\" failed to finish within \"1s\""
