@@ -75,7 +75,8 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 	return false
 }
 
-// IsTimedOut returns true if the build's status indicates that build is timedout.
+// IsTimeOut returns true if the build's execution time is greater than
+// specified build spec timeout.
 func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 	var timeout time.Duration
 	var err error
@@ -92,6 +93,8 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 			return false
 		}
 	}
+
+	// If build has not started timeout, startTime should be zero.
 	if status.StartTime.Time.IsZero() {
 		return false
 	}

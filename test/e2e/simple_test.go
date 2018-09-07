@@ -82,6 +82,7 @@ func TestSimpleBuild(t *testing.T) {
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
+			Timeout: "40s",
 			Steps: []corev1.Container{{
 				Image: "busybox",
 				Args:  []string{"echo", "simple"},
@@ -151,32 +152,5 @@ func TestBuildLowTimeout(t *testing.T) {
 	// verify reason for build failure is timeout
 	if b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason != "BuildTimeout" {
 		t.Fatalf("wanted BuildTimeout; got %q", b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason)
-	}
-}
-
-func TestBuildWithHighTimeout(t *testing.T) {
-	clients := setup(t)
-
-	buildName := "build-high-timeout"
-	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: buildTestNamespace,
-			Name:      buildName,
-		},
-		Spec: v1alpha1.BuildSpec{
-			Timeout: "40s",
-			Steps: []corev1.Container{{
-				Name:    "hightimeoutstep",
-				Image:   "ubuntu",
-				Command: []string{"/bin/bash"},
-				Args:    []string{"-c", "sleep 20"},
-			}},
-		},
-	}); err != nil {
-		t.Fatalf("Error creating build: %v", err)
-	}
-
-	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
-		t.Fatalf("Did not expect error: %v", err)
 	}
 }
