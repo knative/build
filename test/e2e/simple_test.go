@@ -27,6 +27,7 @@ import (
 	"github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -365,4 +366,100 @@ func TestPodAffinity(t *testing.T) {
 	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
 		t.Fatalf("watchBuild did not return expected `watch timeout` error")
 	}
+}
+
+// TestPersistentVolumeClaim tests that two builds that specify a volume backed
+// by the same persist volume claim can use it to pass build information
+// between builds.
+func TestPersistentVolumeClaim(t *testing.T) {
+	logger := logging.GetContextLogger("TestSimpleBuild")
+	clients := buildClients(logger)
+
+	// First, create the PVC.
+	if _, err := clients.kubeClient.Kube.CoreV1().PersistentVolumeClaims(buildTestNamespace).Create(&corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      "cache-claim",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: *resource.NewQuantity(1024, resource.BinarySI), // 1Ki
+				},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating PVC: %v", err)
+	}
+	logger.Infof("Created PVC")
+
+	// Then, run a build that populates the PVC.
+	firstBuild := "cache-populate"
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      firstBuild,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Steps: []corev1.Container{{
+				Image:   "busybox",
+				Command: []string{"bash"},
+				Args:    []string{"-c", "echo foo > /cache/foo"},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "cache",
+					MountPath: "/cache",
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name: "cache",
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: "cache-claim",
+					},
+				},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating first build: %v", err)
+	}
+	logger.Infof("Created first build")
+	if _, err := clients.buildClient.watchBuild(firstBuild); err != nil {
+		t.Fatalf("Error watching build: %v", err)
+	}
+	logger.Infof("First build finished successfully")
+
+	// Then, run a build that reads from the PVC.
+	secondBuild := "cache-retrieve"
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      secondBuild,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Steps: []corev1.Container{{
+				Image: "busybox",
+				Args:  []string{"cat", "/cache/from"},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "cache",
+					MountPath: "/cache",
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name: "cache",
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: "cache-claim",
+					},
+				},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating second build: %v", err)
+	}
+	logger.Infof("Created second build")
+	if _, err := clients.buildClient.watchBuild(secondBuild); err != nil {
+		t.Fatalf("Error watching build: %v", err)
+	}
+	logger.Infof("Second build finished successfully")
 }
