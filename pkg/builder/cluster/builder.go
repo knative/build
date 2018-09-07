@@ -46,8 +46,7 @@ func (op *operation) Name() string {
 	return op.name
 }
 
-func (op *operation) Checkpoint(build *v1alpha1.Build) error {
-	status := build.Status
+func (op *operation) Checkpoint(build *v1alpha1.Build, status *v1alpha1.BuildStatus) error {
 	status.Builder = v1alpha1.ClusterBuildProvider
 	if status.Cluster == nil {
 		status.Cluster = &v1alpha1.ClusterSpec{}
@@ -65,6 +64,9 @@ func (op *operation) Checkpoint(build *v1alpha1.Build) error {
 		// If the build specifies source, skip another container status, which
 		// is the source-fetching container.
 		skip++
+	}
+	if skip > len(op.statuses) {
+		skip = 0
 	}
 
 	for _, s := range op.statuses[skip:] {
