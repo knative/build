@@ -127,7 +127,7 @@ func TestBuildLowTimeout(t *testing.T) {
 	clients := setup(t)
 
 	buildName := "build-low-timeout"
-	buildTimeout := "60s"
+	buildTimeout := "50s"
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
@@ -151,6 +151,10 @@ func TestBuildLowTimeout(t *testing.T) {
 		t.Error("watchBuild did not return expected BuildTimeout error")
 	}
 
+	if &b.Status == nil {
+		t.Fatalf("wanted build status to be set; got nil")
+	}
+
 	successCondition := b.Status.GetCondition(v1alpha1.BuildSucceeded)
 
 	if successCondition == nil {
@@ -159,14 +163,14 @@ func TestBuildLowTimeout(t *testing.T) {
 
 	// verify reason for build failure is timeout
 	if successCondition.Reason != "BuildTimeout" {
-		t.Fatalf("wanted BuildTimeout; got %q", b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason)
+		t.Fatalf("wanted BuildTimeout; got %q", successCondition.Reason)
 	}
 	buildDuration := b.Status.CompletionTime.Time.Sub(b.Status.StartTime.Time).Seconds()
 	lowerEnd, _ := time.ParseDuration(buildTimeout)
-	higherEnd, _ := time.ParseDuration("100s") // build timeout + 30 sec poll time + 10 sec
+	higherEnd, _ := time.ParseDuration("90s") // build timeout + 30 sec poll time + 10 sec
 
 	if !(buildDuration > lowerEnd.Seconds() && buildDuration < higherEnd.Seconds()) {
-		t.Fatalf("Expected the build duration to be within range %f to %f range; but got build start time: %q completed time: %q and duration %f \n",
+		t.Fatalf("Expected the build duration to be within range %f.00s to %f.00s; but got build start time: %q completed time: %q and duration %f \n",
 			lowerEnd.Seconds(),
 			higherEnd.Seconds(),
 			b.Status.StartTime.Time,

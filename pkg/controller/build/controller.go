@@ -304,7 +304,8 @@ func (c *Controller) syncHandler(key string) error {
 				}
 
 				c.logger.Errorf("Timeout: %v", timeoutMsg)
-				return fmt.Errorf("Build %q timed out after %s", build.Name, build.Spec.Timeout)
+				return nil
+				//return fmt.Errorf("Build %q timed out after %s", build.Name, build.Spec.Timeout)
 			} else {
 				// if not timed out then wait async
 				if err := c.waitForOperationAsync(build, op); err != nil {
