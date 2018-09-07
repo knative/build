@@ -49,9 +49,6 @@ type Build interface {
 
 // Interface defines the set of operations that all builders must implement.
 type Interface interface {
-	// Which builder are we?
-	Builder() v1alpha1.BuildProvider
-
 	// Validate a Build for this flavor of builder.
 	Validate(*v1alpha1.Build) error
 

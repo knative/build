@@ -170,25 +170,8 @@ const (
 	GCSManifest GCSSourceType = "Manifest"
 )
 
-// BuildProvider defines a build execution implementation.
-type BuildProvider string
-
-const (
-	// GoogleBuildProvider indicates that this build was performed with Google Cloud Build.
-	GoogleBuildProvider BuildProvider = "Google"
-	// ClusterBuildProvider indicates that this build was performed on-cluster.
-	ClusterBuildProvider BuildProvider = "Cluster"
-)
-
 // BuildStatus is the status for a Build resource
 type BuildStatus struct {
-	Builder BuildProvider `json:"builder,omitempty"`
-
-	// Cluster provides additional information if the builder is Cluster.
-	Cluster *ClusterSpec `json:"cluster,omitempty"`
-	// Google provides additional information if the builder is Google.
-	Google *GoogleSpec `json:"google,omitempty"`
-
 	// Creation is the time the build is created.
 	CreationTime metav1.Time `json:"creationTime,omitEmpty"`
 	// StartTime is the time the build is actually started.
@@ -202,20 +185,11 @@ type BuildStatus struct {
 	Conditions []BuildCondition `json:"conditions,omitempty"`
 	// StepsCompleted lists the name of build steps completed.
 	StepsCompleted []string `json:"stepsCompleted"`
-}
 
-// ClusterSpec provides information about the on-cluster build, if applicable.
-type ClusterSpec struct {
-	// Namespace is the namespace in which the pod is running.
-	Namespace string `json:"namespace"`
+	// PodNamespace is the namespace in which the build's pod is run.
+	PodNamespace string `json:"namespace"`
 	// PodName is the name of the pod responsible for executing this build's steps.
 	PodName string `json:"podName"`
-}
-
-// GoogleSpec provides information about the GCB build, if applicable.
-type GoogleSpec struct {
-	// Operation is the unique name of the GCB API Operation for the build.
-	Operation string `json:"operation"`
 }
 
 // BuildConditionType defines types of build conditions.

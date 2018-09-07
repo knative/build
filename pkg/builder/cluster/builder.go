@@ -47,12 +47,8 @@ func (op *operation) Name() string {
 }
 
 func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
-	status.Builder = v1alpha1.ClusterBuildProvider
-	if status.Cluster == nil {
-		status.Cluster = &v1alpha1.ClusterSpec{}
-	}
-	status.Cluster.Namespace = op.namespace
-	status.Cluster.PodName = op.Name()
+	status.PodNamespace = op.namespace
+	status.PodName = op.Name()
 	status.CreationTime = op.startTime
 	status.StartTime = op.builder.podCreationTime
 	status.StepStates = nil
@@ -108,11 +104,8 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	}
 
 	bs := &v1alpha1.BuildStatus{
-		Builder: v1alpha1.ClusterBuildProvider,
-		Cluster: &v1alpha1.ClusterSpec{
-			Namespace: op.namespace,
-			PodName:   op.Name(),
-		},
+		PodNamespace:   op.namespace,
+		PodName:        op.Name(),
 		CreationTime:   op.startTime,
 		StartTime:      op.builder.podCreationTime,
 		CompletionTime: metav1.Now(),
@@ -195,10 +188,6 @@ type builder struct {
 	podCreationTime metav1.Time
 }
 
-func (b *builder) Builder() v1alpha1.BuildProvider {
-	return v1alpha1.ClusterBuildProvider
-}
-
 func (b *builder) Validate(u *v1alpha1.Build) error {
 	_, err := convert.FromCRD(u, b.kubeclient)
 	return err
@@ -216,12 +205,6 @@ func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) 
 }
 
 func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercommon.Operation, error) {
-	if status.Builder != v1alpha1.ClusterBuildProvider {
-		return nil, fmt.Errorf("not a 'Cluster' builder: %v", status.Builder)
-	}
-	if status.Cluster == nil {
-		return nil, fmt.Errorf("status.cluster cannot be empty: %v", status)
-	}
 	var statuses []corev1.ContainerStatus
 	for _, state := range status.StepStates {
 		statuses = append(statuses, corev1.ContainerStatus{State: state})
@@ -229,8 +212,8 @@ func (b *builder) OperationFromStatus(status *v1alpha1.BuildStatus) (buildercomm
 	b.podCreationTime = status.CreationTime
 	return &operation{
 		builder:   b,
-		namespace: status.Cluster.Namespace,
-		name:      status.Cluster.PodName,
+		namespace: status.PodNamespace,
+		name:      status.PodName,
 		startTime: status.CreationTime,
 		statuses:  statuses,
 	}, nil

@@ -64,9 +64,6 @@ func TestBasicFlow(t *testing.T) {
 	if !buildercommon.IsDone(status) {
 		t.Errorf("IsDone(%v); wanted true, got false", status)
 	}
-	if status.Google.Operation != op.Name() {
-		t.Errorf("status.Google.Operation; wanted %q, got %q", op.Name(), status.Google.Operation)
-	}
 	if msg, failed := buildercommon.ErrorMessage(status); failed {
 		t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)
 	}
@@ -101,9 +98,6 @@ func TestBasicFlowWithError(t *testing.T) {
 	if !buildercommon.IsDone(status) {
 		t.Errorf("IsDone(%v); wanted true, got false", status)
 	}
-	if status.Google.Operation != op.Name() {
-		t.Errorf("status.Google.Operation; wanted %q, got %q", op.Name(), status.Google.Operation)
-	}
 	if msg, failed := buildercommon.ErrorMessage(status); !failed || msg != expectedMsg {
 		t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedMsg, msg)
 	}
@@ -112,9 +106,7 @@ func TestBasicFlowWithError(t *testing.T) {
 func TestOperationFromStatus(t *testing.T) {
 	builder := Builder{}
 	op, err := builder.OperationFromStatus(&v1alpha1.BuildStatus{
-		Google: &v1alpha1.GoogleSpec{
-			Operation: operationName,
-		},
+		PodName: "nop-pod",
 	})
 	if err != nil {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
@@ -128,8 +120,8 @@ func TestOperationFromStatus(t *testing.T) {
 	if !buildercommon.IsDone(status) {
 		t.Errorf("IsDone(%v); wanted true, got false", status)
 	}
-	if status.Google.Operation != op.Name() {
-		t.Errorf("status.Google.Operation; wanted %q, got %q", op.Name(), status.Google.Operation)
+	if status.PodName != "nop-pod" {
+		t.Errorf("PodName got %q, want %q", status.PodName, "nop-pod")
 	}
 	if msg, failed := buildercommon.ErrorMessage(status); failed {
 		t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)

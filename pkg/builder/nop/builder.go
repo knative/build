@@ -41,12 +41,8 @@ type operation struct {
 func (nb *operation) Name() string { return operationName }
 
 func (nb *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
-	// Masquerade as the Google builder.
-	status.Builder = v1alpha1.GoogleBuildProvider
-	if status.Google == nil {
-		status.Google = &v1alpha1.GoogleSpec{}
-	}
-	status.Google.Operation = nb.Name()
+	status.PodNamespace = "nop-namespace"
+	status.PodName = "nop-pod"
 	status.CreationTime = startTime
 	status.StartTime = startTime
 	status.SetCondition(&v1alpha1.BuildCondition{
@@ -63,11 +59,8 @@ func (nb *operation) Terminate() error {
 
 func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	bs := &v1alpha1.BuildStatus{
-		// Masquerade as the Google builder.
-		Builder: v1alpha1.GoogleBuildProvider,
-		Google: &v1alpha1.GoogleSpec{
-			Operation: nb.Name(),
-		},
+		PodNamespace:   "nop-namespace",
+		PodName:        "nop-pod",
 		CreationTime:   startTime,
 		StartTime:      startTime,
 		CompletionTime: completionTime,
@@ -110,11 +103,6 @@ type Builder struct {
 
 	// Err is the error that should be returned from calls to this builder.
 	Err error
-}
-
-func (nb *Builder) Builder() v1alpha1.BuildProvider {
-	// Masquerade as the Google builder.
-	return v1alpha1.GoogleBuildProvider
 }
 
 // Validate does nothing.

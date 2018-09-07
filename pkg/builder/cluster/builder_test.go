@@ -98,8 +98,8 @@ func TestBasicFlow(t *testing.T) {
 		if !buildercommon.IsDone(status) {
 			t.Errorf("IsDone(%v); wanted true, got false", status)
 		}
-		if status.Cluster.PodName != op.Name() {
-			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
+		if status.PodName != op.Name() {
+			t.Errorf("status.PodName; wanted %q, got %q", op.Name(), status.PodName)
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); failed {
 			t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)
@@ -298,8 +298,8 @@ func TestFailureFlow(t *testing.T) {
 		if !buildercommon.IsDone(status) {
 			t.Errorf("IsDone(%v); wanted true, got false", status)
 		}
-		if status.Cluster.PodName != op.Name() {
-			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
+		if status.PodName != op.Name() {
+			t.Errorf("status.PodName; wanted %q, got %q", op.Name(), status.PodName)
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); !failed || msg != expectedErrorMessage {
 			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedErrorMessage, msg)
@@ -403,8 +403,8 @@ func TestPodPendingFlow(t *testing.T) {
 		if buildercommon.IsDone(status) {
 			t.Errorf("IsDone(%v); wanted false, got true", status)
 		}
-		if status.Cluster.PodName != op.Name() {
-			t.Errorf("status.Cluster.PodName; wanted %q, got %q", op.Name(), status.Cluster.PodName)
+		if status.PodName != op.Name() {
+			t.Errorf("status.PodName; wanted %q, got %q", op.Name(), status.PodName)
 		}
 		if msg := statusMessage(status); msg != expectedPendingMsg {
 			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedPendingMsg, msg)
@@ -517,8 +517,8 @@ func TestStepFailureFlow(t *testing.T) {
 		if !buildercommon.IsDone(status) {
 			t.Errorf("IsDone(%v); got false, want true", status)
 		}
-		if status.Cluster.PodName != op.Name() {
-			t.Errorf("status.Cluster.PodName; got %q, want %q", status.Cluster.PodName, op.Name())
+		if status.PodName != op.Name() {
+			t.Errorf("status.PodName; got %q, want %q", status.PodName, op.Name())
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); !failed ||
 			// We expect the error to contain the step name and exit code.
