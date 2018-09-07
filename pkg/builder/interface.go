@@ -92,6 +92,9 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
 			return false
 		}
 	}
+	if status.StartTime.Time.IsZero() {
+		return false
+	}
 	return time.Since(status.StartTime.Time).Seconds() > timeout.Seconds()
 }
 

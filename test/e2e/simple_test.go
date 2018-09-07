@@ -120,3 +120,63 @@ func TestFailingBuild(t *testing.T) {
 		t.Fatalf("watchBuild did not return expected error: %v", err)
 	}
 }
+
+func TestBuildLowTimeout(t *testing.T) {
+	clients := setup(t)
+
+	buildName := "build-low-timeout"
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Timeout: "20s",
+			Steps: []corev1.Container{{
+				Name:    "lowtimeoutstep",
+				Image:   "ubuntu",
+				Command: []string{"/bin/bash"},
+				Args:    []string{"-c", "sleep 2000"},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	b, err := clients.buildClient.watchBuild(buildName)
+	if err == nil {
+		t.Fatalf("watchBuild did not return expected BuildTimeout error")
+	}
+
+	// verify reason for build failure is timeout
+	if b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason != "BuildTimeout" {
+		t.Fatalf("wanted BuildTimeout; got %q", b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason)
+	}
+}
+
+func TestBuildWithHighTimeout(t *testing.T) {
+	clients := setup(t)
+
+	buildName := "build-high-timeout"
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Timeout: "40s",
+			Steps: []corev1.Container{{
+				Name:    "hightimeoutstep",
+				Image:   "ubuntu",
+				Command: []string{"/bin/bash"},
+				Args:    []string{"-c", "sleep 20"},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
+		t.Fatalf("Did not expect error: %v", err)
+	}
+}
