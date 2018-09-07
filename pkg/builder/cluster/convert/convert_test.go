@@ -17,10 +17,8 @@ limitations under the License.
 package convert
 
 import (
-	"encoding/json"
 	"testing"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
@@ -123,7 +121,7 @@ func TestRoundtrip(t *testing.T) {
 				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
 			}
 
-			if d := diff(og, b); d != "" {
+			if d := buildtest.JSONDiff(og, b); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})
@@ -348,29 +346,9 @@ func TestFromCRD(t *testing.T) {
 				t.Fatalf("FromCRD: %v", err)
 			}
 
-			if d := diff(got.Spec, c.want); d != "" {
+			if d := buildtest.JSONDiff(got.Spec, c.want); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})
 	}
-}
-
-func diff(l, r interface{}) string {
-	lb, err := json.MarshalIndent(l, "", " ")
-	if err != nil {
-		panic(err.Error())
-	}
-	rb, err := json.MarshalIndent(r, "", " ")
-	if err != nil {
-		panic(err.Error())
-	}
-
-	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(string(lb), string(rb), true)
-	for _, d := range diffs {
-		if d.Type != diffmatchpatch.DiffEqual {
-			return dmp.DiffPrettyText(diffs)
-		}
-	}
-	return ""
 }

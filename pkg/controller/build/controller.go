@@ -362,7 +362,7 @@ func (c *Controller) syncHandler(key string) error {
 				}
 				return err
 			}
-			if err := op.Checkpoint(build); err != nil {
+			if err := op.Checkpoint(build, &build.Status); err != nil {
 				return err
 			}
 			build, err = c.updateStatus(build)
