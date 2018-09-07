@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
@@ -126,13 +127,14 @@ func TestBuildLowTimeout(t *testing.T) {
 	clients := setup(t)
 
 	buildName := "build-low-timeout"
+	buildTimeout := "60s"
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: "20s",
+			Timeout: buildTimeout,
 			Steps: []corev1.Container{{
 				Name:    "lowtimeoutstep",
 				Image:   "ubuntu",
@@ -146,11 +148,30 @@ func TestBuildLowTimeout(t *testing.T) {
 
 	b, err := clients.buildClient.watchBuild(buildName)
 	if err == nil {
-		t.Fatalf("watchBuild did not return expected BuildTimeout error")
+		t.Error("watchBuild did not return expected BuildTimeout error")
+	}
+
+	successCondition := b.Status.GetCondition(v1alpha1.BuildSucceeded)
+
+	if successCondition == nil {
+		t.Fatalf("wanted build status to be set; got %q", b.Status)
 	}
 
 	// verify reason for build failure is timeout
-	if b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason != "BuildTimeout" {
+	if successCondition.Reason != "BuildTimeout" {
 		t.Fatalf("wanted BuildTimeout; got %q", b.Status.GetCondition(v1alpha1.BuildSucceeded).Reason)
+	}
+	buildDuration := b.Status.CompletionTime.Time.Sub(b.Status.StartTime.Time).Seconds()
+	lowerEnd, _ := time.ParseDuration(buildTimeout)
+	higherEnd, _ := time.ParseDuration("100s") // build timeout + 30 sec poll time + 10 sec
+
+	if !(buildDuration > lowerEnd.Seconds() && buildDuration < higherEnd.Seconds()) {
+		t.Fatalf("Expected the build duration to be within range %f to %f range; but got build start time: %q completed time: %q and duration %f \n",
+			lowerEnd.Seconds(),
+			higherEnd.Seconds(),
+			b.Status.StartTime.Time,
+			b.Status.CompletionTime.Time,
+			buildDuration,
+		)
 	}
 }
