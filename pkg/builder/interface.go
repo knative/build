@@ -29,9 +29,9 @@ type Operation interface {
 	// Name provides the unique name for this operation, see OperationFromStatus.
 	Name() string
 
-	// Checkpoint augments the provided BuildStatus with sufficient state to be restored
-	// by OperationFromStatus on an appropriate BuildProvider.
-	Checkpoint(*v1alpha1.BuildStatus) error
+	// Checkpoint augments the provided Build's Status with sufficient state to
+	// be restored by OperationFromStatus on an appropriate BuildProvider.
+	Checkpoint(*v1alpha1.Build) error
 
 	// Wait blocks until the Operation completes, returning either a status for the build or an error.
 	// TODO(mattmoor): This probably shouldn't be BuildStatus, but some sort of smaller-scope thing.

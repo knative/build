@@ -60,8 +60,11 @@ func TestBasicFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	bs := build.Status
+	if err := op.Checkpoint(build); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
 	if buildercommon.IsDone(&bs) {
@@ -163,8 +166,11 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	bs := build.Status
+	if err := op.Checkpoint(build); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
 	if buildercommon.IsDone(&bs) {
@@ -260,8 +266,11 @@ func TestFailureFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	bs := build.Status
+	if err := op.Checkpoint(build); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
 	if buildercommon.IsDone(&bs) {
@@ -365,8 +374,11 @@ func TestPodPendingFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	bs := build.Status
+	if err := op.Checkpoint(build); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
 	if buildercommon.IsDone(&bs) {
@@ -479,8 +491,11 @@ func TestStepFailureFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	bs := build.Status
+	if err := op.Checkpoint(build); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
 	if buildercommon.IsDone(&bs) {

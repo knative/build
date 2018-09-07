@@ -46,7 +46,8 @@ func (op *operation) Name() string {
 	return op.name
 }
 
-func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
+func (op *operation) Checkpoint(build *v1alpha1.Build) error {
+	status := build.Status
 	status.Builder = v1alpha1.ClusterBuildProvider
 	if status.Cluster == nil {
 		status.Cluster = &v1alpha1.ClusterSpec{}
@@ -57,7 +58,16 @@ func (op *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
 	status.StartTime = op.builder.podCreationTime
 	status.StepStates = nil
 	status.StepsCompleted = nil
-	for _, s := range op.statuses {
+
+	// Always ignore the first pod status, which is creds-init.
+	skip := 1
+	if build.Spec.Source != nil {
+		// If the build specifies source, skip another container status, which
+		// is the source-fetching container.
+		skip++
+	}
+
+	for _, s := range op.statuses[skip:] {
 		if s.State.Terminated != nil {
 			status.StepsCompleted = append(status.StepsCompleted, s.Name)
 		}
