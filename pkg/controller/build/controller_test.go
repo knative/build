@@ -567,6 +567,77 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	}
 }
 
+func TestTimeoutReEnqueueInCreatedProcess(t *testing.T) {
+	build := newBuild("test-re-enqueue-in-created-process")
+	build.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+	f.createServceAccount()
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, _ := f.newController(&nop.Builder{}, eventCh)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+
+	// mocking a build item created process
+	if err := c.syncHandler(getKey(build, t)); err != nil {
+		t.Errorf("Not Expect error when syncing build")
+	}
+
+	// wait for re-enqueue build item (one more second is enough)
+	select {
+	case <-time.After(2 * time.Second):
+		cnt := c.workqueue.Len()
+		if cnt != 1 {
+			t.Errorf("The count of build items in workqueue: expected %d; got %d", 1, cnt)
+			return
+		}
+	}
+}
+
+func TestTimeoutReEnqueueInUpdatedProcess(t *testing.T) {
+	oldBuild := newBuild("test-re-enqueue-old")
+	oldBuild.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
+
+	newBuild := newBuild("test-re-enqueue-new")
+	newBuild.Spec.Timeout = &metav1.Duration{Duration: 2 * time.Second}
+	newBuild.Status.StartTime = metav1.Now()
+
+	f := &fixture{
+		t:          t,
+		client:     fake.NewSimpleClientset(),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, _, _ := f.newController(&nop.Builder{}, eventCh)
+
+	// updateBuild will firstly add a current build item into the workqueue
+	// and the re-enqueue will be ignored by the deduplication of workqueue
+	// as the readyAt time of re-enqueue build item is later than the current build item
+	c.updateBuild(oldBuild, newBuild)
+
+	select {
+	case <-time.After(3 * time.Second):
+		cnt := c.workqueue.Len()
+		if cnt != 1 {
+			t.Errorf("The count of build items in workqueue: expected %d; got %d", 1, cnt)
+		}
+	}
+}
+
 func TestRunController(t *testing.T) {
 	build := newBuild("test-run")
 

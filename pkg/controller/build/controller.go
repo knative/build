@@ -132,10 +132,8 @@ func NewController(
 	logger.Info("Setting up event handlers")
 	// Set up an event handler for when Build resources change
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueueBuild,
-		UpdateFunc: func(old, new interface{}) {
-			controller.enqueueBuild(new)
-		},
+		AddFunc:    controller.enqueueBuild,
+		UpdateFunc: controller.updateBuild,
 	})
 
 	return controller
@@ -241,6 +239,33 @@ func (c *Controller) enqueueBuild(obj interface{}) {
 	c.workqueue.AddRateLimited(key)
 }
 
+func (c *Controller) updateBuild(old, cur interface{}) {
+	oldBuild := old.(*v1alpha1.Build)
+	curBuild := cur.(*v1alpha1.Build)
+
+	// enqueueBuild can't be used in here as it return nothing for error handling
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(curBuild); err != nil {
+		runtime.HandleError(err)
+		return
+	}
+	c.workqueue.AddRateLimited(key)
+
+	curTimeout := builder.GetBuildTimeoutDuration(curBuild.Spec.Timeout)
+	oldTimeout := builder.GetBuildTimeoutDuration(oldBuild.Spec.Timeout)
+	if curTimeout != oldTimeout {
+		startTime := curBuild.Status.StartTime.Time
+
+		// has it timed out ?
+		passedTime := time.Since(startTime)
+		if diff := curTimeout - passedTime; diff > 0 {
+			// no and re-enqueue
+			c.workqueue.AddAfter(key, diff)
+		}
+	}
+}
+
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Build resource
 // with the current status of the resource.
@@ -275,106 +300,112 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// If the build's done, then ignore it.
-	if !builder.IsDone(&build.Status) {
-		// If the build is not done, but is in progress (has an operation), then asynchronously wait for it.
-		// TODO(mattmoor): Check whether the Builder matches the kind of our c.builder.
-		if build.Status.Builder != "" {
-			op, err := c.builder.OperationFromStatus(&build.Status)
-			if err != nil {
+	if builder.IsDone(&build.Status) {
+		c.recorder.Event(build, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+		return nil
+	}
+
+	// If the build is not done, but is in progress (has an operation), then asynchronously wait for it.
+	// TODO(mattmoor): Check whether the Builder matches the kind of our c.builder.
+	if build.Status.Builder != "" {
+		op, err := c.builder.OperationFromStatus(&build.Status)
+		if err != nil {
+			return err
+		}
+
+		// Check if build has timed out
+		if builder.IsTimeout(&build.Status, build.Spec.Timeout) {
+			//cleanup operation and update status
+			timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout.Duration.String())
+
+			if err := op.Terminate(); err != nil {
+				c.logger.Errorf("Failed to terminate pod: %v", err)
 				return err
 			}
 
-			// Check if build has timed out
-			if builder.IsTimeout(&build.Status, build.Spec.Timeout) {
-				//cleanup operation and update status
-				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout.Duration.String())
+			build.Status.SetCondition(&duckv1alpha1.Condition{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "BuildTimeout",
+				Message: timeoutMsg,
+			})
+			// update build completed time
+			build.Status.CompletionTime = metav1.Now()
+			c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildTimeout", timeoutMsg)
 
-				if err := op.Terminate(); err != nil {
-					c.logger.Errorf("Failed to terminate pod: %v", err)
-					return err
-				}
-
-				build.Status.SetCondition(&duckv1alpha1.Condition{
-					Type:    v1alpha1.BuildSucceeded,
-					Status:  corev1.ConditionFalse,
-					Reason:  "BuildTimeout",
-					Message: timeoutMsg,
-				})
-				// update build completed time
-				build.Status.CompletionTime = metav1.Now()
-				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildTimeout", timeoutMsg)
-
-				if _, err := c.updateStatus(build); err != nil {
-					c.logger.Errorf("Failed to update status for pod: %v", err)
-					return err
-				}
-
-				c.logger.Errorf("Timeout: %v", timeoutMsg)
-				return nil
+			if _, err := c.updateStatus(build); err != nil {
+				c.logger.Errorf("Failed to update status for pod: %v", err)
+				return err
 			}
 
-			// if not timed out then wait async
-			go c.waitForOperation(build, op)
-		} else {
-			build.Status.Builder = c.builder.Builder()
-			// If the build hasn't even started, then start it and record the operation in our status.
-			// Note that by recording our status, we will trigger a reconciliation, so the wait above
-			// will kick in.
-			var tmpl v1alpha1.BuildTemplateInterface
-			if build.Spec.Template != nil {
-				if build.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
-					tmpl, err = c.clusterBuildTemplatesLister.Get(build.Spec.Template.Name)
-					if err != nil {
-						// The ClusterBuildTemplate resource may not exist.
-						if errors.IsNotFound(err) {
-							runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", build.Spec.Template.Name))
-						}
-						return err
+			c.logger.Errorf("Timeout: %v", timeoutMsg)
+			return nil
+		}
+
+		// if not timed out then wait async
+		go c.waitForOperation(build, op)
+	} else {
+		build.Status.Builder = c.builder.Builder()
+		// If the build hasn't even started, then start it and record the operation in our status.
+		// Note that by recording our status, we will trigger a reconciliation, so the wait above
+		// will kick in.
+		var tmpl v1alpha1.BuildTemplateInterface
+		if build.Spec.Template != nil {
+			if build.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
+				tmpl, err = c.clusterBuildTemplatesLister.Get(build.Spec.Template.Name)
+				if err != nil {
+					// The ClusterBuildTemplate resource may not exist.
+					if errors.IsNotFound(err) {
+						runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", build.Spec.Template.Name))
 					}
-				} else {
-					tmpl, err = c.buildTemplatesLister.BuildTemplates(namespace).Get(build.Spec.Template.Name)
-					if err != nil {
-						// The BuildTemplate resource may not exist.
-						if errors.IsNotFound(err) {
-							runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", build.Spec.Template.Name, namespace))
-						}
-						return err
-					}
-				}
-			}
-			build, err = builder.ApplyTemplate(build, tmpl)
-			if err != nil {
-				return err
-			}
-			// TODO: Validate build except steps+template
-			b, err := c.builder.BuildFromSpec(build)
-			if err != nil {
-				return err
-			}
-			op, err := b.Execute()
-			if err != nil {
-				build.Status.SetCondition(&duckv1alpha1.Condition{
-					Type:    v1alpha1.BuildSucceeded,
-					Status:  corev1.ConditionFalse,
-					Reason:  "BuildExecuteFailed",
-					Message: err.Error(),
-				})
-
-				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildExecuteFailed", "Failed to execute Build %q: %v", build.Name, err)
-
-				if _, err := c.updateStatus(build); err != nil {
 					return err
 				}
-				return err
-			}
-			if err := op.Checkpoint(build, &build.Status); err != nil {
-				return err
-			}
-			build, err = c.updateStatus(build)
-			if err != nil {
-				return err
+			} else {
+				tmpl, err = c.buildTemplatesLister.BuildTemplates(namespace).Get(build.Spec.Template.Name)
+				if err != nil {
+					// The BuildTemplate resource may not exist.
+					if errors.IsNotFound(err) {
+						runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", build.Spec.Template.Name, namespace))
+					}
+					return err
+				}
 			}
 		}
+		build, err = builder.ApplyTemplate(build, tmpl)
+		if err != nil {
+			return err
+		}
+		// TODO: Validate build except steps+template
+		b, err := c.builder.BuildFromSpec(build)
+		if err != nil {
+			return err
+		}
+		op, err := b.Execute()
+		if err != nil {
+			build.Status.SetCondition(&duckv1alpha1.Condition{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "BuildExecuteFailed",
+				Message: err.Error(),
+			})
+
+			c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildExecuteFailed", "Failed to execute Build %q: %v", build.Name, err)
+
+			if _, err := c.updateStatus(build); err != nil {
+				return err
+			}
+			return err
+		}
+		if err := op.Checkpoint(build, &build.Status); err != nil {
+			return err
+		}
+		build, err = c.updateStatus(build)
+		if err != nil {
+			return err
+		}
+		// enqueue again after the build Timeout
+		timeout := builder.GetBuildTimeoutDuration(build.Spec.Timeout)
+		c.workqueue.AddAfter(key, timeout)
 	}
 
 	c.recorder.Event(build, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
