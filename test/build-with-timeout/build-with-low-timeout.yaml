@@ -18,7 +18,8 @@ metadata:
   labels:
     expect: failed
 spec:
-  timeout: 50s
+  # timeout is serialized in nanoseconds
+  timeout: 50000000000
   steps:
   - name: step1
     image: ubuntu
