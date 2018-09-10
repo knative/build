@@ -88,7 +88,6 @@ type buildClient struct {
 func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 	ls := metav1.SingleObject(metav1.ObjectMeta{Name: name})
 	// TODO: Update watchBuild function to take this as parameter depending on test requirements
-
 	// Set build timeout to 120 seconds. This will trigger watch timeout error
 	var timeout int64 = 120
 	ls.TimeoutSeconds = &timeout

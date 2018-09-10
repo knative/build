@@ -206,6 +206,51 @@ func TestPendingBuild(t *testing.T) {
 	}
 
 	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
-		t.Fatalf("watchBuild did not return watch timeout error")
+		t.Fatalf("watchBuild did not return expected `watch timeout` error")
+	}
+}
+
+// TestPodAffinity tests that a build with non existent pod affinity does not scheduled
+// and fails after watch timeout
+func TestPodAffinity(t *testing.T) {
+	clients := setup(t)
+
+	buildName := "affinity-build"
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Affinity: &corev1.Affinity{
+				NodeAffinity: &corev1.NodeAffinity{
+					// This node affinity rule says the pod can only be placed on a node with a label whose key is kubernetes.io/e2e-az-name
+					// and whose value is either e2e-az1 or e2e-az2. Test cluster does not have any nodes that meets this constraint so the build
+					// will wait for pod to scheduled until timeout.
+					RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+						NodeSelectorTerms: []corev1.NodeSelectorTerm{
+							corev1.NodeSelectorTerm{
+								MatchExpressions: []corev1.NodeSelectorRequirement{
+									corev1.NodeSelectorRequirement{
+										Key:      "kubernetes.io/e2e-az-name",
+										Operator: corev1.NodeSelectorOpIn,
+										Values:   []string{"e2e-az1", "e2e-az2"},
+									}},
+							},
+						},
+					},
+				},
+			},
+			Steps: []corev1.Container{{
+				Image: "busybox",
+				Args:  []string{"true"},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+		t.Fatalf("watchBuild did not return expected `watch timeout` error")
 	}
 }
