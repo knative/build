@@ -168,7 +168,7 @@ func TestBuildLowTimeout(t *testing.T) {
 	buildDuration := b.Status.CompletionTime.Time.Sub(b.Status.StartTime.Time).Seconds()
 	higherEnd := 90 * time.Second // build timeout + 30 sec poll time + 10 sec
 
-	if !(buildDuration > buildTimeout.Seconds() && buildDuration < higherEnd.Seconds()) {
+	if !(buildDuration >= buildTimeout.Seconds() && buildDuration < higherEnd.Seconds()) {
 		t.Fatalf("Expected the build duration to be within range %f.00s to %f.00s; but got build start time: %q completed time: %q and duration %f \n",
 			buildTimeout.Seconds(),
 			higherEnd.Seconds(),
