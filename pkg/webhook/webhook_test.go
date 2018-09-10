@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/mattbaird/jsonpatch"
@@ -210,7 +211,7 @@ func TestValidateBuild(t *testing.T) {
 		reason: "invalid build timeout",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
-				Timeout: "garbagetimeout",
+				Timeout:-20,
 				Steps: []corev1.Container{{
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
@@ -221,7 +222,7 @@ func TestValidateBuild(t *testing.T) {
 		reason: "maximum timeout",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
-				Timeout: "48h",
+				Timeout: 48 * time.Hour,
 				Steps: []corev1.Container{{
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
@@ -231,7 +232,7 @@ func TestValidateBuild(t *testing.T) {
 	}, {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
-				Timeout: "1m",
+				Timeout: 1 * time.Minute,
 				Steps: []corev1.Container{{
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",

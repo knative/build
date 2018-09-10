@@ -83,7 +83,7 @@ func TestSimpleBuild(t *testing.T) {
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: "40s",
+			Timeout: 40 * time.Second,
 			Steps: []corev1.Container{{
 				Image: "busybox",
 				Args:  []string{"echo", "simple"},
@@ -127,7 +127,7 @@ func TestBuildLowTimeout(t *testing.T) {
 	clients := setup(t)
 
 	buildName := "build-low-timeout"
-	buildTimeout := "50s"
+	buildTimeout := 50 * time.Second
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
@@ -166,12 +166,11 @@ func TestBuildLowTimeout(t *testing.T) {
 		t.Fatalf("wanted BuildTimeout; got %q", successCondition.Reason)
 	}
 	buildDuration := b.Status.CompletionTime.Time.Sub(b.Status.StartTime.Time).Seconds()
-	lowerEnd, _ := time.ParseDuration(buildTimeout)
-	higherEnd, _ := time.ParseDuration("90s") // build timeout + 30 sec poll time + 10 sec
+	higherEnd := 90 * time.Second // build timeout + 30 sec poll time + 10 sec
 
-	if !(buildDuration > lowerEnd.Seconds() && buildDuration < higherEnd.Seconds()) {
+	if !(buildDuration > buildTimeout.Seconds() && buildDuration < higherEnd.Seconds()) {
 		t.Fatalf("Expected the build duration to be within range %f.00s to %f.00s; but got build start time: %q completed time: %q and duration %f \n",
-			lowerEnd.Seconds(),
+			buildTimeout.Seconds(),
 			higherEnd.Seconds(),
 			b.Status.StartTime.Time,
 			b.Status.CompletionTime.Time,
