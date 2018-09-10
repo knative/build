@@ -106,7 +106,7 @@ func TestBasicFlows(t *testing.T) {
 		bldr                 builder.Interface
 		setup                func()
 		expectedErrorMessage string
-	 }{{
+	}{{
 		bldr:                 &nop.Builder{},
 		expectedErrorMessage: noErrorMessage,
 	}, {
