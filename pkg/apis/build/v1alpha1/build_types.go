@@ -74,6 +74,7 @@ type BuildSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// Time after which the build times out. Defaults to 10 minutes.
+	// Specified build timeout should be greater than 0 and less than 24h.
 	Timeout time.Duration `json:"timeout,omitempty"`
 }
 
