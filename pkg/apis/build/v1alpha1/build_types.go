@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,9 +73,9 @@ type BuildSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// Time after which the build times out. Defaults to 10 minutes.
-	// Go serializes the value in nano seconds.
-	// Specified build timeout should be greater than 0 and less than 24h.
-	Timeout time.Duration `json:"timeout,omitempty"`
+	// Specified build timeout should be less than 24h.
+	// Refer Go's ParseDuration documentation for expected format: https://golang.org/pkg/time/#ParseDuration
+	Timeout string `json:"timeout,omitempty"`
 }
 
 // TemplateKind defines the type of BuildTemplate used by the build.

@@ -77,21 +77,30 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 
 // IsTimeout returns true if the build's execution time is greater than
 // specified build spec timeout.
-func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout time.Duration) bool {
+func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
+	var timeout time.Duration
+	var defaultTimeout = 10 * time.Minute
+	var err error
+
 	if status == nil {
 		return false
 	}
 
-	if buildTimeout == 0 {
+	if buildTimeout == "" {
 		// Set default timeout to 10 minute if build timeout is not set
-		buildTimeout = 10 * time.Minute
+		timeout = defaultTimeout
+	} else {
+		timeout, err = time.ParseDuration(buildTimeout)
+		if err != nil {
+			return false
+		}
 	}
 
 	// If build has not started timeout, startTime should be zero.
 	if status.StartTime.Time.IsZero() {
 		return false
 	}
-	return time.Since(status.StartTime.Time).Seconds() > buildTimeout.Seconds()
+	return time.Since(status.StartTime.Time).Seconds() > timeout.Seconds()
 }
 
 // ErrorMessage returns the error message from the status.

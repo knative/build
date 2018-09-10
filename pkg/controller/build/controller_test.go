@@ -67,7 +67,7 @@ func newBuild(name string) *v1alpha1.Build {
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: 20 * time.Minute,
+			Timeout: "20m",
 		},
 	}
 }
@@ -237,7 +237,7 @@ func TestTimeoutFlows(t *testing.T) {
 		t.Errorf("Error parsing duration")
 	}
 
-	build.Spec.Timeout = 1 * time.Second
+	build.Spec.Timeout = "1s"
 
 	f := &fixture{
 		t:           t,
