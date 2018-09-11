@@ -271,8 +271,7 @@ func (c *Controller) syncHandler(key string) error {
 	// If the build's done, then ignore it.
 	if !builder.IsDone(&build.Status) {
 		// If the build is not done, but is in progress (has an operation), then asynchronously wait for it.
-		// TODO(mattmoor): Check whether the Builder matches the kind of our c.builder.
-		if build.Status.Builder != "" {
+		if build.Status.PodName != "" {
 			op, err := c.builder.OperationFromStatus(&build.Status)
 			if err != nil {
 				return err
@@ -312,7 +311,6 @@ func (c *Controller) syncHandler(key string) error {
 				}
 			}
 		} else {
-			build.Status.Builder = c.builder.Builder()
 			// If the build hasn't even started, then start it and record the operation in our status.
 			// Note that by recording our status, we will trigger a reconciliation, so the wait above
 			// will kick in.

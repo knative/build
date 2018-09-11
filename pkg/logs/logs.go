@@ -221,9 +221,8 @@ func podName(cfg *rest.Config, out io.Writer, buildName, namespace string) (stri
 			return "", fmt.Errorf("getting build: %v", err)
 		}
 
-		cluster := b.Status.Cluster
-		if cluster != nil && cluster.PodName != "" {
-			return cluster.PodName, nil
+		if b.Status.PodName != "" {
+			return b.Status.PodName, nil
 		}
 
 		for _, condition := range b.Status.Conditions {
