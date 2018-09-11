@@ -18,7 +18,7 @@ metadata:
   labels:
     expect: failed
 spec:
-  timeout: 50s
+  timeout: "50s"
   steps:
   - name: step1
     image: ubuntu

@@ -145,7 +145,7 @@ func TestBasicFlows(t *testing.T) {
 			t.Errorf("error fetching build: %v", err)
 		}
 		// Update status to current time
-		first.Status.CreationTime = metav1.Now()
+		first.Status.StartTime = metav1.Now()
 
 		if builder.IsDone(&first.Status) {
 			t.Errorf("First IsDone(%d); wanted not done, got done.", idx)
@@ -282,8 +282,8 @@ func TestTimeoutFlows(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{first})
 
 	// Run a second iteration of the syncHandler.
-	if err := c.syncHandler(getKey(build, t)); err == nil {
-		t.Errorf("Expect syncing build to error with timeout")
+	if err := c.syncHandler(getKey(build, t)); err != nil {
+		t.Errorf("Unexpected error while syncing build: %v", err)
 	}
 
 	expectedTimeoutMsg := "Warning BuildTimeout Build \"test\" failed to finish within \"1s\""

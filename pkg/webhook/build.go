@@ -243,13 +243,11 @@ func validateTimeout(timeout string) error {
 	if timeout == "" {
 		return nil
 	} else {
-		timeout, err := time.ParseDuration(timeout)
+		timeoutDuration, err := time.ParseDuration(timeout)
 		if err != nil {
 			return validationError("InvalidTimeFormat", "invalid build timeout %q err %#v. Refer https://golang.org/pkg/time/#ParseDuration for time format documentation", timeout, err)
 		}
-
-		// time out should not greater than 24 hours
-		if timeout.Hours() > maxTimeout.Hours() {
+		if timeoutDuration > maxTimeout {
 			return validationError("InvalidTimeout", "build timeout exceeded 24h")
 		}
 	}

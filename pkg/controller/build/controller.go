@@ -294,7 +294,8 @@ func (c *Controller) syncHandler(key string) error {
 					Reason:  "BuildTimeout",
 					Message: timeoutMsg,
 				})
-
+				// update build completed time
+				build.Status.CompletionTime = metav1.Now()
 				c.recorder.Eventf(build, corev1.EventTypeWarning, "BuildTimeout", timeoutMsg)
 
 				if _, err := c.updateStatus(build); err != nil {
@@ -303,7 +304,7 @@ func (c *Controller) syncHandler(key string) error {
 				}
 
 				c.logger.Errorf("Timeout: %v", timeoutMsg)
-				return fmt.Errorf("Build %q timed out after %s", build.Name, build.Spec.Timeout)
+				return nil
 			} else {
 				// if not timed out then wait async
 				if err := c.waitForOperationAsync(build, op); err != nil {
