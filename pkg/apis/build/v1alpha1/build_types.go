@@ -76,6 +76,10 @@ type BuildSpec struct {
 	// Specified build timeout should be less than 24h.
 	// Refer Go's ParseDuration documentation for expected format: https://golang.org/pkg/time/#ParseDuration
 	Timeout string `json:"timeout,omitempty"`
+
+	// If specified, the pod's scheduling constraints
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // TemplateKind defines the type of BuildTemplate used by the build.
