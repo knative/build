@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
@@ -31,9 +32,10 @@ import (
 
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
 	"github.com/knative/build/pkg/controller"
-	"github.com/knative/build/pkg/controller/build"
-	"github.com/knative/build/pkg/controller/buildtemplate"
-	"github.com/knative/build/pkg/controller/clusterbuildtemplate"
+	buildctrl "github.com/knative/build/pkg/controller/build"
+	"github.com/knative/build/pkg/reconciler/build"
+	"github.com/knative/build/pkg/reconciler/buildtemplate"
+	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
@@ -90,24 +92,37 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, time.Second*30)
 
-	// Add new controllers here.
-	ctors := []controller.Constructor{
-		build.NewController,
-		buildtemplate.NewController,
-		clusterbuildtemplate.NewController,
-	}
+	buildInformer := buildInformerFactory.Build().V1alpha1().Builds()
+	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
+	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
 
 	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
 
 	// Build all of our controllers, with the clients constructed above.
-	controllers := make([]controller.Interface, 0, len(ctors))
-	for _, ctor := range ctors {
-		controllers = append(controllers,
-			ctor(bldr, kubeClient, buildClient, kubeInformerFactory, buildInformerFactory, logger))
+	controllers := []controller.Interface{
+		// TODO(mattmoor): Move the Build controller logic into pkg/reconciler/build
+		buildctrl.NewController(bldr, kubeClient, buildClient,
+			kubeInformerFactory, buildInformerFactory, logger),
+
+		build.NewController(logger, kubeClient, buildClient, buildInformer),
+		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
+			clusterBuildTemplateInformer),
+		buildtemplate.NewController(logger, kubeClient, buildClient,
+			buildTemplateInformer),
 	}
 
 	go kubeInformerFactory.Start(stopCh)
 	go buildInformerFactory.Start(stopCh)
+
+	for i, synced := range []cache.InformerSynced{
+		buildInformer.Informer().HasSynced,
+		buildTemplateInformer.Informer().HasSynced,
+		clusterBuildTemplateInformer.Informer().HasSynced,
+	} {
+		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
+			logger.Fatalf("failed to wait for cache at index %v to sync", i)
+		}
+	}
 
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {
