@@ -21,6 +21,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/knative/pkg/kmeta"
 )
 
 // +genclient
@@ -37,6 +40,9 @@ type Build struct {
 	Spec   BuildSpec   `json:"spec"`
 	Status BuildStatus `json:"status"`
 }
+
+// Check that our resource implements several interfaces.
+var _ kmeta.OwnerRefable = (*Build)(nil)
 
 // BuildSpec is the spec for a Build resource.
 type BuildSpec struct {
@@ -311,3 +317,7 @@ func (b *Build) SetGeneration(generation int64) { b.Spec.Generation = generation
 
 // GetSpecJSON returns the JSON serialization of this build's Spec.
 func (b *Build) GetSpecJSON() ([]byte, error) { return json.Marshal(b.Spec) }
+
+func (b *Build) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("Build")
+}

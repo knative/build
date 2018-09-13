@@ -20,17 +20,10 @@ import (
 	"encoding/json"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/knative/pkg/kmeta"
 )
-
-// TemplateSpec returnes the Spec used by the template
-func (bt *ClusterBuildTemplate) TemplateSpec() BuildTemplateSpec {
-	return bt.Spec
-}
-
-// Copy performes a deep copy
-func (bt *ClusterBuildTemplate) Copy() BuildTemplateInterface {
-	return bt.DeepCopy()
-}
 
 // +genclient
 // +genclient:noStatus
@@ -44,6 +37,10 @@ type ClusterBuildTemplate struct {
 
 	Spec BuildTemplateSpec `json:"spec"`
 }
+
+// Check that our resource implements several interfaces.
+var _ kmeta.OwnerRefable = (*ClusterBuildTemplate)(nil)
+var _ Template = (*ClusterBuildTemplate)(nil)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -63,3 +60,17 @@ func (bt *ClusterBuildTemplate) SetGeneration(generation int64) { bt.Spec.Genera
 
 // GetSpecJSON returns the JSON serialization of this build template's Spec.
 func (bt *ClusterBuildTemplate) GetSpecJSON() ([]byte, error) { return json.Marshal(bt.Spec) }
+
+// TemplateSpec returnes the Spec used by the template
+func (bt *ClusterBuildTemplate) TemplateSpec() BuildTemplateSpec {
+	return bt.Spec
+}
+
+// Copy performes a deep copy
+func (bt *ClusterBuildTemplate) Copy() BuildTemplateInterface {
+	return bt.DeepCopy()
+}
+
+func (bt *ClusterBuildTemplate) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("ClusterBuildTemplate")
+}
