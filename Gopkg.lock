@@ -180,10 +180,11 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:00aceaec6aff16ea2f9d644d8cb5239d47dc3af78f1bceaaa8ff058a245bfa44"
+  digest = "1:82cc174fc37b905f1bf50297c571bdd8b3c37662b4586c0160bf55d68dc3ba34"
   name = "github.com/knative/pkg"
   packages = [
     "configmap",
+    "controller",
     "logging",
     "logging/logkey",
     "signals",
@@ -743,6 +744,7 @@
     "github.com/go-yaml/yaml",
     "github.com/google/go-cmp/cmp",
     "github.com/knative/pkg/configmap",
+    "github.com/knative/pkg/controller",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
     "github.com/knative/pkg/signals",
