@@ -33,6 +33,9 @@ import (
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
+	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
+	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
+	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
 )
 
 const controllerAgentName = "buildtemplate-controller"
@@ -43,8 +46,11 @@ type Reconciler struct {
 	kubeclientset kubernetes.Interface
 	// buildclientset is a clientset for our own API group
 	buildclientset clientset.Interface
+	// cachingclientset is a clientset for creating caching resources.
+	cachingclientset cachingclientset.Interface
 
 	buildTemplatesLister listers.BuildTemplateLister
+	imageLister          cachinglisters.ImageLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -68,7 +74,9 @@ func NewController(
 	logger *zap.SugaredLogger,
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
+	cachingclientset cachingclientset.Interface,
 	buildTemplateInformer informers.BuildTemplateInformer,
+	imageInformer cachinginformers.ImageInformer,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
@@ -77,7 +85,9 @@ func NewController(
 	r := &Reconciler{
 		kubeclientset:        kubeclientset,
 		buildclientset:       buildclientset,
+		cachingclientset:     cachingclientset,
 		buildTemplatesLister: buildTemplateInformer.Lister(),
+		imageLister:          imageInformer.Lister(),
 		Logger:               logger,
 	}
 	impl := controller.NewImpl(r, logger, "BuildTemplates")

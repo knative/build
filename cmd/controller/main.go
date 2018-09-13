@@ -39,6 +39,8 @@ import (
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
+	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
+	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
@@ -76,25 +78,32 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %s", err.Error())
+		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
+		logger.Fatalf("Error building kubernetes clientset: %v", err)
 	}
 
 	buildClient, err := buildclientset.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalf("Error building Build clientset: %s", err.Error())
+		logger.Fatalf("Error building Build clientset: %v", err)
+	}
+
+	cachingClient, err := cachingclientset.NewForConfig(cfg)
+	if err != nil {
+		logger.Fatalf("Error building Caching clientset: %v", err)
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, time.Second*30)
+	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, time.Second*30)
 
 	buildInformer := buildInformerFactory.Build().V1alpha1().Builds()
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
+	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 
 	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
 
@@ -106,9 +115,9 @@ func main() {
 
 		build.NewController(logger, kubeClient, buildClient, buildInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
-			clusterBuildTemplateInformer),
+			cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient,
-			buildTemplateInformer),
+			cachingClient, buildTemplateInformer, imageInformer),
 	}
 
 	go kubeInformerFactory.Start(stopCh)
@@ -118,6 +127,8 @@ func main() {
 		buildInformer.Informer().HasSynced,
 		buildTemplateInformer.Informer().HasSynced,
 		clusterBuildTemplateInformer.Informer().HasSynced,
+		// TODO(mattmoor): Start waiting for sync after something sets up an event otherwise it hangs here.
+		// imageInformer.Informer().HasSynced,
 	} {
 		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)
