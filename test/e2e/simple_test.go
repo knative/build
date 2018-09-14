@@ -149,7 +149,7 @@ func TestBuildLowTimeout(t *testing.T) {
 
 	b, err := clients.buildClient.watchBuild(buildName)
 	if err == nil {
-		t.Error("watchBuild did not return expected BuildTimeout error")
+		t.Fatalf("watchBuild did not return expected BuildTimeout error")
 	}
 
 	if &b.Status == nil {
