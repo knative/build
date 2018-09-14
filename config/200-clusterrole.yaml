@@ -18,3 +18,6 @@ rules:
   - apiGroups: ["build.knative.dev"]
     resources: ["builds", "buildtemplates", "clusterbuildtemplates"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["caching.internal.knative.dev"]
+    resources: ["images"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]

@@ -180,9 +180,29 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:91f921be64cf5b693829e3198a18c42270d98b904e12bfa85dc336cb9ae55a4f"
+  branch = "master"
+  digest = "1:826576a2dbea52eb350ed5c0fd3e53f1f24cd6bdcfaf89ff89239b8cd426cd0d"
+  name = "github.com/knative/caching"
+  packages = [
+    "pkg/apis/caching",
+    "pkg/apis/caching/v1alpha1",
+    "pkg/client/clientset/versioned",
+    "pkg/client/clientset/versioned/scheme",
+    "pkg/client/clientset/versioned/typed/caching/v1alpha1",
+    "pkg/client/informers/externalversions",
+    "pkg/client/informers/externalversions/caching",
+    "pkg/client/informers/externalversions/caching/v1alpha1",
+    "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/listers/caching/v1alpha1",
+  ]
+  pruneopts = "T"
+  revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
+
+[[projects]]
+  digest = "1:9b930cc85d6efef080023752eff8ef39acd753a3e5a32a78525b43c8918e7adb"
   name = "github.com/knative/pkg"
   packages = [
+    "apis",
     "configmap",
     "controller",
     "kmeta",
@@ -464,9 +484,10 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:83b01e3d6f85c4e911de84febd69a2d3ece614c5a4a518fbc2b5d59000645980"
+  digest = "1:4b0d523ee389c762d02febbcfa0734c4530ebe87abe925db18f05422adcb33e8"
   name = "k8s.io/apimachinery"
   packages = [
+    "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
@@ -744,6 +765,11 @@
   input-imports = [
     "github.com/go-yaml/yaml",
     "github.com/google/go-cmp/cmp",
+    "github.com/knative/caching/pkg/apis/caching",
+    "github.com/knative/caching/pkg/client/clientset/versioned",
+    "github.com/knative/caching/pkg/client/informers/externalversions",
+    "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1",
+    "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/kmeta",
