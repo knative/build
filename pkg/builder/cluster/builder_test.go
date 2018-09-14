@@ -60,23 +60,25 @@ func TestBasicFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	if err := op.Checkpoint(build, &build.Status); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
-	if buildercommon.IsDone(&bs) {
-		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
+	if buildercommon.IsDone(&build.Status) {
+		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
+	if build.Status.CreationTime.IsZero() {
+		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
 	}
-	if !bs.CompletionTime.IsZero() {
-		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	if !build.Status.CompletionTime.IsZero() {
+		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !bs.StartTime.IsZero() {
-		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	if !build.Status.StartTime.IsZero() {
+		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
-	op, err = builder.OperationFromStatus(&bs)
+	op, err = builder.OperationFromStatus(&build.Status)
 	if err != nil {
 		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
 	}
@@ -163,23 +165,25 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	if err := op.Checkpoint(build, &build.Status); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
-	if buildercommon.IsDone(&bs) {
-		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
+	if buildercommon.IsDone(&build.Status) {
+		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
+	if build.Status.CreationTime.IsZero() {
+		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
 	}
-	if !bs.CompletionTime.IsZero() {
-		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	if !build.Status.CompletionTime.IsZero() {
+		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !bs.StartTime.IsZero() {
-		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	if !build.Status.StartTime.IsZero() {
+		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
-	op, err = builder.OperationFromStatus(&bs)
+	op, err = builder.OperationFromStatus(&build.Status)
 	if err != nil {
 		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
 	}
@@ -260,23 +264,25 @@ func TestFailureFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	if err := op.Checkpoint(build, &build.Status); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
-	if buildercommon.IsDone(&bs) {
-		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
+	if buildercommon.IsDone(&build.Status) {
+		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
+	if build.Status.CreationTime.IsZero() {
+		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
 	}
-	if !bs.CompletionTime.IsZero() {
-		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	if !build.Status.CompletionTime.IsZero() {
+		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !bs.StartTime.IsZero() {
-		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	if !build.Status.StartTime.IsZero() {
+		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
-	op, err = builder.OperationFromStatus(&bs)
+	op, err = builder.OperationFromStatus(&build.Status)
 	if err != nil {
 		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
 	}
@@ -365,23 +371,25 @@ func TestPodPendingFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	if err := op.Checkpoint(build, &build.Status); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
-	if buildercommon.IsDone(&bs) {
-		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
+	if buildercommon.IsDone(&build.Status) {
+		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
+	if build.Status.CreationTime.IsZero() {
+		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
 	}
-	if !bs.CompletionTime.IsZero() {
-		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	if !build.Status.CompletionTime.IsZero() {
+		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !bs.StartTime.IsZero() {
-		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	if !build.Status.StartTime.IsZero() {
+		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
-	op, err = builder.OperationFromStatus(&bs)
+	op, err = builder.OperationFromStatus(&build.Status)
 	if err != nil {
 		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
 	}
@@ -479,23 +487,25 @@ func TestStepFailureFlow(t *testing.T) {
 		t.Fatalf("Unexpected error executing builder.Build: %v", err)
 	}
 
-	var bs v1alpha1.BuildStatus
-	if err := op.Checkpoint(&bs); err != nil {
+	build := &v1alpha1.Build{
+		Status: v1alpha1.BuildStatus{},
+	}
+	if err := op.Checkpoint(build, &build.Status); err != nil {
 		t.Fatalf("Unexpected error executing op.Checkpoint: %v", err)
 	}
-	if buildercommon.IsDone(&bs) {
-		t.Errorf("IsDone(%v); wanted not done, got done.", bs)
+	if buildercommon.IsDone(&build.Status) {
+		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if bs.CreationTime.IsZero() {
-		t.Errorf("bs.CreationTime; want zero, got %v", bs.CreationTime)
+	if build.Status.CreationTime.IsZero() {
+		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
 	}
-	if !bs.StartTime.IsZero() {
-		t.Errorf("bs.StartTime; want non-zero, got %v", bs.StartTime)
+	if !build.Status.StartTime.IsZero() {
+		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
-	if !bs.CompletionTime.IsZero() {
-		t.Errorf("bs.CompletionTime; want zero, got %v", bs.CompletionTime)
+	if !build.Status.CompletionTime.IsZero() {
+		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	op, err = builder.OperationFromStatus(&bs)
+	op, err = builder.OperationFromStatus(&build.Status)
 	if err != nil {
 		t.Fatalf("Unexpected error executing OperationFromStatus: %v", err)
 	}
@@ -641,4 +651,78 @@ func statusMessage(status *v1alpha1.BuildStatus) string {
 		}
 	}
 	return ""
+}
+
+func TestStripStepStates(t *testing.T) {
+	for _, c := range []struct {
+		desc     string
+		statuses []corev1.ContainerStatus
+		build    *v1alpha1.Build
+	}{{
+		desc: "only creds-init",
+		statuses: []corev1.ContainerStatus{{
+			State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "creds-init: should be stripped"}},
+		}, {
+			State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "real step: should be retained"}},
+		}},
+		build: &v1alpha1.Build{
+			// No source.
+			Status: v1alpha1.BuildStatus{},
+		},
+	}, {
+		desc: "has source",
+		statuses: []corev1.ContainerStatus{{
+			Name:  "creds-init",
+			State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "creds-init: should be stripped"}},
+		}, {
+			Name:  "git-init",
+			State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "git-init: should be stripped"}},
+		}, {
+			State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{Reason: "real step: should be retained"}},
+		}},
+		build: &v1alpha1.Build{
+			// No source.
+			Spec: v1alpha1.BuildSpec{
+				Source: &v1alpha1.SourceSpec{
+					Git: &v1alpha1.GitSourceSpec{},
+				},
+			},
+			Status: v1alpha1.BuildStatus{},
+		},
+	}} {
+		t.Run(c.desc, func(t *testing.T) {
+			status := &v1alpha1.BuildStatus{}
+			op := &operation{
+				statuses:  c.statuses,
+				builder:   &builder{},
+				namespace: "namespace",
+				name:      "podname",
+			}
+			if err := op.Checkpoint(c.build, status); err != nil {
+				t.Fatalf("Checkpoint: %v", err)
+			}
+
+			// In both cases, we want the same status, stripped of implicit
+			// steps' states.
+			wantStatus := &v1alpha1.BuildStatus{
+				Builder: v1alpha1.ClusterBuildProvider,
+				Cluster: &v1alpha1.ClusterSpec{
+					Namespace: "namespace",
+					PodName:   "podname",
+				},
+				StepStates: []corev1.ContainerState{{
+					Terminated: &corev1.ContainerStateTerminated{Reason: "real step: should be retained"},
+				}},
+				StepsCompleted: []string{""},
+				Conditions: []v1alpha1.BuildCondition{{
+					Type:   v1alpha1.BuildSucceeded,
+					Status: corev1.ConditionUnknown,
+					Reason: "Building",
+				}},
+			}
+			if d := buildtest.JSONDiff(wantStatus, status); d != "" {
+				t.Errorf("Diff:\n%s", d)
+			}
+		})
+	}
 }

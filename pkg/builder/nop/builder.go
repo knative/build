@@ -40,7 +40,7 @@ type operation struct {
 
 func (nb *operation) Name() string { return operationName }
 
-func (nb *operation) Checkpoint(status *v1alpha1.BuildStatus) error {
+func (nb *operation) Checkpoint(_ *v1alpha1.Build, status *v1alpha1.BuildStatus) error {
 	// Masquerade as the Google builder.
 	status.Builder = v1alpha1.GoogleBuildProvider
 	if status.Google == nil {
