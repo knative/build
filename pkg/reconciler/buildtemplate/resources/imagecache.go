@@ -56,7 +56,7 @@ func makeImageCachesFromSpec(
 				Name:            names.ImageCache(bt, index),
 				Namespace:       namespace,
 				Labels:          kmeta.MakeVersionLabels(bt),
-				OwnerReferences: []metav1.OwnerReference{*kmeta.NewOwnerReference(bt)},
+				OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(bt)},
 			},
 			Spec: caching.ImageSpec{
 				Image: container.Image,

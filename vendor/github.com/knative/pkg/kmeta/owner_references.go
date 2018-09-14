@@ -32,7 +32,7 @@ type OwnerRefable interface {
 	GetGroupVersionKind() schema.GroupVersionKind
 }
 
-// NewOwnerReference creates an OwnerReference pointing to the given Resource.
-func NewOwnerReference(obj OwnerRefable) *metav1.OwnerReference {
+// NewControllerRef creates an OwnerReference pointing to the given controller.
+func NewControllerRef(obj OwnerRefable) *metav1.OwnerReference {
 	return metav1.NewControllerRef(obj.GetObjectMeta(), obj.GetGroupVersionKind())
 }

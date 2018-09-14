@@ -199,7 +199,7 @@
   revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
 
 [[projects]]
-  digest = "1:9b930cc85d6efef080023752eff8ef39acd753a3e5a32a78525b43c8918e7adb"
+  digest = "1:0fe8157574f136a341c550d375e5eff6045f20f9310da8a703fb81775568aa2b"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -214,7 +214,7 @@
     "test/spoof",
   ]
   pruneopts = "NUT"
-  revision = "bfddf2d91b1cab2ceae6893468e9dbd26538d640"
+  revision = "2a7e950c4e2d635d6e32ba3d050dd32ba7be5be3"
 
 [[projects]]
   branch = "master"
