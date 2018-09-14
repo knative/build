@@ -766,6 +766,7 @@
     "github.com/go-yaml/yaml",
     "github.com/google/go-cmp/cmp",
     "github.com/knative/caching/pkg/apis/caching",
+    "github.com/knative/caching/pkg/apis/caching/v1alpha1",
     "github.com/knative/caching/pkg/client/clientset/versioned",
     "github.com/knative/caching/pkg/client/informers/externalversions",
     "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1",
