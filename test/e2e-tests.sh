@@ -35,16 +35,7 @@ function teardown() {
   ko delete --ignore-not-found=true -f config/
 }
 
-function abort_test() {
-  echo "$1"
-  # If formatting fails for any reason, use yaml as a fall back.
-  kubectl get builds -o=custom-columns-file=./test/columns.txt || \
-    kubectl get builds -oyaml
-  fail_test
-}
-
 function run_yaml_tests() {
-  header "Running YAML E2E tests"
   echo ">> Starting tests"
   ko apply -R -f test/ || return 1
 
@@ -65,7 +56,7 @@ function run_yaml_tests() {
   fi
 
   # Check that tests passed.
-  local retval=0
+  local failed=0
   echo ">> Checking test results"
   for expected_status in succeeded failed; do
     results="$(kubectl get builds -l expect=${expected_status} \
@@ -79,18 +70,19 @@ function run_yaml_tests() {
         ;;
       *)
         echo "ERROR: Invalid expected status '${expected_status}'"
-        retval=1
+        failed=1
         ;;
     esac
     for result in ${results}; do
       if [[ ! "${result,,}" == *"=${want}" ]]; then
         echo "ERROR: test ${result} but should be ${want}"
-        retval=1
+        failed=1
       fi
     done
   done
-  [[ ${retval} -eq 0 ]] && echo ">> All YAML tests passed"
-  return ${retval}
+  (( failed )) && return 1
+  echo ">> All YAML tests passed"
+  return 0
 }
 
 # Script entry point.
@@ -110,8 +102,8 @@ set +o errexit
 set +o pipefail
 
 # Make sure that are no builds or build templates in the current namespace.
-kubectl delete builds --all
-kubectl delete buildtemplates --all
+kubectl delete --ignore-not-found=true builds --all
+kubectl delete --ignore-not-found=true buildtemplates --all
 
 # Run the tests
 
@@ -120,7 +112,14 @@ failed=0
 header "Running Go e2e tests"
 report_go_test -tags e2e ./test/e2e/... -count=1 || failed=1
 
-run_yaml_tests || failed=1
+header "Running YAML e2e tests"
+if ! run_yaml_tests; then
+  failed=1
+  echo "ERROR: one or more YAML tests failed"
+  # If formatting fails for any reason, use yaml as a fall back.
+  kubectl get builds -o=custom-columns-file=./test/columns.txt || \
+    kubectl get builds -oyaml
+fi
 
-(( failed )) && abort_test "ERROR: one or more tests failed"
+(( failed )) && fail_test
 success
