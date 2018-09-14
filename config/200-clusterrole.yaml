@@ -20,4 +20,4 @@ rules:
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["caching.internal.knative.dev"]
     resources: ["images"]
-    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+    verbs: ["get", "list", "create", "update", "delete", "deletecollection", "patch", "watch"]

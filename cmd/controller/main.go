@@ -122,13 +122,13 @@ func main() {
 
 	go kubeInformerFactory.Start(stopCh)
 	go buildInformerFactory.Start(stopCh)
+	go cachingInformerFactory.Start(stopCh)
 
 	for i, synced := range []cache.InformerSynced{
 		buildInformer.Informer().HasSynced,
 		buildTemplateInformer.Informer().HasSynced,
 		clusterBuildTemplateInformer.Informer().HasSynced,
-		// TODO(mattmoor): Start waiting for sync after something sets up an event otherwise it hangs here.
-		// imageInformer.Informer().HasSynced,
+		imageInformer.Informer().HasSynced,
 	} {
 		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)

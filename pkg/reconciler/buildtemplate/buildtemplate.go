@@ -20,19 +20,25 @@ import (
 	"context"
 
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 
+	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
+	"github.com/knative/build/pkg/reconciler/buildtemplate/resources"
+	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
 	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
@@ -50,7 +56,7 @@ type Reconciler struct {
 	cachingclientset cachingclientset.Interface
 
 	buildTemplatesLister listers.BuildTemplateLister
-	imageLister          cachinglisters.ImageLister
+	imagesLister         cachinglisters.ImageLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -87,7 +93,7 @@ func NewController(
 		buildclientset:       buildclientset,
 		cachingclientset:     cachingclientset,
 		buildTemplatesLister: buildTemplateInformer.Lister(),
-		imageLister:          imageInformer.Lister(),
+		imagesLister:         imageInformer.Lister(),
 		Logger:               logger,
 	}
 	impl := controller.NewImpl(r, logger, "BuildTemplates")
@@ -97,6 +103,14 @@ func NewController(
 	buildTemplateInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    impl.Enqueue,
 		UpdateFunc: controller.PassNew(impl.Enqueue),
+	})
+
+	imageInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("BuildTemplate")),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.EnqueueControllerOf,
+			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
+		},
 	})
 
 	return impl
@@ -114,7 +128,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Get the BuildTemplate resource with this namespace/name
-	if _, err := c.buildTemplatesLister.BuildTemplates(namespace).Get(name); errors.IsNotFound(err) {
+	bt, err := c.buildTemplatesLister.BuildTemplates(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		// The BuildTemplate resource may no longer exist, in which case we stop processing.
 		logger.Errorf("buildtemplate %q in work queue no longer exists", key)
 		return nil
@@ -122,6 +137,59 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	// TODO: Meaningful reconciliation.
+	if err := c.reconcileImageCaches(ctx, bt); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (c *Reconciler) reconcileImageCaches(ctx context.Context, bt *v1alpha1.BuildTemplate) error {
+	ics := resources.MakeImageCaches(bt)
+
+	eics, err := c.imagesLister.Images(bt.Namespace).List(kmeta.MakeVersionLabelSelector(bt))
+	if err != nil {
+		return err
+	}
+
+	// Make sure we have all of the desired caching resources.
+	if missing := allCached(ics, eics); len(missing) > 0 {
+		grp, _ := errgroup.WithContext(ctx)
+
+		for _, m := range missing {
+			m := m
+			grp.Go(func() error {
+				_, err := c.cachingclientset.CachingV1alpha1().Images(m.Namespace).Create(&m)
+				return err
+			})
+		}
+
+		// Wait for the creates to complete.
+		if err := grp.Wait(); err != nil {
+			return err
+		}
+	}
+
+	// Delete any Image caches relevant to older versions of this resource.
+	propPolicy := metav1.DeletePropagationForeground
+	return c.cachingclientset.CachingV1alpha1().Images(bt.Namespace).DeleteCollection(
+		&metav1.DeleteOptions{PropagationPolicy: &propPolicy},
+		metav1.ListOptions{LabelSelector: kmeta.MakeOldVersionLabelSelector(bt).String()},
+	)
+}
+
+func allCached(desired []caching.Image, observed []*caching.Image) (missing []caching.Image) {
+	for _, d := range desired {
+		found := false
+		for _, o := range observed {
+			if d.Name == o.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, d)
+		}
+	}
+	return missing
 }

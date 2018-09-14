@@ -364,6 +364,14 @@
   revision = "30785a2c434e431ef7c507b54617d6a951d5f2b4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:39ebcc2b11457b703ae9ee2e8cca0f68df21969c6102cb3b705f76cca0ea0239"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  pruneopts = "NUT"
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
   digest = "1:a969921c213e6d90554219689f484043e1e897d1936e524cfbb4fd6cb8ae2736"
   name = "golang.org/x/sys"
   packages = [
@@ -782,6 +790,7 @@
     "github.com/mattbaird/jsonpatch",
     "github.com/sergi/go-diff/diffmatchpatch",
     "go.uber.org/zap",
+    "golang.org/x/sync/errgroup",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/core/v1",
