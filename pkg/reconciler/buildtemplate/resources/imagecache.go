@@ -30,7 +30,7 @@ import (
 
 // Note: namespace is passed separately because this may be used for
 // cluster-scoped stuff as well.
-func makeImageCachesFromSpec(
+func MakeImageCachesFromSpec(
 	namespace string,
 	bt names.ImageCacheable,
 ) []caching.Image {
@@ -67,5 +67,5 @@ func makeImageCachesFromSpec(
 }
 
 func MakeImageCaches(bt *v1alpha1.BuildTemplate) []caching.Image {
-	return makeImageCachesFromSpec(bt.Namespace, bt)
+	return MakeImageCachesFromSpec(bt.Namespace, bt)
 }

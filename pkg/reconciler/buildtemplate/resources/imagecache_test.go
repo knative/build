@@ -27,15 +27,17 @@ import (
 	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 )
 
-func TestMakeImageCache(t *testing.T) {
+func TestMakeImageCacheFromSpec(t *testing.T) {
 	boolTrue := true
 
 	tests := []struct {
-		name string
-		bt   *v1alpha1.BuildTemplate
-		want []caching.Image
+		name      string
+		namespace string
+		bt        *v1alpha1.BuildTemplate
+		want      []caching.Image
 	}{{
-		name: "no container",
+		name:      "no container",
+		namespace: "foo",
 		bt: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       "foo",
@@ -46,7 +48,8 @@ func TestMakeImageCache(t *testing.T) {
 			Spec: v1alpha1.BuildTemplateSpec{},
 		},
 	}, {
-		name: "single container",
+		name:      "single container",
+		namespace: "foo",
 		bt: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       "foo",
@@ -82,7 +85,8 @@ func TestMakeImageCache(t *testing.T) {
 			},
 		}},
 	}, {
-		name: "duplicate container",
+		name:      "duplicate container",
+		namespace: "foo",
 		bt: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       "foo",
@@ -120,7 +124,8 @@ func TestMakeImageCache(t *testing.T) {
 			},
 		}},
 	}, {
-		name: "multiple containers",
+		name:      "multiple containers",
+		namespace: "foo",
 		bt: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       "foo",
@@ -180,7 +185,8 @@ func TestMakeImageCache(t *testing.T) {
 			},
 		}},
 	}, {
-		name: "containers with substitutions",
+		name:      "containers with substitutions",
+		namespace: "foo",
 		bt: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:       "foo",
@@ -197,6 +203,99 @@ func TestMakeImageCache(t *testing.T) {
 				}, {
 					Image: "helloworld:${TAG}",
 				}, {
+					Image: "busybox",
+				}},
+			},
+		},
+		want: []caching.Image{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "foo",
+				Name:      "bar-asdf-00000",
+				Labels: map[string]string{
+					"controller": "1234",
+					"version":    "asdf",
+				},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         "build.knative.dev/v1alpha1",
+					Kind:               "BuildTemplate",
+					Name:               "bar",
+					UID:                "1234",
+					Controller:         &boolTrue,
+					BlockOwnerDeletion: &boolTrue,
+				}},
+			},
+			Spec: caching.ImageSpec{
+				Image: "busybox",
+			},
+		}},
+	}, {
+		name:      "single container, different namespace",
+		namespace: "not-foo",
+		bt: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:       "foo",
+				Name:            "bar",
+				UID:             "1234",
+				ResourceVersion: "asdf",
+			},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Image: "busybox",
+				}},
+			},
+		},
+		want: []caching.Image{{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "not-foo",
+				Name:      "bar-asdf-00000",
+				Labels: map[string]string{
+					"controller": "1234",
+					"version":    "asdf",
+				},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         "build.knative.dev/v1alpha1",
+					Kind:               "BuildTemplate",
+					Name:               "bar",
+					UID:                "1234",
+					Controller:         &boolTrue,
+					BlockOwnerDeletion: &boolTrue,
+				}},
+			},
+			Spec: caching.ImageSpec{
+				Image: "busybox",
+			},
+		}},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := MakeImageCachesFromSpec(test.namespace, test.bt)
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("MakeImageCache (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+func TestMakeImageCache(t *testing.T) {
+	boolTrue := true
+
+	// Test going through MakeImageCache, but prefer testing MakeImageCachesFromSpec.
+	tests := []struct {
+		name string
+		bt   *v1alpha1.BuildTemplate
+		want []caching.Image
+	}{{
+		name: "single container",
+		bt: &v1alpha1.BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:       "foo",
+				Name:            "bar",
+				UID:             "1234",
+				ResourceVersion: "asdf",
+			},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
 					Image: "busybox",
 				}},
 			},

@@ -21,18 +21,24 @@ import (
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 
+	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
+	"github.com/knative/build/pkg/reconciler/buildtemplate"
+	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate/resources"
+	"github.com/knative/build/pkg/system"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
 	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
@@ -50,7 +56,7 @@ type Reconciler struct {
 	cachingclientset cachingclientset.Interface
 
 	clusterBuildTemplatesLister listers.ClusterBuildTemplateLister
-	imageLister                 cachinglisters.ImageLister
+	imagesLister                cachinglisters.ImageLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -87,7 +93,7 @@ func NewController(
 		buildclientset:              buildclientset,
 		cachingclientset:            cachingclientset,
 		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
-		imageLister:                 imageInformer.Lister(),
+		imagesLister:                imageInformer.Lister(),
 		Logger:                      logger,
 	}
 	impl := controller.NewImpl(r, logger, "ClusterBuildTemplates")
@@ -99,6 +105,14 @@ func NewController(
 		UpdateFunc: controller.PassNew(impl.Enqueue),
 	})
 
+	imageInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ClusterBuildTemplate")),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.EnqueueControllerOf,
+			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
+		},
+	})
+
 	return impl
 }
 
@@ -107,7 +121,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	logger := logging.FromContext(ctx)
 
 	// Get the ClusterBuildTemplate resource with this key
-	if _, err := c.clusterBuildTemplatesLister.Get(key); errors.IsNotFound(err) {
+	cbt, err := c.clusterBuildTemplatesLister.Get(key)
+	if errors.IsNotFound(err) {
 		// The ClusterBuildTemplate resource may no longer exist, in which case we stop processing.
 		logger.Errorf("clusterbuildtemplate %q in work queue no longer exists", key)
 		return nil
@@ -115,6 +130,30 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	// TODO: Meaningful reconciliation.
+	if err := c.reconcileImageCaches(ctx, cbt); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (c *Reconciler) reconcileImageCaches(ctx context.Context, cbt *v1alpha1.ClusterBuildTemplate) error {
+	ics := resources.MakeImageCaches(cbt)
+
+	eics, err := c.imagesLister.Images(system.Namespace).List(kmeta.MakeVersionLabelSelector(cbt))
+	if err != nil {
+		return err
+	}
+
+	// Make sure we have all of the desired caching resources.
+	if err := buildtemplate.CreateMissingImageCaches(ctx, c.cachingclientset, ics, eics); err != nil {
+		return err
+	}
+
+	// Delete any Image caches relevant to older versions of this resource.
+	propPolicy := metav1.DeletePropagationForeground
+	return c.cachingclientset.CachingV1alpha1().Images(system.Namespace).DeleteCollection(
+		&metav1.DeleteOptions{PropagationPolicy: &propPolicy},
+		metav1.ListOptions{LabelSelector: kmeta.MakeOldVersionLabelSelector(cbt).String()},
+	)
 }
