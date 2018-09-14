@@ -164,8 +164,21 @@ function acquire_cluster_admin_role() {
   # might not have the necessary permission.
   local password=$(gcloud --format="value(masterAuth.password)" \
       container clusters describe $2 --zone=$3)
-  kubectl config set-credentials cluster-admin \
-      --username=admin --password=${password}
+  if [[ -n "${password}" ]]; then
+    # Cluster created with basic authentication
+    kubectl config set-credentials cluster-admin \
+        --username=admin --password=${password}
+  else
+    local cert=$(mktemp)
+    local key=$(mktemp)
+    echo "Certificate in ${cert}, key in ${key}"
+    gcloud --format="value(masterAuth.clientCertificate)" \
+      container clusters describe $2 --zone=$3 | base64 -d > ${cert}
+    gcloud --format="value(masterAuth.clientKey)" \
+      container clusters describe $2 --zone=$3 | base64 -d > ${key}
+    kubectl config set-credentials cluster-admin \
+      --client-certificate=${cert} --client-key=${key}
+  fi
   kubectl config set-context $(kubectl config current-context) \
       --user=cluster-admin
   kubectl create clusterrolebinding cluster-admin-binding \
@@ -294,16 +307,36 @@ function check_licenses() {
   run_dep_collector -check $@
 }
 
-# Check links in all .md files in the repo.
-function check_links_in_markdown() {
-  local checker="markdown-link-check"
+# Run the given linter on the given files, checking it exists first.
+# Parameters: $1 - tool
+#             $2 - tool purpose (for error message if tool not installed)
+#             $3 - tool parameters (quote if multiple parameters used)
+#             $4..$n - files to run linter on
+function run_lint_tool() {
+  local checker=$1
+  local params=$3
   if ! hash ${checker} 2>/dev/null; then
-    warning "${checker} not installed, not checking links in .md files"
-    return 0
+    warning "${checker} not installed, not $2"
+    return 127
   fi
+  shift 3
   local failed=0
-  for md_file in $(find ${REPO_ROOT_DIR} -name \*.md); do
-    ${checker} -q ${md_file} || failed=1
+  for file in $@; do
+    ${checker} ${params} ${file} || failed=1
   done
   return ${failed}
+}
+
+# Check links in the given markdown files.
+# Parameters: $1...$n - files to inspect
+function check_links_in_markdown() {
+  # https://github.com/tcort/markdown-link-check
+  run_lint_tool markdown-link-check "checking links in markdown files" -q $@
+}
+
+# Check format of the given markdown files.
+# Parameters: $1...$n - files to inspect
+function lint_markdown() {
+  # https://github.com/markdownlint/markdownlint
+  run_lint_tool mdl "linting markdown files" "-r ~MD013" $@
 }
