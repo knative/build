@@ -20,13 +20,12 @@ package e2e
 
 import (
 	"flag"
-	"log"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
-	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -38,45 +37,30 @@ import (
 // the test namespace.
 func TestMain(m *testing.M) {
 	flag.Parse()
-	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
-	if err != nil {
-		log.Fatalf("newClients: %v", err)
-	}
+	logging.InitializeLogger(test.Flags.LogVerbose)
+	logger := logging.GetContextLogger("TestSetup")
 
-	// Ensure the test namespace exists, by trying to create it and ignoring
-	// already-exists errors.
-	if _, err := clients.kubeClient.Kube.CoreV1().Namespaces().Create(&corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: buildTestNamespace,
-		},
-	}); err == nil {
-		log.Printf("Created namespace %q", buildTestNamespace)
-	} else if kuberrors.IsAlreadyExists(err) {
-		log.Printf("Namespace %q already exists", buildTestNamespace)
-	} else {
-		log.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
-	}
-
-	defer func() {
-	}()
+	clients := setup(logger)
+	test.CleanupOnInterrupt(func() { teardownNamespace(clients, logger) }, logger)
 
 	code := m.Run()
-
-	// Delete the test namespace to be recreated next time.
-	if err := clients.kubeClient.Kube.CoreV1().Namespaces().Delete(buildTestNamespace, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
-		log.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
-	}
-	log.Printf("Deleted namespace %q", buildTestNamespace)
-
-	os.Exit(code)
+	defer func() {
+		// Cleanup namespace
+		teardownNamespace(clients, logger)
+		os.Exit(code)
+	}()
 }
 
 // TestSimpleBuild tests that a simple build that does nothing interesting
 // succeeds.
 func TestSimpleBuild(t *testing.T) {
-	clients := setup(t)
-
+	logger := logging.GetContextLogger("TestSimpleBuild")
+	clients := buildClients(logger)
 	buildName := "simple-build"
+
+	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
+	defer teardownBuilds(clients, logger)
+
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
@@ -100,9 +84,14 @@ func TestSimpleBuild(t *testing.T) {
 
 // TestFailingBuild tests that a simple build that fails, fails as expected.
 func TestFailingBuild(t *testing.T) {
-	clients := setup(t)
+	logger := logging.GetContextLogger("TestFailingBuild")
 
+	clients := buildClients(logger)
 	buildName := "failing-build"
+
+	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
+	defer teardownBuilds(clients, logger)
+
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
@@ -124,9 +113,14 @@ func TestFailingBuild(t *testing.T) {
 }
 
 func TestBuildLowTimeout(t *testing.T) {
-	clients := setup(t)
+	logger := logging.GetContextLogger("TestBuildLowTimeout")
 
+	clients := buildClients(logger)
 	buildName := "build-low-timeout"
+
+	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
+	defer teardownBuilds(clients, logger)
+
 	buildTimeout := 50 * time.Second
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
@@ -183,9 +177,14 @@ func TestBuildLowTimeout(t *testing.T) {
 // TestPendingBuild tests that a build with non existent node selector will remain in pending
 // state until watch timeout.
 func TestPendingBuild(t *testing.T) {
-	clients := setup(t)
+	logger := logging.GetContextLogger("TestPendingBuild")
 
+	clients := buildClients(logger)
 	buildName := "pending-build"
+
+	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
+	defer teardownBuilds(clients, logger)
+
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
@@ -210,9 +209,14 @@ func TestPendingBuild(t *testing.T) {
 // TestPodAffinity tests that a build with non existent pod affinity does not scheduled
 // and fails after watch timeout
 func TestPodAffinity(t *testing.T) {
-	clients := setup(t)
+	logger := logging.GetContextLogger("TestPodAffinity")
 
+	clients := buildClients(logger)
 	buildName := "affinity-build"
+
+	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
+	defer teardownBuilds(clients, logger)
+
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,

@@ -21,7 +21,7 @@ package e2e
 import (
 	"errors"
 	"fmt"
-	"testing"
+	"log"
 
 	"github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +33,8 @@ import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildversioned "github.com/knative/build/pkg/client/clientset/versioned"
 	buildtyped "github.com/knative/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
+	"github.com/knative/pkg/test/logging"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type clients struct {
@@ -42,10 +44,54 @@ type clients struct {
 
 const buildTestNamespace = "build-tests"
 
-func setup(t *testing.T) *clients {
+func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
+	if clients != nil && clients.kubeClient != nil {
+		logger.Infof("Deleting namespace %q", buildTestNamespace)
+
+		if err := clients.kubeClient.Kube.CoreV1().Namespaces().Delete(buildTestNamespace, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
+			log.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
+		}
+	}
+}
+
+func teardownBuilds(clients *clients, logger *logging.BaseLogger) {
+	if clients != nil && clients.buildClient != nil {
+		logger.Infof("Deleting builds in namespace %q", buildTestNamespace)
+		err := clients.buildClient.deleteBuilds()
+		if err != nil {
+			logger.Fatalf("Error deleting builds: %v", err)
+		}
+	}
+}
+
+func buildClients(logger *logging.BaseLogger) *clients {
 	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
 	if err != nil {
-		t.Fatalf("newClients: %v", err)
+		logger.Fatalf("Error creating newClients: %v", err)
+	}
+	return clients
+}
+
+func setup(logger *logging.BaseLogger) *clients {
+	clients := buildClients(logger)
+
+	// Ensure the test namespace exists, by trying to create it and ignoring
+	// already-exists errors.
+	if _, err := clients.kubeClient.Kube.CoreV1().Namespaces().Create(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: buildTestNamespace,
+		},
+	}); err == nil {
+		logger.Infof("Created namespace %q", buildTestNamespace)
+	} else if kuberrors.IsAlreadyExists(err) {
+		logger.Infof("Namespace %q already exists", buildTestNamespace)
+	} else {
+		logger.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
+	}
+
+	err := clients.buildClient.deleteBuilds()
+	if err != nil {
+		logger.Errorf("Error deleting builds: %v", err)
 	}
 
 	return clients
@@ -83,6 +129,21 @@ func newClients(configPath string, clusterName string, namespace string) (*clien
 
 type buildClient struct {
 	builds buildtyped.BuildInterface
+}
+
+func (c *buildClient) deleteBuilds() error {
+	buildList, err := c.builds.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list build: %v", err)
+	}
+
+	for _, build := range buildList.Items {
+		err := c.builds.Delete(build.Name, &metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to delete build %s: %v", build.Name, err)
+		}
+	}
+	return nil
 }
 
 func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
