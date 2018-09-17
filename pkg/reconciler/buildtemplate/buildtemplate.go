@@ -153,21 +153,8 @@ func (c *Reconciler) reconcileImageCaches(ctx context.Context, bt *v1alpha1.Buil
 	}
 
 	// Make sure we have all of the desired caching resources.
-	if missing := allCached(ics, eics); len(missing) > 0 {
-		grp, _ := errgroup.WithContext(ctx)
-
-		for _, m := range missing {
-			m := m
-			grp.Go(func() error {
-				_, err := c.cachingclientset.CachingV1alpha1().Images(m.Namespace).Create(&m)
-				return err
-			})
-		}
-
-		// Wait for the creates to complete.
-		if err := grp.Wait(); err != nil {
-			return err
-		}
+	if err := CreateMissingImageCaches(ctx, c.cachingclientset, ics, eics); err != nil {
+		return err
 	}
 
 	// Delete any Image caches relevant to older versions of this resource.
@@ -178,7 +165,7 @@ func (c *Reconciler) reconcileImageCaches(ctx context.Context, bt *v1alpha1.Buil
 	)
 }
 
-func allCached(desired []caching.Image, observed []*caching.Image) (missing []caching.Image) {
+func missingImageCaches(desired []caching.Image, observed []*caching.Image) (missing []caching.Image) {
 	for _, d := range desired {
 		found := false
 		for _, o := range observed {
@@ -192,4 +179,24 @@ func allCached(desired []caching.Image, observed []*caching.Image) (missing []ca
 		}
 	}
 	return missing
+}
+
+func CreateMissingImageCaches(ctx context.Context, client cachingclientset.Interface,
+	desired []caching.Image, observed []*caching.Image) error {
+	missing := missingImageCaches(desired, observed)
+	if len(missing) == 0 {
+		return nil
+	}
+
+	grp, _ := errgroup.WithContext(ctx)
+	for _, m := range missing {
+		m := m
+		grp.Go(func() error {
+			_, err := client.CachingV1alpha1().Images(m.Namespace).Create(&m)
+			return err
+		})
+	}
+
+	// Wait for the creates to complete.
+	return grp.Wait()
 }
