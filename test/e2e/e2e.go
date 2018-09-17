@@ -21,9 +21,9 @@ package e2e
 import (
 	"errors"
 	"fmt"
-	"testing"
 
 	"github.com/knative/pkg/test"
+	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -33,6 +33,7 @@ import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildversioned "github.com/knative/build/pkg/client/clientset/versioned"
 	buildtyped "github.com/knative/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type clients struct {
@@ -42,12 +43,50 @@ type clients struct {
 
 const buildTestNamespace = "build-tests"
 
-func setup(t *testing.T) *clients {
+func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
+	if clients != nil && clients.kubeClient != nil {
+		logger.Infof("Deleting namespace %q", buildTestNamespace)
+
+		if err := clients.kubeClient.Kube.CoreV1().Namespaces().Delete(buildTestNamespace, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
+			logger.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
+		}
+	}
+}
+
+func teardownBuild(clients *clients, logger *logging.BaseLogger, name string) {
+	if clients != nil && clients.buildClient != nil {
+		logger.Infof("Deleting build %q in namespace %q", name, buildTestNamespace)
+
+		if err := clients.buildClient.builds.Delete(name, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
+			logger.Fatalf("Error deleting build %q: %v", name, err)
+		}
+	}
+}
+
+func buildClients(logger *logging.BaseLogger) *clients {
 	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
 	if err != nil {
-		t.Fatalf("newClients: %v", err)
+		logger.Fatalf("Error creating newClients: %v", err)
 	}
+	return clients
+}
 
+func setup(logger *logging.BaseLogger) *clients {
+	clients := buildClients(logger)
+
+	// Ensure the test namespace exists, by trying to create it and ignoring
+	// already-exists errors.
+	if _, err := clients.kubeClient.Kube.CoreV1().Namespaces().Create(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: buildTestNamespace,
+		},
+	}); err == nil {
+		logger.Infof("Created namespace %q", buildTestNamespace)
+	} else if kuberrors.IsAlreadyExists(err) {
+		logger.Infof("Namespace %q already exists", buildTestNamespace)
+	} else {
+		logger.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
+	}
 	return clients
 }
 
