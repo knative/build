@@ -21,6 +21,7 @@ package e2e
 import (
 	"context"
 	"flag"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -41,6 +42,15 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 	logging.InitializeLogger(test.Flags.LogVerbose)
 	logger := logging.GetContextLogger("TestSetup")
+	flag.Set("alsologtostderr", "true")
+	if test.Flags.EmitMetrics {
+		logging.InitializeMetricExporter()
+	}
+
+	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
+	if err != nil {
+		log.Fatalf("newClients: %v", err)
+	}
 
 	clients := setup(logger)
 	test.CleanupOnInterrupt(func() { teardownNamespace(clients, logger) }, logger)
