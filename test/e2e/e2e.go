@@ -57,7 +57,7 @@ func teardownBuild(clients *clients, logger *logging.BaseLogger, name string) {
 	if clients != nil && clients.buildClient != nil {
 		logger.Infof("Deleting build %q in namespace %q", name, buildTestNamespace)
 
-		if err := clients.buildClient.builds.Delete(name, &metav1.DeleteOptions{}); err != nil {
+		if err := clients.buildClient.builds.Delete(name, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
 			logger.Fatalf("Error deleting build %q: %v", name, err)
 		}
 	}

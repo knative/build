@@ -42,12 +42,16 @@ func TestMain(m *testing.M) {
 
 	clients := setup(logger)
 	test.CleanupOnInterrupt(func() { teardownNamespace(clients, logger) }, logger)
+	var code int
 
-	code := m.Run()
+	defer func() {
+		// Cleanup namespace
+		teardownNamespace(clients, logger)
+		// Exit with m.Run exit code
+		os.Exit(code)
+	}()
 
-	// Cleanup namespace
-	teardownNamespace(clients, logger)
-	os.Exit(code)
+	code = m.Run()
 }
 
 // TestSimpleBuild tests that a simple build that does nothing interesting
