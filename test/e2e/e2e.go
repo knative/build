@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/knative/pkg/test"
+	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -32,7 +33,6 @@ import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildversioned "github.com/knative/build/pkg/client/clientset/versioned"
 	buildtyped "github.com/knative/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
-	"github.com/knative/pkg/test/logging"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -56,8 +56,8 @@ func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
 func teardownBuild(clients *clients, logger *logging.BaseLogger, name string) {
 	if clients != nil && clients.buildClient != nil {
 		logger.Infof("Deleting build %q in namespace %q", name, buildTestNamespace)
-		err := clients.buildClient.deleteBuild(name)
-		if err != nil {
+
+		if err := clients.buildClient.builds.Delete(name, &metav1.DeleteOptions{}); err != nil {
 			logger.Fatalf("Error deleting build %q: %v", name, err)
 		}
 	}
@@ -122,10 +122,6 @@ func newClients(configPath string, clusterName string, namespace string) (*clien
 
 type buildClient struct {
 	builds buildtyped.BuildInterface
-}
-
-func (c *buildClient) deleteBuild(name string) error {
-	return c.builds.Delete(name, &metav1.DeleteOptions{})
 }
 
 func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
