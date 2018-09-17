@@ -58,8 +58,8 @@ func TestSimpleBuild(t *testing.T) {
 	clients := buildClients(logger)
 	buildName := "simple-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
-	defer teardownBuilds(clients, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -89,8 +89,8 @@ func TestFailingBuild(t *testing.T) {
 	clients := buildClients(logger)
 	buildName := "failing-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
-	defer teardownBuilds(clients, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -118,8 +118,8 @@ func TestBuildLowTimeout(t *testing.T) {
 	clients := buildClients(logger)
 	buildName := "build-low-timeout"
 
-	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
-	defer teardownBuilds(clients, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
 
 	buildTimeout := 50 * time.Second
 
@@ -182,8 +182,8 @@ func TestPendingBuild(t *testing.T) {
 	clients := buildClients(logger)
 	buildName := "pending-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
-	defer teardownBuilds(clients, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -214,8 +214,8 @@ func TestPodAffinity(t *testing.T) {
 	clients := buildClients(logger)
 	buildName := "affinity-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuilds(clients, logger) }, logger)
-	defer teardownBuilds(clients, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{

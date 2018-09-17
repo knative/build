@@ -53,12 +53,12 @@ func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
 	}
 }
 
-func teardownBuilds(clients *clients, logger *logging.BaseLogger) {
+func teardownBuild(clients *clients, logger *logging.BaseLogger, name string) {
 	if clients != nil && clients.buildClient != nil {
-		logger.Infof("Deleting builds in namespace %q", buildTestNamespace)
-		err := clients.buildClient.deleteBuilds()
+		logger.Infof("Deleting build %q in namespace %q", name, buildTestNamespace)
+		err := clients.buildClient.deleteBuild(name)
 		if err != nil {
-			logger.Fatalf("Error deleting builds: %v", err)
+			logger.Fatalf("Error deleting build %q: %v", name, err)
 		}
 	}
 }
@@ -87,12 +87,6 @@ func setup(logger *logging.BaseLogger) *clients {
 	} else {
 		logger.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
 	}
-
-	err := clients.buildClient.deleteBuilds()
-	if err != nil {
-		logger.Errorf("Error deleting builds: %v", err)
-	}
-
 	return clients
 }
 
@@ -130,19 +124,8 @@ type buildClient struct {
 	builds buildtyped.BuildInterface
 }
 
-func (c *buildClient) deleteBuilds() error {
-	buildList, err := c.builds.List(metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to list build: %v", err)
-	}
-
-	for _, build := range buildList.Items {
-		err := c.builds.Delete(build.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to delete build %s: %v", build.Name, err)
-		}
-	}
-	return nil
+func (c *buildClient) deleteBuild(name string) error {
+	return c.builds.Delete(name, &metav1.DeleteOptions{})
 }
 
 func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
