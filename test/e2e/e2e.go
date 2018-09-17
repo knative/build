@@ -21,7 +21,6 @@ package e2e
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
@@ -49,7 +48,7 @@ func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
 		logger.Infof("Deleting namespace %q", buildTestNamespace)
 
 		if err := clients.kubeClient.Kube.CoreV1().Namespaces().Delete(buildTestNamespace, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
-			log.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
+			logger.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
 		}
 	}
 }
