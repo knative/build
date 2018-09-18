@@ -25,6 +25,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildercommon "github.com/knative/build/pkg/builder"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 const operationName = "nop"
@@ -49,7 +50,7 @@ func (nb *operation) Checkpoint(_ *v1alpha1.Build, status *v1alpha1.BuildStatus)
 	status.Google.Operation = nb.Name()
 	status.CreationTime = startTime
 	status.StartTime = startTime
-	status.SetCondition(&v1alpha1.BuildCondition{
+	status.SetCondition(&duckv1alpha1.Condition{
 		Type:   v1alpha1.BuildSucceeded,
 		Status: corev1.ConditionUnknown,
 		Reason: "Building",
@@ -74,14 +75,14 @@ func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 	}
 
 	if nb.builder.ErrorMessage != "" {
-		bs.SetCondition(&v1alpha1.BuildCondition{
+		bs.SetCondition(&duckv1alpha1.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Reason:  "NopFailed",
 			Message: nb.builder.ErrorMessage,
 		})
 	} else {
-		bs.SetCondition(&v1alpha1.BuildCondition{
+		bs.SetCondition(&duckv1alpha1.Condition{
 			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionTrue,
 		})

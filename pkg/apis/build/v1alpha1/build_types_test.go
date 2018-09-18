@@ -17,10 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/knative/build/pkg/buildtest"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 const bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"
@@ -47,11 +47,11 @@ func TestParsing(t *testing.T) {
 
 func TestBuildConditions(t *testing.T) {
 	rev := &Build{}
-	foo := &BuildCondition{
+	foo := &duckv1alpha1.Condition{
 		Type:   "Foo",
 		Status: "True",
 	}
-	bar := &BuildCondition{
+	bar := &duckv1alpha1.Condition{
 		Type:   "Bar",
 		Status: "True",
 	}
@@ -63,28 +63,10 @@ func TestBuildConditions(t *testing.T) {
 		t.Fatalf("Unexpected Condition length; want 1, got %d", len(rev.Status.Conditions))
 	}
 
-	// Remove a non-existent condition.
-	rev.Status.RemoveCondition(bar.Type)
-
-	if len(rev.Status.Conditions) != 1 {
-		t.Fatalf("Unexpected Condition length; want 1, got %d", len(rev.Status.Conditions))
-	}
-
-	if got, want := rev.Status.GetCondition(foo.Type), foo; !reflect.DeepEqual(got, want) {
-		t.Errorf("GetCondition() = %v, want %v", got, want)
-	}
-
 	// Add a second condition.
 	rev.Status.SetCondition(bar)
 
 	if len(rev.Status.Conditions) != 2 {
 		t.Fatalf("Unexpected Condition length; want 2, got %d", len(rev.Status.Conditions))
-	}
-
-	// Remove an existing condition.
-	rev.Status.RemoveCondition(bar.Type)
-
-	if len(rev.Status.Conditions) != 1 {
-		t.Fatalf("Unexpected Condition length; want 1, got %d", len(rev.Status.Conditions))
 	}
 }

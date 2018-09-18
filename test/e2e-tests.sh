@@ -60,7 +60,7 @@ function run_yaml_tests() {
   echo ">> Checking test results"
   for expected_status in succeeded failed; do
     results="$(kubectl get builds -l expect=${expected_status} \
-        --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].state}{.status.conditions[*].status}{" "}{end}')"
+        --output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].type}{.status.conditions[*].status}{" "}{end}')"
     case $expected_status in
       succeeded)
         want=succeededtrue

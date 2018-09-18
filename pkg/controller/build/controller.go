@@ -34,15 +34,14 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/controller"
-	"github.com/knative/pkg/logging/logkey"
-
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-
+	"github.com/knative/build/pkg/builder"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
+	"github.com/knative/build/pkg/controller"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/logging/logkey"
 )
 
 const controllerAgentName = "build-controller"
@@ -288,7 +287,7 @@ func (c *Controller) syncHandler(key string) error {
 					return err
 				}
 
-				build.Status.SetCondition(&v1alpha1.BuildCondition{
+				build.Status.SetCondition(&duckv1alpha1.Condition{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionFalse,
 					Reason:  "BuildTimeout",
@@ -347,7 +346,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			op, err := b.Execute()
 			if err != nil {
-				build.Status.SetCondition(&v1alpha1.BuildCondition{
+				build.Status.SetCondition(&duckv1alpha1.Condition{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionFalse,
 					Reason:  "BuildExecuteFailed",
