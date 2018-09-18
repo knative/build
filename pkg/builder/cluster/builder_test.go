@@ -23,6 +23,7 @@ import (
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"go.uber.org/zap"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -720,7 +721,7 @@ func TestStripStepStates(t *testing.T) {
 					Reason: "Building",
 				}},
 			}
-			if d := buildtest.JSONDiff(wantStatus, status); d != "" {
+			if d := cmp.Diff(wantStatus, status); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})

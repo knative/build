@@ -98,10 +98,11 @@
   revision = "e89373fe6b4a7413d7acd6da1725b83ef713e6e4"
 
 [[projects]]
-  digest = "1:2e3c336fc7fde5c984d2841455a658a6d626450b1754a854b3b32e7a8f49a07a"
+  digest = "1:d2754cafcab0d22c13541618a8029a70a8959eb3525ff201fe971637e2274cd0"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
+    "cmp/cmpopts",
     "cmp/internal/diff",
     "cmp/internal/function",
     "cmp/internal/value",
@@ -263,14 +264,6 @@
   pruneopts = "NUT"
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
-
-[[projects]]
-  digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
-  name = "github.com/sergi/go-diff"
-  packages = ["diffmatchpatch"]
-  pruneopts = "NUT"
-  revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:15e5c398fbd9d2c439b635a08ac161b13d04f0c2aa587fe256b65dc0c3efe8b7"
@@ -773,6 +766,7 @@
   input-imports = [
     "github.com/go-yaml/yaml",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/knative/caching/pkg/apis/caching",
     "github.com/knative/caching/pkg/apis/caching/v1alpha1",
     "github.com/knative/caching/pkg/client/clientset/versioned",
@@ -786,9 +780,9 @@
     "github.com/knative/pkg/logging/logkey",
     "github.com/knative/pkg/signals",
     "github.com/knative/pkg/test",
+    "github.com/knative/pkg/test/logging",
     "github.com/knative/test-infra",
     "github.com/mattbaird/jsonpatch",
-    "github.com/sergi/go-diff/diffmatchpatch",
     "go.uber.org/zap",
     "golang.org/x/sync/errgroup",
     "k8s.io/api/admission/v1beta1",

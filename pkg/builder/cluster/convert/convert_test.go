@@ -19,13 +19,18 @@ package convert
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/buildtest"
 )
+
+var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
 
 func read2CRD(f string) (*v1alpha1.Build, error) {
 	var bs v1alpha1.Build
@@ -121,7 +126,7 @@ func TestRoundtrip(t *testing.T) {
 				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
 			}
 
-			if d := buildtest.JSONDiff(og, b); d != "" {
+			if d := cmp.Diff(og, b, ignorePrivateResourceFields); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})
@@ -346,7 +351,7 @@ func TestFromCRD(t *testing.T) {
 				t.Fatalf("FromCRD: %v", err)
 			}
 
-			if d := buildtest.JSONDiff(got.Spec, c.want); d != "" {
+			if d := cmp.Diff(&got.Spec, c.want, ignorePrivateResourceFields); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})
