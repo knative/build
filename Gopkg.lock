@@ -200,10 +200,12 @@
   revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
 
 [[projects]]
-  digest = "1:0fe8157574f136a341c550d375e5eff6045f20f9310da8a703fb81775568aa2b"
+  digest = "1:5323b3b63fd8130347d4005190b5e3144e5bf3cb11d04630a772a97dad657f96"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
+    "apis/duck",
+    "apis/duck/v1alpha1",
     "configmap",
     "controller",
     "kmeta",
@@ -215,7 +217,7 @@
     "test/spoof",
   ]
   pruneopts = "NUT"
-  revision = "2a7e950c4e2d635d6e32ba3d050dd32ba7be5be3"
+  revision = "67830c7a64431edc38ee19628dc7116b0c6d99b5"
 
 [[projects]]
   branch = "master"
@@ -773,6 +775,8 @@
     "github.com/knative/caching/pkg/client/informers/externalversions",
     "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1",
     "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
+    "github.com/knative/pkg/apis/duck",
+    "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/kmeta",
@@ -790,6 +794,7 @@
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/fields",
     "k8s.io/apimachinery/pkg/labels",

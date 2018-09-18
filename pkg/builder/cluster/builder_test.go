@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 
 	"github.com/google/go-cmp/cmp"
@@ -32,6 +33,7 @@ import (
 
 	buildercommon "github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/buildtest"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 
 	"testing"
 )
@@ -42,6 +44,10 @@ const (
 	expectedErrorReason  = "it was bad"
 	expectedPendingMsg   = "build step \"\" is pending with reason \"stuff broke\""
 )
+
+var ignoreVolatileTime = cmp.Comparer(func(_, _ apis.VolatileTime) bool {
+	return true
+})
 
 func newBuilder(cs kubernetes.Interface) *builder {
 	kif := kubeinformers.NewSharedInformerFactory(cs, time.Second*30)
@@ -715,13 +721,13 @@ func TestStripStepStates(t *testing.T) {
 					Terminated: &corev1.ContainerStateTerminated{Reason: "real step: should be retained"},
 				}},
 				StepsCompleted: []string{""},
-				Conditions: []v1alpha1.BuildCondition{{
+				Conditions: duckv1alpha1.Conditions{{
 					Type:   v1alpha1.BuildSucceeded,
 					Status: corev1.ConditionUnknown,
 					Reason: "Building",
 				}},
 			}
-			if d := cmp.Diff(wantStatus, status); d != "" {
+			if d := cmp.Diff(wantStatus, status, ignoreVolatileTime); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})

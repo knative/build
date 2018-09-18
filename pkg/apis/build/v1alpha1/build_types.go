@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/knative/pkg/apis/duck"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/kmeta"
 )
 
@@ -43,6 +45,9 @@ type Build struct {
 
 // Check that our resource implements several interfaces.
 var _ kmeta.OwnerRefable = (*Build)(nil)
+
+// Check that Build implements the Conditions duck type.
+var _ = duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{})
 
 // BuildSpec is the spec for a Build resource.
 type BuildSpec struct {
@@ -209,11 +214,16 @@ type BuildStatus struct {
 
 	// StepStates describes the state of each build step container.
 	StepStates []corev1.ContainerState `json:"stepStates,omitEmpty"`
-	// Conditions describes the set of conditions of this build.
-	Conditions []BuildCondition `json:"conditions,omitempty"`
+
 	// StepsCompleted lists the name of build steps completed.
 	StepsCompleted []string `json:"stepsCompleted"`
+
+	// Conditions describes the set of conditions of this build.
+	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty"`
 }
+
+// Check that BuildStatus may have its conditions managed.
+var _ duckv1alpha1.ConditionsAccessor = (*BuildStatus)(nil)
 
 // ClusterSpec provides information about the on-cluster build, if applicable.
 type ClusterSpec struct {
@@ -229,35 +239,14 @@ type GoogleSpec struct {
 	Operation string `json:"operation"`
 }
 
-// BuildConditionType defines types of build conditions.
-type BuildConditionType string
-
 // BuildSucceeded is set when the build is running, and becomes True when the
 // build finishes successfully.
 //
 // If the build is ongoing, its status will be Unknown. If it fails, its status
 // will be False.
-const BuildSucceeded BuildConditionType = "Succeeded"
+const BuildSucceeded = duckv1alpha1.ConditionSucceeded
 
-// BuildCondition defines a readiness condition for a Build.
-// See: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#typical-status-properties
-type BuildCondition struct {
-	// Type is the type of the condition.
-	Type BuildConditionType `json:"state"`
-
-	// Status is one of True, False or Unknown.
-	Status corev1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
-
-	// Reason is a one-word CamelCase reason for the condition's last
-	// transition.
-	// +optional
-	Reason string `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
-
-	// Message is a human-readable message indicating details about the
-	// last transition.
-	// +optional
-	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
-}
+var buildCondSet = duckv1alpha1.NewBatchConditionSet()
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -271,42 +260,28 @@ type BuildList struct {
 }
 
 // GetCondition returns the Condition matching the given type.
-func (bs *BuildStatus) GetCondition(t BuildConditionType) *BuildCondition {
-	for _, cond := range bs.Conditions {
-		if cond.Type == t {
-			return &cond
-		}
-	}
-	return nil
+func (bs *BuildStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+	return buildCondSet.Manage(bs).GetCondition(t)
 }
 
 // SetCondition sets the condition, unsetting previous conditions with the same
 // type as necessary.
-func (b *BuildStatus) SetCondition(newCond *BuildCondition) {
-	if newCond == nil {
-		return
+func (bs *BuildStatus) SetCondition(newCond *duckv1alpha1.Condition) {
+	if newCond != nil {
+		buildCondSet.Manage(bs).SetCondition(*newCond)
 	}
-
-	t := newCond.Type
-	var conditions []BuildCondition
-	for _, cond := range b.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
-	conditions = append(conditions, *newCond)
-	b.Conditions = conditions
 }
 
-// RemoveCondition removes any condition with the given type.
-func (b *BuildStatus) RemoveCondition(t BuildConditionType) {
-	var conditions []BuildCondition
-	for _, cond := range b.Conditions {
-		if cond.Type != t {
-			conditions = append(conditions, cond)
-		}
-	}
-	b.Conditions = conditions
+// GetConditions returns the Conditions array. This enables generic handling of
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (bs *BuildStatus) GetConditions() duckv1alpha1.Conditions {
+	return bs.Conditions
+}
+
+// SetConditions sets the Conditions array. This enables generic handling of
+// conditions by implementing the duckv1alpha1.Conditions interface.
+func (bs *BuildStatus) SetConditions(conditions duckv1alpha1.Conditions) {
+	bs.Conditions = conditions
 }
 
 // GetGeneration returns the generation number of this object.

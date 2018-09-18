@@ -32,6 +32,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildercommon "github.com/knative/build/pkg/builder"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 type operation struct {
@@ -75,7 +76,7 @@ func (op *operation) Checkpoint(build *v1alpha1.Build, status *v1alpha1.BuildSta
 		}
 		status.StepStates = append(status.StepStates, s.State)
 	}
-	status.SetCondition(&v1alpha1.BuildCondition{
+	status.SetCondition(&duckv1alpha1.Condition{
 		Type:   v1alpha1.BuildSucceeded,
 		Status: corev1.ConditionUnknown,
 		Reason: "Building",
@@ -134,21 +135,21 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 
 	if pod.Status.Phase == corev1.PodFailed {
 		msg := getFailureMessage(pod)
-		bs.SetCondition(&v1alpha1.BuildCondition{
+		bs.SetCondition(&duckv1alpha1.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Message: msg,
 		})
 	} else if pod.Status.Phase == corev1.PodPending {
 		msg := getWaitingMessage(pod)
-		bs.SetCondition(&v1alpha1.BuildCondition{
+		bs.SetCondition(&duckv1alpha1.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionUnknown,
 			Message: "Pending",
 			Reason:  msg,
 		})
 	} else {
-		bs.SetCondition(&v1alpha1.BuildCondition{
+		bs.SetCondition(&duckv1alpha1.Condition{
 			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionTrue,
 		})
