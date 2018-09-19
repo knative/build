@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/knative/build/pkg/buildtest"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
@@ -46,7 +48,7 @@ func TestParsing(t *testing.T) {
 }
 
 func TestBuildConditions(t *testing.T) {
-	rev := &Build{}
+	b := &Build{}
 	foo := &duckv1alpha1.Condition{
 		Type:   "Foo",
 		Status: "True",
@@ -57,16 +59,57 @@ func TestBuildConditions(t *testing.T) {
 	}
 
 	// Add a new condition.
-	rev.Status.SetCondition(foo)
+	b.Status.SetCondition(foo)
 
-	if len(rev.Status.Conditions) != 1 {
-		t.Fatalf("Unexpected Condition length; want 1, got %d", len(rev.Status.Conditions))
+	if len(b.Status.Conditions) != 1 {
+		t.Fatalf("Unexpected Condition length; want 1, got %d", len(b.Status.Conditions))
+	}
+
+	foobuildCondition := b.Status.GetConditions()[0]
+	if cmp.Diff(foobuildCondition.Type, foo.Type) != "" {
+		t.Fatalf("Unexpected build condition type; want %v got %v", foo.Type, foobuildCondition.Type)
+	}
+
+	if cmp.Diff(foobuildCondition.Status, foo.Status) != "" {
+		t.Fatalf("Unexpected build condition status; want %v got %v", foo.Status, foobuildCondition.Type)
 	}
 
 	// Add a second condition.
-	rev.Status.SetCondition(bar)
+	b.Status.SetCondition(bar)
 
-	if len(rev.Status.Conditions) != 2 {
-		t.Fatalf("Unexpected Condition length; want 2, got %d", len(rev.Status.Conditions))
+	if len(b.Status.Conditions) != 2 {
+		t.Fatalf("Unexpected Condition length; want 2, got %d", len(b.Status.Conditions))
+	}
+
+	barBuildCondition := b.Status.GetConditions()[0]
+
+	if cmp.Diff(barBuildCondition.Type, bar.Type) != "" {
+		t.Fatalf("Unexpected build condition type; want %v got %v", bar.Type, barBuildCondition.Type)
+	}
+
+	if cmp.Diff(barBuildCondition.Status, bar.Status) != "" {
+		t.Fatalf("Unexpected build condition status; want %v got %v", bar.Status, barBuildCondition.Type)
+	}
+
+}
+
+func TestBuildGeneration(t *testing.T) {
+	b := Build{}
+	if a := b.GetGeneration(); a != 0 {
+		t.Errorf("empty build generation should be 0 but got: %d", a)
+	}
+
+	b.SetGeneration(5)
+	if e, a := int64(5), b.GetGeneration(); e != a {
+		t.Errorf("getgeneration mismatch; expected: %d got: %d", e, a)
+	}
+}
+
+func TestBuildGroupVersionKind(t *testing.T) {
+	b := Build{}
+
+	epectedKind := "Build"
+	if b.GetGroupVersionKind().Kind != epectedKind {
+		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", epectedKind, b.GetGroupVersionKind().Kind)
 	}
 }
