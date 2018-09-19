@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"log"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -134,10 +135,12 @@ func main() {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)
 		}
 	}
-
+	var wg sync.WaitGroup
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {
+		wg.Add(1)
 		go func(ctrlr controller.Interface) {
+			defer wg.Done()
 			// We don't expect this to return until stop is called,
 			// but if it does, propagate it back.
 			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
@@ -145,7 +148,6 @@ func main() {
 			}
 		}(ctrlr)
 	}
-
-	// TODO(mattmoor): Use a sync.WaitGroup instead?
-	<-stopCh
+	// Wait for all controllers to finish
+	wg.Wait()
 }
