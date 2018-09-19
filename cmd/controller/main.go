@@ -148,7 +148,7 @@ func main() {
 	}
 
 	// Wait for all controllers to finish and log errors if there are any
-	if err := g.Wait(); err == nil {
+	if err := g.Wait(); err != nil {
 		logger.Fatalf("Error running controller: %s", err.Error())
 	}
 }
