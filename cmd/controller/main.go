@@ -19,10 +19,10 @@ package main
 import (
 	"flag"
 	"log"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -135,19 +135,20 @@ func main() {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)
 		}
 	}
-	var wg sync.WaitGroup
+	var g errgroup.Group
+
 	// Start all of the controllers.
 	for _, ctrlr := range controllers {
-		wg.Add(1)
-		go func(ctrlr controller.Interface) {
-			defer wg.Done()
+		ctrlr := ctrlr
+		g.Go(func() error {
 			// We don't expect this to return until stop is called,
 			// but if it does, propagate it back.
-			if err := ctrlr.Run(threadsPerController, stopCh); err != nil {
-				logger.Fatalf("Error running controller: %s", err.Error())
-			}
-		}(ctrlr)
+			return ctrlr.Run(threadsPerController, stopCh)
+		})
 	}
-	// Wait for all controllers to finish
-	wg.Wait()
+
+	// Wait for all controllers to finish and log errors if there are any
+	if err := g.Wait(); err == nil {
+		logger.Fatalf("Error running controller: %s", err.Error())
+	}
 }
