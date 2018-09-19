@@ -243,7 +243,7 @@ func validateTimeout(timeout metav1.Duration) error {
 	if timeout.Duration > maxTimeout {
 		return validationError("InvalidTimeout", "build timeout exceeded 24h")
 	} else if timeout.Duration < 0 {
-		return validationError("InvalidTimeFormat", "build timeout should be greater than 0")
+		return validationError("InvalidFormat", "build timeout should be greater than 0")
 	}
 	return nil
 }
