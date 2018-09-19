@@ -145,6 +145,7 @@ func (in *BuildSpec) DeepCopyInto(out *BuildSpec) {
 			(*out)[key] = val
 		}
 	}
+	out.Timeout = in.Timeout
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		if *in == nil {

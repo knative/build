@@ -70,7 +70,7 @@ func TestSimpleBuild(t *testing.T) {
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: "40s",
+			Timeout: metav1.Duration{Duration: 40 * time.Second},
 			Steps: []corev1.Container{{
 				Image: "busybox",
 				Args:  []string{"echo", "simple"},
@@ -132,7 +132,7 @@ func TestBuildLowTimeout(t *testing.T) {
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: buildTimeout.String(),
+			Timeout: metav1.Duration{Duration: buildTimeout},
 			Steps: []corev1.Container{{
 				Name:    "lowtimeoutstep",
 				Image:   "ubuntu",

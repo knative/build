@@ -237,19 +237,13 @@ func validationError(reason, format string, fmtArgs ...interface{}) error {
 	}
 }
 
-func validateTimeout(timeout string) error {
+func validateTimeout(timeout metav1.Duration) error {
 	maxTimeout := time.Duration(24 * time.Hour)
 
-	if timeout == "" {
-		return nil
-	} else {
-		timeoutDuration, err := time.ParseDuration(timeout)
-		if err != nil {
-			return validationError("InvalidTimeFormat", "invalid build timeout %q err %#v. Refer https://golang.org/pkg/time/#ParseDuration for time format documentation", timeout, err)
-		}
-		if timeoutDuration > maxTimeout {
-			return validationError("InvalidTimeout", "build timeout exceeded 24h")
-		}
+	if timeout.Duration > maxTimeout {
+		return validationError("InvalidTimeout", "build timeout exceeded 24h")
+	} else if timeout.Duration < 0 {
+		return validationError("InvalidFormat", "build timeout should be greater than 0")
 	}
 	return nil
 }

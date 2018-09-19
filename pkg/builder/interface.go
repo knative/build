@@ -20,6 +20,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 )
@@ -79,23 +80,19 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 
 // IsTimeout returns true if the build's execution time is greater than
 // specified build spec timeout.
-func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout string) bool {
+func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout metav1.Duration) bool {
 	var timeout time.Duration
 	var defaultTimeout = 10 * time.Minute
-	var err error
 
 	if status == nil {
 		return false
 	}
 
-	if buildTimeout == "" {
+	if buildTimeout.Duration == 0 {
 		// Set default timeout to 10 minute if build timeout is not set
 		timeout = defaultTimeout
 	} else {
-		timeout, err = time.ParseDuration(buildTimeout)
-		if err != nil {
-			return false
-		}
+		timeout = buildTimeout.Duration
 	}
 
 	// If build has not started timeout, startTime should be zero.

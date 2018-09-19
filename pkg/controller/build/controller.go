@@ -280,7 +280,7 @@ func (c *Controller) syncHandler(key string) error {
 			// Check if build has timed out
 			if builder.IsTimeout(&build.Status, build.Spec.Timeout) {
 				//cleanup operation and update status
-				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout)
+				timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout.Duration.String())
 
 				if err := op.Terminate(); err != nil {
 					c.logger.Errorf("Failed to terminate pod: %v", err)
