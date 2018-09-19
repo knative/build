@@ -208,7 +208,7 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
-		reason: "invalid build timeout",
+		reason: "negative build timeout",
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				Timeout: metav1.Duration{Duration: -48 * time.Hour},
