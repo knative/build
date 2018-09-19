@@ -55,8 +55,8 @@ func TestBuildSpec(t *testing.T) {
 func TestGroupVersionKind(t *testing.T) {
 	c := ClusterBuildTemplate{}
 
-	epectedKind := "ClusterBuildTemplate"
-	if c.GetGroupVersionKind().Kind != epectedKind {
-		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", epectedKind, c.GetGroupVersionKind().Kind)
+	expectedKind := "ClusterBuildTemplate"
+	if c.GetGroupVersionKind().Kind != expectedKind {
+		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", expectedKind, c.GetGroupVersionKind().Kind)
 	}
 }

@@ -108,8 +108,8 @@ func TestBuildGeneration(t *testing.T) {
 func TestBuildGroupVersionKind(t *testing.T) {
 	b := Build{}
 
-	epectedKind := "Build"
-	if b.GetGroupVersionKind().Kind != epectedKind {
-		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", epectedKind, b.GetGroupVersionKind().Kind)
+	expectedKind := "Build"
+	if b.GetGroupVersionKind().Kind != expectedKind {
+		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", expectedKind, b.GetGroupVersionKind().Kind)
 	}
 }
