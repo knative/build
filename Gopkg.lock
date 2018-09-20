@@ -200,7 +200,7 @@
   revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
 
 [[projects]]
-  digest = "1:5323b3b63fd8130347d4005190b5e3144e5bf3cb11d04630a772a97dad657f96"
+  digest = "1:b8f5b265a58b2c6459abbd7ee51b77c026cdeba27f4b89191138a0677d094687"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -217,7 +217,7 @@
     "test/spoof",
   ]
   pruneopts = "NUT"
-  revision = "67830c7a64431edc38ee19628dc7116b0c6d99b5"
+  revision = "c15d7c8f2220a7578b33504df6edefa948c845ae"
 
 [[projects]]
   branch = "master"
@@ -775,6 +775,7 @@
     "github.com/knative/caching/pkg/client/informers/externalversions",
     "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1",
     "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
+    "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/configmap",
