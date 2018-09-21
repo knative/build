@@ -32,6 +32,7 @@ spec:
           "-stderrthreshold", "INFO",
           "-creds-image", "github.com/knative/build/cmd/creds-init",
           "-git-image", "github.com/knative/build/cmd/git-init",
+          "-nop-image", "github.com/knative/build/cmd/nop",
         ]
         volumeMounts:
         - name: config-logging
