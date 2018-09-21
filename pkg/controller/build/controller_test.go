@@ -18,18 +18,27 @@ package build
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/knative/build/pkg/builder"
 	"github.com/knative/build/pkg/builder/nop"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 
@@ -53,8 +62,6 @@ type fixture struct {
 	kubeclient *k8sfake.Clientset
 	// Objects to put in the store.
 	buildLister []*v1alpha1.Build
-	// Objects from here preloaded into NewSimpleFake.
-	kubeobjects []runtime.Object
 	objects     []runtime.Object
 	eventCh     chan string
 }
@@ -101,6 +108,228 @@ func getKey(build *v1alpha1.Build, t *testing.T) string {
 	return key
 }
 
+func TestBuildNotFoundFlow(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	build := newBuild("test")
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	reactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		if action.GetVerb() == "get" && action.GetResource().Resource == "builds" {
+			return true, nil, fmt.Errorf("inducing failure for %s %s", action.GetVerb(), action.GetResource().Resource)
+		}
+		return false, nil, nil
+	}
+
+	f.client.PrependReactor("*", "*", reactor)
+
+	err := c.syncHandler(getKey(build, t))
+	if err == nil {
+		t.Errorf("Expect error syncing build")
+	}
+}
+
+func TestBuildWithBadKey(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	f := &fixture{
+		t:          t,
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+	eventCh := make(chan string, 1024)
+	c, _, _ := f.newController(bldr, eventCh)
+
+	err := c.syncHandler("blah/blah/blah")
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+	}
+}
+
+func TestBuildNotFoundError(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	build := newBuild("test")
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	err := c.syncHandler(getKey(build, t))
+	if err != nil {
+		t.Errorf("Did not expect error: %s", err.Error())
+	}
+}
+
+func TestBuilWithNonExistentBuildTemplate(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	build := &v1alpha1.Build{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-build",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Kind: v1alpha1.BuildTemplateKind,
+				Name: "not-existent-template",
+			},
+		},
+	}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	err := c.syncHandler(getKey(build, t))
+	if err == nil {
+		t.Errorf("Expect error syncing build")
+	}
+	if !kuberrors.IsNotFound(err) {
+		t.Errorf("Expect error to be not found err: %s", err.Error())
+	}
+}
+
+func TestBuilWithNonExistentClusterBuildTemplate(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	build := &v1alpha1.Build{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-build",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Kind: v1alpha1.ClusterBuildTemplateKind,
+				Name: "not-existent-template",
+			},
+		},
+	}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	err := c.syncHandler(getKey(build, t))
+	if err == nil {
+		t.Errorf("Expect error syncing build")
+	}
+	if !kuberrors.IsNotFound(err) {
+		t.Errorf("Expect error to be not found err: %s", err.Error())
+	}
+}
+
+func TestBuilWithTemplate(t *testing.T) {
+	bldr := &nop.Builder{}
+
+	tmpl := &v1alpha1.BuildTemplate{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-template",
+			Namespace: metav1.NamespaceDefault,
+		},
+	}
+
+	build := &v1alpha1.Build{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-build",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Kind: v1alpha1.BuildTemplateKind,
+				Name: tmpl.Name,
+			},
+		},
+	}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build, tmpl},
+		client:     fake.NewSimpleClientset(build, tmpl),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+
+	i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	err := c.syncHandler(getKey(build, t))
+	if err != nil {
+		t.Errorf("Not expecting error: %s", err.Error())
+	}
+
+	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
+	b, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	if !(b.Spec.Template.Kind == v1alpha1.BuildTemplateKind && b.Spec.Template.Name == tmpl.Name) {
+		t.Errorf("error matching stuff: %v", b.Spec.Template)
+	}
+}
 func TestBasicFlows(t *testing.T) {
 	tests := []struct {
 		bldr                 builder.Interface
@@ -117,11 +346,11 @@ func TestBasicFlows(t *testing.T) {
 	for idx, test := range tests {
 		build := newBuild("test")
 		f := &fixture{
-			t:           t,
-			objects:     []runtime.Object{build},
-			kubeobjects: nil,
-			client:      fake.NewSimpleClientset(build),
-			kubeclient:  k8sfake.NewSimpleClientset(),
+			t:       t,
+			objects: []runtime.Object{build},
+			//	kubeobjects: nil,
+			client:     fake.NewSimpleClientset(build),
+			kubeclient: k8sfake.NewSimpleClientset(),
 		}
 
 		stopCh := make(chan struct{})
@@ -197,11 +426,10 @@ func TestErrFlows(t *testing.T) {
 
 	build := newBuild("test")
 	f := &fixture{
-		t:           t,
-		objects:     []runtime.Object{build},
-		kubeobjects: nil,
-		client:      fake.NewSimpleClientset(build),
-		kubeclient:  k8sfake.NewSimpleClientset(),
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
 	}
 
 	stopCh := make(chan struct{})
@@ -232,19 +460,15 @@ func TestTimeoutFlows(t *testing.T) {
 	bldr := &nop.Builder{}
 
 	build := newBuild("test")
-	buffer, err := time.ParseDuration("10m")
-	if err != nil {
-		t.Errorf("Error parsing duration")
-	}
+	buffer := 1 * time.Minute
 
 	build.Spec.Timeout = metav1.Duration{Duration: 1 * time.Second}
 
 	f := &fixture{
-		t:           t,
-		objects:     []runtime.Object{build},
-		kubeobjects: nil,
-		client:      fake.NewSimpleClientset(build),
-		kubeclient:  k8sfake.NewSimpleClientset(),
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
 	}
 
 	stopCh := make(chan struct{})
@@ -274,9 +498,6 @@ func TestTimeoutFlows(t *testing.T) {
 	if builder.IsDone(&first.Status) {
 		t.Error("First IsDone; wanted not done, got done.")
 	}
-	if msg, failed := builder.ErrorMessage(&first.Status); failed {
-		t.Errorf("First ErrorMessage(%v); wanted not failed, got failed", msg)
-	}
 
 	// We have to manually update the index, or the controller won't see the update.
 	f.updateIndex(i, []*v1alpha1.Build{first})
@@ -286,7 +507,27 @@ func TestTimeoutFlows(t *testing.T) {
 		t.Errorf("Unexpected error while syncing build: %v", err)
 	}
 
-	expectedTimeoutMsg := "Warning BuildTimeout Build \"test\" failed to finish within \"1s\""
+	second, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	var ignoreLastTransitionTime = cmpopts.IgnoreTypes(duckv1alpha1.Condition{}.LastTransitionTime.Inner.Time)
+
+	buildStatusMsg := fmt.Sprintf("Build %q failed to finish within \"1s\"", second.Name)
+
+	buildStatus := second.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+	expectedStatus := &duckv1alpha1.Condition{
+		Type:    duckv1alpha1.ConditionSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildTimeout",
+		Message: buildStatusMsg,
+	}
+
+	if d := cmp.Diff(buildStatus, expectedStatus, ignoreLastTransitionTime); d != "" {
+		t.Errorf("Mismatch of build status: expected %#v ; got %#v; diff %s", expectedStatus, buildStatus, d)
+	}
+
+	expectedTimeoutMsg := fmt.Sprintf("Warning BuildTimeout %s", buildStatusMsg)
 	for i := 0; i < 2; i++ {
 		select {
 		case statusEvent := <-eventCh:
@@ -297,5 +538,100 @@ func TestTimeoutFlows(t *testing.T) {
 		case <-time.After(4 * time.Second):
 			t.Fatalf("No events published")
 		}
+	}
+}
+
+func TestTimeoutFlowWithFailedOperation(t *testing.T) {
+	bldr := &nop.Builder{
+		OpErr: errors.New("test-err"), // Include error while terminating build
+	}
+
+	build := newBuild("test")
+	buffer := 10 * time.Minute
+
+	build.Spec.Timeout = metav1.Duration{Duration: 1 * time.Second}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	defer close(stopCh)
+	defer close(eventCh)
+
+	c, i, k8sI := f.newController(bldr, eventCh)
+
+	f.updateIndex(i, []*v1alpha1.Build{build})
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	if err := c.syncHandler(getKey(build, t)); err != nil {
+		t.Errorf("Not Expect error when syncing build: %s", err.Error())
+	}
+
+	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
+	first, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+
+	// Update status to past time by substracting buffer time
+	first.Status.CreationTime.Time = metav1.Now().Time.Add(-buffer)
+
+	// We have to manually update the index, or the controller won't see the update.
+	f.updateIndex(i, []*v1alpha1.Build{first})
+
+	// Run a second iteration of the syncHandler to receive error from operation.
+	if err := c.syncHandler(getKey(build, t)); err == nil {
+		t.Errorf("Expected error from operation.Terminate while syncing build")
+	}
+}
+
+func TestRunController(t *testing.T) {
+	bldr := &nop.Builder{}
+	build := newBuild("test")
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{build},
+		client:     fake.NewSimpleClientset(build),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	stopCh := make(chan struct{})
+	eventCh := make(chan string, 1024)
+	errChan := make(chan error)
+
+	defer close(eventCh)
+
+	c, i, _ := f.newController(bldr, eventCh)
+
+	i.Start(stopCh)
+
+	go func() {
+		errChan <- c.Run(1, stopCh)
+	}()
+
+	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
+	first, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error creating build: %v", err)
+	}
+
+	var ignoreTime = cmpopts.IgnoreFields(v1alpha1.Build{}.Status.StartTime.Time)
+
+	if d := cmp.Diff(first, build, ignoreTime); d != "" {
+		t.Errorf("diff: %s; got %v; wanted: %v", d, first, build)
+	}
+
+	select {
+	case errRun := <-errChan:
+		t.Errorf("Unexpected error from function: %s", errRun.Error())
+	case <-time.After(2 * time.Second):
+		close(stopCh)
 	}
 }

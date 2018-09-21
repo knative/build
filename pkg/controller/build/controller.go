@@ -320,7 +320,7 @@ func (c *Controller) syncHandler(key string) error {
 					if err != nil {
 						// The ClusterBuildTemplate resource may not exist.
 						if errors.IsNotFound(err) {
-							runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", key))
+							runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", build.Spec.Template.Name))
 						}
 						return err
 					}
@@ -329,7 +329,7 @@ func (c *Controller) syncHandler(key string) error {
 					if err != nil {
 						// The BuildTemplate resource may not exist.
 						if errors.IsNotFound(err) {
-							runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", key, namespace))
+							runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", build.Spec.Template.Name, namespace))
 						}
 						return err
 					}
