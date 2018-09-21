@@ -39,3 +39,13 @@ metadata:
   namespace: knative-build
 spec:
   image: gcr.io/cloud-builders/gcs-fetcher
+---
+apiVersion: caching.internal.knative.dev/v1alpha1
+kind: Image
+metadata:
+  name: nop
+  namespace: knative-build
+spec:
+  # This is the Go import path for the binary that is containerized
+  # and substituted here.
+  image: github.com/knative/build/cmd/nop

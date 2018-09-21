@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -63,13 +62,6 @@ var (
 		Name:         "home",
 		VolumeSource: emptyVolumeSource,
 	}}
-	// A benign placeholder for when a container is required, but none was specified.
-	nopContainer = corev1.Container{
-		Name:    "nop",
-		Image:   "busybox",
-		Command: []string{"/bin/echo"},
-		Args:    []string{"Build successful"},
-	}
 )
 
 func validateVolumes(vs []corev1.Volume) error {
@@ -106,6 +98,9 @@ var (
 	// The container with Git that we use to implement the Git source step.
 	gitImage = flag.String("git-image", "override-with-git:latest",
 		"The container image containing our Git binary.")
+	// The container that just prints build successful.
+	nopImage = flag.String("nop-image", "override-with-nop:latest",
+		"The container image run at the end of the build to log build success")
 	gcsFetcherImage = flag.String("gcs-fetcher-image", "gcr.io/cloud-builders/gcs-fetcher:latest",
 		"The container image containing our GCS fetcher binary.")
 )
@@ -366,9 +361,12 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		},
 		Spec: corev1.PodSpec{
 			// If the build fails, don't restart it.
-			RestartPolicy:      corev1.RestartPolicyNever,
-			InitContainers:     initContainers,
-			Containers:         []corev1.Container{nopContainer},
+			RestartPolicy:  corev1.RestartPolicyNever,
+			InitContainers: initContainers,
+			Containers: []corev1.Container{{
+				Name:  "nop",
+				Image: *nopImage,
+			}},
 			ServiceAccountName: build.Spec.ServiceAccountName,
 			Volumes:            volumes,
 			NodeSelector:       build.Spec.NodeSelector,
@@ -445,10 +443,8 @@ func filterImplicitVolumes(vs []corev1.Volume) []corev1.Volume {
 func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 	podSpec := pod.Spec.DeepCopy()
 
-	for _, c := range podSpec.Containers {
-		if !reflect.DeepEqual(c, nopContainer) {
-			return nil, fmt.Errorf("unrecognized container spec, got: %v", podSpec.Containers)
-		}
+	if len(podSpec.Containers) != 1 {
+		return nil, fmt.Errorf("unrecognized container spec, got: %v", podSpec.Containers)
 	}
 
 	subPath := ""

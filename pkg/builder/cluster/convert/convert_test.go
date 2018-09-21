@@ -32,6 +32,11 @@ import (
 
 var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
 
+var nopContainer = corev1.Container{
+	Name:  "nop",
+	Image: *nopImage,
+}
+
 func read2CRD(f string) (*v1alpha1.Build, error) {
 	var bs v1alpha1.Build
 	if err := buildtest.DataAs(f, &bs.Spec); err != nil {
