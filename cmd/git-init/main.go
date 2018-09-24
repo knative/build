@@ -18,7 +18,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"os"
 	"os/exec"
 
 	"github.com/knative/pkg/logging"
@@ -55,16 +54,6 @@ func main() {
 	flag.Parse()
 	logger, _ := logging.NewLogger("", "git-init")
 	defer logger.Sync()
-
-	// HACK HACK HACK
-	// Git seems to ignore $HOME/.ssh and look in /root/.ssh for unknown reasons.
-	// As a workaround, symlink /root/.ssh to where we expect the $HOME to land.
-	// This means SSH auth only works for our built-in git support, and not
-	// custom steps.
-	err := os.Symlink("/builder/home/.ssh", "/root/.ssh")
-	if err != nil {
-		logger.Fatalf("Unexpected error creating symlink: %v", err)
-	}
 
 	run(logger, "git", "init")
 	run(logger, "git", "remote", "add", "origin", *url)
