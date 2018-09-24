@@ -44,22 +44,25 @@ var (
 		EmptyDir: &corev1.EmptyDirVolumeSource{},
 	}
 	// These are injected into all of the source/step containers.
-	implicitEnvVars = []corev1.EnvVar{{
-		Name:  "HOME",
-		Value: "/builder/home",
-	}}
+	implicitEnvVars      = []corev1.EnvVar{}
 	implicitVolumeMounts = []corev1.VolumeMount{{
 		Name:      "workspace",
 		MountPath: workspaceDir,
 	}, {
-		Name:      "home",
-		MountPath: "/builder/home",
+		Name:      "home-docker",
+		MountPath: "/root/.docker",
+	}, {
+		Name:      "home-ssh",
+		MountPath: "/root/.ssh",
 	}}
 	implicitVolumes = []corev1.Volume{{
 		Name:         "workspace",
 		VolumeSource: emptyVolumeSource,
 	}, {
-		Name:         "home",
+		Name:         "home-docker",
+		VolumeSource: emptyVolumeSource,
+	}, {
+		Name:         "home-ssh",
 		VolumeSource: emptyVolumeSource,
 	}}
 )
