@@ -570,8 +570,8 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{first})
 
 	// Run a second iteration of the syncHandler to receive error from operation.
-	if err := c.syncHandler(getKey(build, t)); err == nil || cmp.Diff(err.Error(), oppErr.Error()) != "" {
-		t.Errorf("Expect error %s when syncing build", oppErr.Error())
+	if err = c.syncHandler(getKey(build, t)); err != oppErr {
+		t.Errorf("Expect error %#v when syncing build", oppErr)
 	}
 }
 

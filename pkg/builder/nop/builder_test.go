@@ -17,6 +17,8 @@ limitations under the License.
 package nop
 
 import (
+	"errors"
+
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildercommon "github.com/knative/build/pkg/builder"
 
@@ -129,5 +131,22 @@ func TestOperationFromStatus(t *testing.T) {
 	}
 	if msg, failed := buildercommon.ErrorMessage(status); failed {
 		t.Errorf("ErrorMessage(%v); wanted not failed, got %q", status, msg)
+	}
+}
+
+func TestTerminate(t *testing.T) {
+	builder := Builder{
+		OpErr: errors.New("testerr"),
+	}
+	op, err := builder.OperationFromStatus(&v1alpha1.BuildStatus{
+		Google: &v1alpha1.GoogleSpec{
+			Operation: operationName,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error waiting for builder.Operation: %v", err)
+	}
+	if op.Terminate() == nil {
+		t.Errorf("Expected error from operation.Terminate")
 	}
 }

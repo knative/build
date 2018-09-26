@@ -58,10 +58,7 @@ func (nb *operation) Checkpoint(_ *v1alpha1.Build, status *v1alpha1.BuildStatus)
 }
 
 func (nb *operation) Terminate() error {
-	if nb.builder.OpErr != nil {
-		return nb.builder.OpErr
-	}
-	return nil
+	return nb.builder.OpErr
 }
 
 func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
