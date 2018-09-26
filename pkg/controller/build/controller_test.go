@@ -134,7 +134,6 @@ func TestBuildNotFoundFlow(t *testing.T) {
 		}
 		return false, nil, nil
 	}
-
 	f.client.PrependReactor("*", "*", reactor)
 
 	if err := c.syncHandler(getKey(build, t)); err == nil {
@@ -152,7 +151,7 @@ func TestBuildWithBadKey(t *testing.T) {
 	eventCh := make(chan string, 1024)
 	c, _, _ := f.newController(bldr, eventCh)
 
-	if err := c.syncHandler("blah/blah/blah"); err != nil {
+	if err := c.syncHandler("bad/worse/worst"); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
 }
@@ -179,7 +178,7 @@ func TestBuildNotFoundError(t *testing.T) {
 	k8sI.Start(stopCh)
 
 	if err := c.syncHandler(getKey(build, t)); err != nil {
-		t.Errorf("unexpected error while syncing build: %s", err.Error())
+		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
 }
 
@@ -212,6 +211,7 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			return build
 		},
 	}}
+
 	for _, test := range tests {
 		f := &fixture{
 			t:          t,
@@ -277,14 +277,14 @@ func TestBuilWithTemplate(t *testing.T) {
 
 	err := i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
 	if err != nil {
-		t.Errorf("error adding cluster build template to informer: %s", err.Error())
+		t.Errorf("Unexpected error when adding cluster build template to build informer: %s", err.Error())
 	}
+
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	err = c.syncHandler(getKey(build, t))
-	if err != nil {
+	if err = c.syncHandler(getKey(build, t)); err != nil {
 		t.Errorf("unexpected expecting error while syncing build: %s", err.Error())
 	}
 
@@ -424,16 +424,16 @@ func TestErrFlows(t *testing.T) {
 
 	// Fetch the build object and check the status
 	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
-	first, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	b, err := buildClient.Get(build.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
 
-	if !builder.IsDone(&first.Status) {
-		t.Error("First IsDone(); wanted done, got not done.")
+	if !builder.IsDone(&b.Status) {
+		t.Error("Builder IsDone(); wanted done, got not done.")
 	}
-	if msg, _ := builder.ErrorMessage(&first.Status); bldrErr.Error() != msg {
-		t.Errorf("Second ErrorMessage(); wanted %q, got %q.", bldrErr.Error(), msg)
+	if msg, _ := builder.ErrorMessage(&b.Status); bldrErr.Error() != msg {
+		t.Errorf("Builder ErrorMessage(); wanted %q, got %q.", bldrErr.Error(), msg)
 	}
 }
 
@@ -571,7 +571,7 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 
 	// Run a second iteration of the syncHandler to receive error from operation.
 	if err := c.syncHandler(getKey(build, t)); err == nil || cmp.Diff(err.Error(), oppErr.Error()) != "" {
-		t.Errorf("Expected error %s from operation.Terminate while syncing build", oppErr.Error())
+		t.Errorf("Expect error %s when syncing build", oppErr.Error())
 	}
 }
 
@@ -601,20 +601,21 @@ func TestRunController(t *testing.T) {
 	}()
 
 	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
-	first, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	b, err := buildClient.Get(build.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error creating build: %v", err)
 	}
 
+	// Ignore build start time when comparing
 	var ignoreTime = cmpopts.IgnoreFields(v1alpha1.Build{}.Status.StartTime.Time)
 
-	if d := cmp.Diff(first, build, ignoreTime); d != "" {
-		t.Errorf("diff: %s; got %v; wanted: %v", d, first, build)
+	if d := cmp.Diff(b, build, ignoreTime); d != "" {
+		t.Errorf("Build mismatch; diff: %s; got %v; wanted: %v", d, b, build)
 	}
 
 	select {
 	case errRun := <-errChan:
-		t.Errorf("Unexpected error from function: %s", errRun.Error())
+		t.Errorf("Unexpected error from Run(): %s", errRun.Error())
 	case <-time.After(2 * time.Second):
 		close(stopCh)
 	}
