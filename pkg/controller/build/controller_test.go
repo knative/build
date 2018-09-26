@@ -588,16 +588,23 @@ func TestRunController(t *testing.T) {
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 
 	defer close(eventCh)
+	defer close(errChan)
 
 	c, i, _ := f.newController(bldr, eventCh)
 
 	i.Start(stopCh)
 
 	go func() {
-		errChan <- c.Run(1, stopCh)
+		errChan <- c.Run(2, stopCh)
+	}()
+
+	// Shut down the controller after 2 second timeout
+	go func() {
+		time.Sleep(2 * time.Second)
+		close(stopCh)
 	}()
 
 	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
@@ -613,10 +620,7 @@ func TestRunController(t *testing.T) {
 		t.Errorf("Build mismatch; diff: %s; got %v; wanted: %v", d, b, build)
 	}
 
-	select {
-	case errRun := <-errChan:
-		t.Errorf("Unexpected error from Run(): %s", errRun.Error())
-	case <-time.After(2 * time.Second):
-		close(stopCh)
+	if errRun := <-errChan; errRun != nil {
+		t.Errorf("Unexpected error from Run(): %#v", errRun)
 	}
 }
