@@ -23,10 +23,15 @@ import (
 	"github.com/knative/pkg/apis"
 
 	"github.com/knative/build/pkg/buildtest"
+	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 const bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"
+
+func TestBuildImplementsConditions(t *testing.T) {
+	duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{})
+}
 
 func TestParsing(t *testing.T) {
 	var bs BuildSpec
