@@ -60,10 +60,8 @@ type fixture struct {
 
 	client     *fake.Clientset
 	kubeclient *k8sfake.Clientset
-	// Objects to put in the store.
-	buildLister []*v1alpha1.Build
-	objects     []runtime.Object
-	eventCh     chan string
+	objects    []runtime.Object
+	eventCh    chan string
 }
 
 func newBuild(name string) *v1alpha1.Build {
@@ -102,7 +100,7 @@ func (f *fixture) updateIndex(i informers.SharedInformerFactory, bl []*v1alpha1.
 func getKey(build *v1alpha1.Build, t *testing.T) string {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(build)
 	if err != nil {
-		t.Errorf("Unexpected error getting key for build %v: %v", build.Name, err)
+		t.Errorf("unexpected error getting key for build %v: %v", build.Name, err)
 		return ""
 	}
 	return key
@@ -129,17 +127,17 @@ func TestBuildNotFoundFlow(t *testing.T) {
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
+	// induce failure when fetching build information in controller
 	reactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
 		if action.GetVerb() == "get" && action.GetResource().Resource == "builds" {
-			return true, nil, fmt.Errorf("inducing failure for %s %s", action.GetVerb(), action.GetResource().Resource)
+			return true, nil, fmt.Errorf("Inducing failure for %q action of %q", action.GetVerb(), action.GetResource().Resource)
 		}
 		return false, nil, nil
 	}
 
 	f.client.PrependReactor("*", "*", reactor)
 
-	err := c.syncHandler(getKey(build, t))
-	if err == nil {
+	if err := c.syncHandler(getKey(build, t)); err == nil {
 		t.Errorf("Expect error syncing build")
 	}
 }
@@ -154,9 +152,8 @@ func TestBuildWithBadKey(t *testing.T) {
 	eventCh := make(chan string, 1024)
 	c, _, _ := f.newController(bldr, eventCh)
 
-	err := c.syncHandler("blah/blah/blah")
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
+	if err := c.syncHandler("blah/blah/blah"); err != nil {
+		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
 }
 
@@ -177,98 +174,69 @@ func TestBuildNotFoundError(t *testing.T) {
 	defer close(eventCh)
 
 	c, i, k8sI := f.newController(bldr, eventCh)
+	// Don't update build informers with test build object
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	err := c.syncHandler(getKey(build, t))
-	if err != nil {
-		t.Errorf("Did not expect error: %s", err.Error())
+	if err := c.syncHandler(getKey(build, t)); err != nil {
+		t.Errorf("unexpected error while syncing build: %s", err.Error())
 	}
 }
 
-func TestBuilWithNonExistentBuildTemplate(t *testing.T) {
-	bldr := &nop.Builder{}
-
-	build := &v1alpha1.Build{
-		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-build",
-			Namespace: metav1.NamespaceDefault,
+func TestBuildWithNonExistentTemplates(t *testing.T) {
+	tests := []struct {
+		bldr  builder.Interface
+		build func() *v1alpha1.Build
+	}{{
+		bldr: &nop.Builder{},
+		build: func() *v1alpha1.Build {
+			build := newBuild("test-buildtemplate")
+			build.Spec = v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Kind: v1alpha1.BuildTemplateKind,
+					Name: "not-existent-template",
+				},
+			}
+			return build
 		},
-		Spec: v1alpha1.BuildSpec{
-			Template: &v1alpha1.TemplateInstantiationSpec{
-				Kind: v1alpha1.BuildTemplateKind,
-				Name: "not-existent-template",
-			},
+	}, {
+		bldr: &nop.Builder{},
+		build: func() *v1alpha1.Build {
+			build := newBuild("test-clusterbuild-template")
+			build.Spec = v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Kind: v1alpha1.ClusterBuildTemplateKind,
+					Name: "not-existent-template",
+				},
+			}
+			return build
 		},
-	}
+	}}
+	for _, test := range tests {
+		f := &fixture{
+			t:          t,
+			objects:    []runtime.Object{test.build()},
+			client:     fake.NewSimpleClientset(test.build()),
+			kubeclient: k8sfake.NewSimpleClientset(),
+		}
 
-	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{build},
-		client:     fake.NewSimpleClientset(build),
-		kubeclient: k8sfake.NewSimpleClientset(),
-	}
+		stopCh := make(chan struct{})
+		eventCh := make(chan string, 1024)
+		defer close(stopCh)
+		defer close(eventCh)
 
-	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
-	defer close(stopCh)
-	defer close(eventCh)
+		c, i, k8sI := f.newController(test.bldr, eventCh)
+		f.updateIndex(i, []*v1alpha1.Build{test.build()})
+		i.Start(stopCh)
+		k8sI.Start(stopCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
-	f.updateIndex(i, []*v1alpha1.Build{build})
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
-
-	err := c.syncHandler(getKey(build, t))
-	if err == nil {
-		t.Errorf("Expect error syncing build")
-	}
-	if !kuberrors.IsNotFound(err) {
-		t.Errorf("Expect error to be not found err: %s", err.Error())
-	}
-}
-
-func TestBuilWithNonExistentClusterBuildTemplate(t *testing.T) {
-	bldr := &nop.Builder{}
-
-	build := &v1alpha1.Build{
-		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-build",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: v1alpha1.BuildSpec{
-			Template: &v1alpha1.TemplateInstantiationSpec{
-				Kind: v1alpha1.ClusterBuildTemplateKind,
-				Name: "not-existent-template",
-			},
-		},
-	}
-
-	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{build},
-		client:     fake.NewSimpleClientset(build),
-		kubeclient: k8sfake.NewSimpleClientset(),
-	}
-
-	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
-	defer close(stopCh)
-	defer close(eventCh)
-
-	c, i, k8sI := f.newController(bldr, eventCh)
-	f.updateIndex(i, []*v1alpha1.Build{build})
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
-
-	err := c.syncHandler(getKey(build, t))
-	if err == nil {
-		t.Errorf("Expect error syncing build")
-	}
-	if !kuberrors.IsNotFound(err) {
-		t.Errorf("Expect error to be not found err: %s", err.Error())
+		err := c.syncHandler(getKey(test.build(), t))
+		if err == nil {
+			t.Errorf("Expect error syncing build")
+		}
+		if !kuberrors.IsNotFound(err) {
+			t.Errorf("Expect error to be not found err: %s", err.Error())
+		}
 	}
 }
 
@@ -282,19 +250,15 @@ func TestBuilWithTemplate(t *testing.T) {
 			Namespace: metav1.NamespaceDefault,
 		},
 	}
+	buildTemplateSpec := &v1alpha1.TemplateInstantiationSpec{
+		Kind: v1alpha1.BuildTemplateKind,
+		Name: tmpl.Name,
+		Env:  []corev1.EnvVar{corev1.EnvVar{Value: "testvalue", Name: "testkey"}},
+	}
 
-	build := &v1alpha1.Build{
-		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-build",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: v1alpha1.BuildSpec{
-			Template: &v1alpha1.TemplateInstantiationSpec{
-				Kind: v1alpha1.BuildTemplateKind,
-				Name: tmpl.Name,
-			},
-		},
+	build := newBuild("test-buildtemplate")
+	build.Spec = v1alpha1.BuildSpec{
+		Template: buildTemplateSpec,
 	}
 
 	f := &fixture{
@@ -311,14 +275,17 @@ func TestBuilWithTemplate(t *testing.T) {
 
 	c, i, k8sI := f.newController(bldr, eventCh)
 
-	i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
+	err := i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
+	if err != nil {
+		t.Errorf("error adding cluster build template to informer: %s", err.Error())
+	}
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	err := c.syncHandler(getKey(build, t))
+	err = c.syncHandler(getKey(build, t))
 	if err != nil {
-		t.Errorf("Not expecting error: %s", err.Error())
+		t.Errorf("unexpected expecting error while syncing build: %s", err.Error())
 	}
 
 	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
@@ -326,8 +293,8 @@ func TestBuilWithTemplate(t *testing.T) {
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
-	if !(b.Spec.Template.Kind == v1alpha1.BuildTemplateKind && b.Spec.Template.Name == tmpl.Name) {
-		t.Errorf("error matching stuff: %v", b.Spec.Template)
+	if d := cmp.Diff(b.Spec.Template, buildTemplateSpec); d != "" {
+		t.Errorf("error matching build template spec: expected %#v; got %#v; diff %v", buildTemplateSpec, b.Spec.Template, d)
 	}
 }
 func TestBasicFlows(t *testing.T) {
@@ -346,9 +313,8 @@ func TestBasicFlows(t *testing.T) {
 	for idx, test := range tests {
 		build := newBuild("test")
 		f := &fixture{
-			t:       t,
-			objects: []runtime.Object{build},
-			//	kubeobjects: nil,
+			t:          t,
+			objects:    []runtime.Object{build},
 			client:     fake.NewSimpleClientset(build),
 			kubeclient: k8sfake.NewSimpleClientset(),
 		}
@@ -421,10 +387,11 @@ func TestBasicFlows(t *testing.T) {
 }
 
 func TestErrFlows(t *testing.T) {
-	bldr := &nop.Builder{Err: errors.New("not okay")}
+	bldrErr := errors.New("not okay")
+	bldr := &nop.Builder{Err: bldrErr}
 	expectedErrEventMsg := "Warning BuildExecuteFailed Failed to execute Build"
 
-	build := newBuild("test")
+	build := newBuild("test-err")
 	f := &fixture{
 		t:          t,
 		objects:    []runtime.Object{build},
@@ -453,6 +420,20 @@ func TestErrFlows(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatalf("No events published")
+	}
+
+	// Fetch the build object and check the status
+	buildClient := f.client.BuildV1alpha1().Builds(build.Namespace)
+	first, err := buildClient.Get(build.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+
+	if !builder.IsDone(&first.Status) {
+		t.Error("First IsDone(); wanted done, got not done.")
+	}
+	if msg, _ := builder.ErrorMessage(&first.Status); bldrErr.Error() != msg {
+		t.Errorf("Second ErrorMessage(); wanted %q, got %q.", bldrErr.Error(), msg)
 	}
 }
 
@@ -511,6 +492,8 @@ func TestTimeoutFlows(t *testing.T) {
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
+
+	// Ignore last transition time for comparing status objects
 	var ignoreLastTransitionTime = cmpopts.IgnoreTypes(duckv1alpha1.Condition{}.LastTransitionTime.Inner.Time)
 
 	buildStatusMsg := fmt.Sprintf("Build %q failed to finish within \"1s\"", second.Name)
@@ -542,8 +525,9 @@ func TestTimeoutFlows(t *testing.T) {
 }
 
 func TestTimeoutFlowWithFailedOperation(t *testing.T) {
+	oppErr := errors.New("test-err")
 	bldr := &nop.Builder{
-		OpErr: errors.New("test-err"), // Include error while terminating build
+		OpErr: oppErr, // Include error while terminating build
 	}
 
 	build := newBuild("test")
@@ -586,14 +570,14 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{first})
 
 	// Run a second iteration of the syncHandler to receive error from operation.
-	if err := c.syncHandler(getKey(build, t)); err == nil {
-		t.Errorf("Expected error from operation.Terminate while syncing build")
+	if err := c.syncHandler(getKey(build, t)); err == nil || cmp.Diff(err.Error(), oppErr.Error()) != "" {
+		t.Errorf("Expected error %s from operation.Terminate while syncing build", oppErr.Error())
 	}
 }
 
 func TestRunController(t *testing.T) {
 	bldr := &nop.Builder{}
-	build := newBuild("test")
+	build := newBuild("test-run")
 
 	f := &fixture{
 		t:          t,
