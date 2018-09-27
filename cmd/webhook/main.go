@@ -28,7 +28,11 @@ import (
 	"github.com/knative/build/pkg"
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
-	"github.com/knative/build/pkg/webhook"
+
+	"github.com/knative//build/pkg/apis/build/v1alpha1"
+	"github.com/knative/pkg/webhook"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
@@ -85,5 +89,16 @@ func main() {
 		SecretName:       "build-webhook-certs",
 		WebhookName:      "webhook.build.knative.dev",
 	}
-	webhook.NewAdmissionController(kubeClient, buildClient, bldr, options, logger).Run(stopCh)
+
+	controller := webhook.AdmissionController{
+		Client:  kubeClient,
+		Options: options,
+		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
+			v1alpha1.SchemeGroupVersion.WithKind("Build"):                &v1alpha1.Build{},
+			v1alpha1.SchemeGroupVersion.WithKind("ClusterBuildTemplate"): &v1alpha1.ClusterBuildTemplate{},
+			v1alpha1.SchemeGroupVersion.WithKind("BuildTemplate"):        &v1alpha1.BuildTemplate{},
+		},
+		Logger: log,
+	}
+	controller.Run(stopCh)
 }
