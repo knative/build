@@ -49,7 +49,7 @@ type BuildTemplate struct {
 var _ kmeta.OwnerRefable = (*BuildTemplate)(nil)
 var _ Template = (*BuildTemplate)(nil)
 
-// Check that Route may be validated and defaulted.
+// Check that BuildTemplate may be validated and defaulted.
 var _ apis.Validatable = (*BuildTemplate)(nil)
 var _ apis.Defaultable = (*BuildTemplate)(nil)
 

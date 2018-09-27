@@ -43,9 +43,9 @@ type ClusterBuildTemplate struct {
 var _ kmeta.OwnerRefable = (*ClusterBuildTemplate)(nil)
 var _ Template = (*ClusterBuildTemplate)(nil)
 
-// Check that Route may be validated and defaulted.
-var _ apis.Validatable = (*BuildTemplate)(nil)
-var _ apis.Defaultable = (*BuildTemplate)(nil)
+// Check that ClusterBuildTemplate may be validated and defaulted.
+var _ apis.Validatable = (*ClusterBuildTemplate)(nil)
+var _ apis.Defaultable = (*ClusterBuildTemplate)(nil)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
