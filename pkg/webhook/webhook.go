@@ -25,9 +25,10 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 	"time"
 
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	pkgwebhook "github.com/knative/pkg/webhook"
 	"github.com/mattbaird/jsonpatch"
 	"go.uber.org/zap"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -60,49 +61,18 @@ const (
 
 var resources = []string{"builds", "buildtemplates", "clusterbuildtemplates"}
 
-// ControllerOptions contains the configuration for the webhook
-type ControllerOptions struct {
-	// WebhookName is the name of the webhook we create to handle
-	// mutations before they get stored in the storage.
-	WebhookName string
-
-	// ServiceName is the service name of the webhook.
-	ServiceName string
-
-	// ServiceNamespace is the namespace of the webhook service.
-	ServiceNamespace string
-
-	// SecretName is the name of k8s secret that contains the webhook
-	// server key/cert and corresponding CA cert that signed them. The
-	// server key/cert are used to serve the webhook and the CA cert
-	// is provided to k8s apiserver during admission controller
-	// registration.
-	SecretName string
-
-	// Port where the webhook is served. Per k8s admission
-	// registration requirements this should be 443 unless there is
-	// only a single port for the service.
-	Port int
-
-	// RegistrationDelay controls how long admission registration
-	// occurs after the webhook is started. This is used to avoid
-	// potential races where registration completes and k8s apiserver
-	// invokes the webhook before the HTTP server is started.
-	RegistrationDelay time.Duration
-}
-
 // genericCRDHandler defines the factory object to use for unmarshaling incoming objects
 type genericCRDHandler struct {
 	Factory runtime.Object
 
 	// Defaulter sets defaults on an object. If non-nil error is returned, object
 	// creation is denied. Mutations should be appended to the patches operations.
-	Defaulter func(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, crd genericCRD) error
+	Defaulter func(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, crd pkgwebhook.GenericCRD) error
 
 	// Validator validates an object, mutating it if necessary. If non-nil error
 	// is returned, object creation is denied. Mutations should be appended to
 	// the patches operations.
-	Validator func(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error
+	Validator func(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old, new pkgwebhook.GenericCRD) error
 }
 
 // AdmissionController implements the external admission webhook for validation of
@@ -111,27 +81,14 @@ type AdmissionController struct {
 	client      kubernetes.Interface
 	buildClient buildclientset.Interface
 	builder     builder.Interface
-	options     ControllerOptions
+	options     pkgwebhook.ControllerOptions
 	handlers    map[string]genericCRDHandler
 	logger      *zap.SugaredLogger
 }
 
-// genericCRD is the interface definition that allows us to perform the generic
-// CRD actions like deciding whether to increment generation and so forth.
-type genericCRD interface {
-	// GetObjectMeta return the object metadata
-	GetObjectMeta() metav1.Object
-	// GetGeneration returns the current Generation of the object
-	GetGeneration() int64
-	// SetGeneration sets the Generation of the object
-	SetGeneration(int64)
-	// GetSpecJSON returns the Spec part of the resource marshalled into JSON
-	GetSpecJSON() ([]byte, error)
-}
-
-var _ genericCRD = (*v1alpha1.Build)(nil)
-var _ genericCRD = (*v1alpha1.BuildTemplate)(nil)
-var _ genericCRD = (*v1alpha1.ClusterBuildTemplate)(nil)
+var _ pkgwebhook.GenericCRD = (*v1alpha1.Build)(nil)
+var _ pkgwebhook.GenericCRD = (*v1alpha1.BuildTemplate)(nil)
+var _ pkgwebhook.GenericCRD = (*v1alpha1.ClusterBuildTemplate)(nil)
 
 // getAPIServerExtensionCACert gets the Kubernetes aggregate apiserver
 // client CA cert used by validator.
@@ -208,7 +165,7 @@ func getOrGenerateKeyCertsFromSecret(ctx context.Context, client kubernetes.Inte
 }
 
 // NewAdmissionController creates a new instance of the admission webhook controller.
-func NewAdmissionController(client kubernetes.Interface, buildClient buildclientset.Interface, builder builder.Interface, options ControllerOptions, logger *zap.SugaredLogger) *AdmissionController {
+func NewAdmissionController(client kubernetes.Interface, buildClient buildclientset.Interface, builder builder.Interface, options pkgwebhook.ControllerOptions, logger *zap.SugaredLogger) *AdmissionController {
 	ac := &AdmissionController{
 		client:      client,
 		buildClient: buildClient,
@@ -233,13 +190,13 @@ func NewAdmissionController(client kubernetes.Interface, buildClient buildclient
 	return ac
 }
 
-func configureCerts(ctx context.Context, client kubernetes.Interface, options *ControllerOptions) (*tls.Config, []byte, error) {
+func configureCerts(ctx context.Context, client kubernetes.Interface, options *pkgwebhook.ControllerOptions) (*tls.Config, []byte, error) {
 	apiServerCACert, err := getAPIServerExtensionCACert(client)
 	if err != nil {
 		return nil, nil, err
 	}
 	serverKey, serverCert, caCert, err := getOrGenerateKeyCertsFromSecret(
-		ctx, client, options.SecretName, options.ServiceNamespace)
+		ctx, client, options.SecretName, options.Namespace)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -337,7 +294,7 @@ func (ac *AdmissionController) register(
 			}},
 			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 				Service: &admissionregistrationv1beta1.ServiceReference{
-					Namespace: ac.options.ServiceNamespace,
+					Namespace: ac.options.Namespace,
 					Name:      ac.options.ServiceName,
 				},
 				CABundle: caCert,
@@ -456,8 +413,8 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 		return nil, fmt.Errorf("unhandled kind: %q", kind)
 	}
 
-	oldObj := handler.Factory.DeepCopyObject().(genericCRD)
-	newObj := handler.Factory.DeepCopyObject().(genericCRD)
+	oldObj := handler.Factory.DeepCopyObject().(pkgwebhook.GenericCRD)
+	newObj := handler.Factory.DeepCopyObject().(pkgwebhook.GenericCRD)
 
 	if len(newBytes) != 0 {
 		newDecoder := json.NewDecoder(bytes.NewBuffer(newBytes))
@@ -505,24 +462,7 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 		return nil, err
 	}
 
-	if err := validateMetadata(newObj); err != nil {
-		logger.Error("Failed to validate", zap.Error(err))
-		return nil, fmt.Errorf("Failed to validate: %s", err)
-	}
 	return json.Marshal(patches)
-}
-
-func validateMetadata(new genericCRD) error {
-	name := new.GetObjectMeta().GetName()
-
-	if strings.Contains(name, ".") {
-		return errors.New("Invalid resource name: special character . must not be present")
-	}
-
-	if len(name) > 63 {
-		return errors.New("Invalid resource name: length must be no more than 63 characters")
-	}
-	return nil
 }
 
 // updateGeneration sets the generation by following this logic:
@@ -533,68 +473,61 @@ func validateMetadata(new genericCRD) error {
 // by the APIserver (https://github.com/kubernetes/kubernetes/issues/58778)
 // So, we add Generation here. Once that gets fixed, remove this and use
 // ObjectMeta.Generation instead.
-func updateGeneration(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old genericCRD, new genericCRD) error {
+func updateGeneration(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old, new pkgwebhook.GenericCRD) error {
 	logger := logging.FromContext(ctx)
-	var oldGeneration int64
-	if old == nil {
-		logger.Info("Old is nil")
-	} else {
-		oldGeneration = old.GetGeneration()
-	}
-	if oldGeneration == 0 {
-		logger.Info("Creating an object, setting generation to 1")
-		*patches = append(*patches, jsonpatch.JsonPatchOperation{
-			Operation: "add",
-			Path:      "/spec/generation",
-			Value:     1,
-		})
+
+	if chg, err := hasChanged(ctx, old, new); err != nil {
+		return err
+	} else if !chg {
+		logger.Info("No changes in the spec, not bumping generation")
 		return nil
 	}
 
-	oldSpecJSON, err := old.GetSpecJSON()
+	// Leverage Spec duck typing to bump the Generation of the resource.
+	before, err := asGenerational(ctx, new)
 	if err != nil {
-		logger.Error("Failed to get Spec JSON for old", zap.Error(err))
-	}
-	newSpecJSON, err := new.GetSpecJSON()
-	if err != nil {
-		logger.Error("Failed to get Spec JSON for new", zap.Error(err))
-	}
-
-	specPatches, err := jsonpatch.CreatePatch(oldSpecJSON, newSpecJSON)
-	if err != nil {
-		fmt.Printf("Error creating JSON patch:%v", err)
 		return err
 	}
-	if len(specPatches) > 0 {
-		specPatchesJSON, err := json.Marshal(specPatches)
-		if err != nil {
-			logger.Error("Failed to marshal spec patches", zap.Error(err))
-			return err
-		}
-		logger.Infof("Specs differ:\n%+v\n", string(specPatchesJSON))
+	after := before.DeepCopyObject().(*duckv1alpha1.Generational)
+	after.Spec.Generation = after.Spec.Generation + 1
 
-		operation := "replace"
-		if newGeneration := new.GetGeneration(); newGeneration == 0 {
-			// If new is missing Generation, we need to "add" instead of "replace".
-			// We see this for Service resources because the initial generation is
-			// added to the managed Configuration and Route, but not the Service
-			// that manages them.
-			// TODO(#642): Remove this.
-			operation = "add"
-		}
-		*patches = append(*patches, jsonpatch.JsonPatchOperation{
-			Operation: operation,
-			Path:      "/spec/generation",
-			Value:     oldGeneration + 1,
-		})
-		return nil
+	genBump, err := createPatch(before, after)
+	if err != nil {
+		return err
 	}
-	logger.Info("No changes in the spec, not bumping generation")
+	*patches = append(*patches, genBump...)
 	return nil
 }
 
+func createPatch(before, after interface{}) ([]jsonpatch.JsonPatchOperation, error) {
+	// Marshal the before and after.
+	rawBefore, err := json.Marshal(before)
+	if err != nil {
+		return nil, err
+	}
+
+	rawAfter, err := json.Marshal(after)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonpatch.CreatePatch(rawBefore, rawAfter)
+}
+
+func asGenerational(ctx context.Context, crd pkgwebhook.GenericCRD) (*duckv1alpha1.Generational, error) {
+	raw, err := json.Marshal(crd)
+	if err != nil {
+		return nil, err
+	}
+	kr := &duckv1alpha1.Generational{}
+	if err := json.Unmarshal(raw, kr); err != nil {
+		return nil, err
+	}
+	return kr, nil
+}
+
 func generateSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
-	serverKey, serverCert, caCert, err := CreateCerts(ctx)
+	serverKey, serverCert, caCert, err := pkgwebhook.CreateCerts(ctx, name, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -609,4 +542,55 @@ func generateSecret(ctx context.Context, name, namespace string) (*corev1.Secret
 			secretCACert:     caCert,
 		},
 	}, nil
+}
+
+// Not worth fully duck typing since there's no shared schema.
+type hasSpec struct {
+	Spec json.RawMessage `json:"spec"`
+}
+
+func getSpecJSON(crd pkgwebhook.GenericCRD) ([]byte, error) {
+	b, err := json.Marshal(crd)
+	if err != nil {
+		return nil, err
+	}
+	hs := hasSpec{}
+	if err := json.Unmarshal(b, &hs); err != nil {
+		return nil, err
+	}
+	return []byte(hs.Spec), nil
+}
+
+func hasChanged(ctx context.Context, old, new pkgwebhook.GenericCRD) (bool, error) {
+	if old == nil {
+		return true, nil
+	}
+	logger := logging.FromContext(ctx)
+
+	oldSpecJSON, err := getSpecJSON(old)
+	if err != nil {
+		logger.Error("Failed to get Spec JSON for old", zap.Error(err))
+		return false, err
+	}
+	newSpecJSON, err := getSpecJSON(new)
+	if err != nil {
+		logger.Error("Failed to get Spec JSON for new", zap.Error(err))
+		return false, err
+	}
+
+	specPatches, err := jsonpatch.CreatePatch(oldSpecJSON, newSpecJSON)
+	if err != nil {
+		fmt.Printf("Error creating JSON patch:%v", err)
+		return false, err
+	}
+	if len(specPatches) == 0 {
+		return false, nil
+	}
+	specPatchesJSON, err := json.Marshal(specPatches)
+	if err != nil {
+		logger.Error("Failed to marshal spec patches", zap.Error(err))
+		return false, err
+	}
+	logger.Infof("Specs differ:\n%+v\n", string(specPatchesJSON))
+	return true, nil
 }

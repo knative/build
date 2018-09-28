@@ -30,7 +30,6 @@ func (b *BuildTemplateSpec) Validate() *apis.FieldError {
 		return err
 	}
 	return nil
-	// return validatePlaceholders(tmpl.TemplateSpec().Steps)
 }
 
 func validateObjectMetadata(meta metav1.Object) *apis.FieldError {
@@ -53,33 +52,6 @@ func validateObjectMetadata(meta metav1.Object) *apis.FieldError {
 }
 
 var nestedPlaceholderRE = regexp.MustCompile(`\${[^}]+\$`)
-
-func validatePlaceholders(steps []corev1.Container) *apis.FieldError {
-	for _, s := range steps {
-		if nestedPlaceholderRE.MatchString(s.Name) {
-			return apis.ErrInvalidValue("nestedPlaceHolderStepName", s.Name)
-		}
-		for _, a := range s.Args {
-			if nestedPlaceholderRE.MatchString(a) {
-				return apis.ErrInvalidValue("nestedPlaceHolderArgs", a)
-			}
-		}
-		for _, e := range s.Env {
-			if nestedPlaceholderRE.MatchString(e.Value) {
-				return apis.ErrInvalidValue("nestedPlaceHolderEnv", e.Value)
-			}
-		}
-		if nestedPlaceholderRE.MatchString(s.WorkingDir) {
-			return apis.ErrInvalidValue("nestedPlaceHolderEnv", s.WorkingDir)
-		}
-		for _, c := range s.Command {
-			if nestedPlaceholderRE.MatchString(c) {
-				return apis.ErrInvalidValue("nestedPlaceHolderCmd", c)
-			}
-		}
-	}
-	return nil
-}
 
 func validateParameters(params []ParameterSpec) *apis.FieldError {
 	// Template must not duplicate parameter names.

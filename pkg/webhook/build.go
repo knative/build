@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/mattbaird/jsonpatch"
 	corev1 "k8s.io/api/core/v1"
@@ -28,26 +27,12 @@ import (
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/pkg/logging"
+	pkgwebhook "github.com/knative/pkg/webhook"
 )
 
-func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {
+func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new pkgwebhook.GenericCRD) error {
 	_, b, err := unmarshalBuilds(ctx, old, new)
 	if err != nil {
-		return err
-	}
-
-	if b.Spec.Template == nil && len(b.Spec.Steps) == 0 {
-		return validationError("NoTemplateOrSteps", "build must specify either template or steps")
-	}
-	if b.Spec.Template != nil && len(b.Spec.Steps) > 0 {
-		return validationError("TemplateAndSteps", "build cannot specify both template and steps")
-	}
-
-	if b.Spec.Template != nil && b.Spec.Template.Name == "" {
-		return validationError("MissingTemplateName", "template instantiation is missing template name: %v", b.Spec.Template)
-	}
-
-	if err := validateTimeout(b.Spec.Timeout); err != nil {
 		return err
 	}
 
@@ -85,10 +70,8 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 		}
 		volumes = tmpl.TemplateSpec().Volumes
 	}
-	if err := validateSteps(b.Spec.Steps); err != nil {
-		return err
-	}
-	if err := validateVolumes(append(b.Spec.Volumes, volumes...)); err != nil {
+
+	if err := validateVolumes(volumes); err != nil {
 		return err
 	}
 
@@ -98,7 +81,7 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 
 var errInvalidBuild = errors.New("failed to convert to Build")
 
-func unmarshalBuilds(ctx context.Context, old, new genericCRD) (*v1alpha1.Build, *v1alpha1.Build, error) {
+func unmarshalBuilds(ctx context.Context, old, new pkgwebhook.GenericCRD) (*v1alpha1.Build, *v1alpha1.Build, error) {
 	logger := logging.FromContext(ctx)
 
 	var oldb *v1alpha1.Build
@@ -193,25 +176,6 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl v1alpha1.BuildTemplate
 	return nil
 }
 
-func validateSteps(steps []corev1.Container) error {
-	// Build must not duplicate step names.
-	names := map[string]struct{}{}
-	for i, s := range steps {
-		if s.Image == "" {
-			return validationError("StepMissingImage", "step %d (%q) must specify image", i, s.Name)
-		}
-
-		if s.Name == "" {
-			continue
-		}
-		if _, ok := names[s.Name]; ok {
-			return validationError("DuplicateStepName", "duplicate step name %q", s.Name)
-		}
-		names[s.Name] = struct{}{}
-	}
-	return nil
-}
-
 func validateVolumes(volumes []corev1.Volume) error {
 	// Build must not duplicate volume names.
 	vols := map[string]struct{}{}
@@ -235,15 +199,4 @@ func validationError(reason, format string, fmtArgs ...interface{}) error {
 		reason:  reason,
 		message: fmt.Sprintf(format, fmtArgs...),
 	}
-}
-
-func validateTimeout(timeout metav1.Duration) error {
-	maxTimeout := time.Duration(24 * time.Hour)
-
-	if timeout.Duration > maxTimeout {
-		return validationError("InvalidTimeout", "build timeout exceeded 24h")
-	} else if timeout.Duration < 0 {
-		return validationError("InvalidFormat", "build timeout should be greater than 0")
-	}
-	return nil
 }
