@@ -33,11 +33,6 @@ required = [
   version = "kubernetes-1.11.0"
 
 [[override]]
-  name = "github.com/knative/pkg"
-  # HEAD as of 2018-09-28
-  revision = "3155feb33006c8e0379a58237a819a36fae98c2d"
-
-[[override]]
   name = "github.com/json-iterator/go"
   # This is the commit at which k8s depends on this in 1.11
   # It seems to be broken at HEAD.
@@ -48,6 +43,12 @@ required = [
   # This is the commit at which k8s depends on this in 1.11
   # It seems to be broken at HEAD.
   revision = "1ff28809256a84bb6966640ff3d0371af82ccba4"
+
+[[constraint]]
+  name = "github.com/knative/pkg"
+  # HEAD as of 2018-09-28
+  revision = "3155feb33006c8e0379a58237a819a36fae98c2d"
+
 
 [prune]
   go-tests = true
@@ -68,9 +69,3 @@ required = [
   name = "github.com/knative/test-infra"
   unused-packages = false
   non-go = false
-
-[[constraint]]
-  name = "github.com/knative/pkg"
-  # HEAD as of 2018-09-26
-  revision = "f81d0f8f0fac9943f3892c5e86007dc00382a909"
-
