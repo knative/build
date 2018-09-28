@@ -475,43 +475,70 @@ func (ac *AdmissionController) mutate(ctx context.Context, kind string, oldBytes
 // ObjectMeta.Generation instead.
 func updateGeneration(ctx context.Context, patches *[]jsonpatch.JsonPatchOperation, old, new pkgwebhook.GenericCRD) error {
 	logger := logging.FromContext(ctx)
-
-	if chg, err := hasChanged(ctx, old, new); err != nil {
-		return err
-	} else if !chg {
-		logger.Info("No changes in the spec, not bumping generation")
+	var oldGeneration *duckv1alpha1.Generational
+	var err error
+	if old == nil {
+		logger.Info("Old is nil")
+	} else {
+		oldGeneration, err = asGenerational(ctx, old)
+		if err != nil {
+			return err
+		}
+	}
+	if oldGeneration.Spec.Generation == 0 {
+		logger.Info("Creating an object, setting generation to 1")
+		*patches = append(*patches, jsonpatch.JsonPatchOperation{
+			Operation: "add",
+			Path:      "/spec/generation",
+			Value:     1,
+		})
 		return nil
 	}
-
-	// Leverage Spec duck typing to bump the Generation of the resource.
-	before, err := asGenerational(ctx, new)
+	oldSpecJSON, err := getSpecJSON(old)
 	if err != nil {
+		logger.Error("Failed to get Spec JSON for old", zap.Error(err))
+	}
+	newSpecJSON, err := getSpecJSON(new)
+	if err != nil {
+		logger.Error("Failed to get Spec JSON for new", zap.Error(err))
+	}
+
+	specPatches, err := jsonpatch.CreatePatch(oldSpecJSON, newSpecJSON)
+	if err != nil {
+		fmt.Printf("Error creating JSON patch:%v", err)
 		return err
 	}
-	after := before.DeepCopyObject().(*duckv1alpha1.Generational)
-	after.Spec.Generation = after.Spec.Generation + 1
 
-	genBump, err := createPatch(before, after)
-	if err != nil {
-		return err
+	if len(specPatches) > 0 {
+		specPatchesJSON, err := json.Marshal(specPatches)
+		if err != nil {
+			logger.Error("Failed to marshal spec patches", zap.Error(err))
+			return err
+		}
+		logger.Infof("Specs differ:\n%+v\n", string(specPatchesJSON))
+
+		operation := "replace"
+		newGeneration, err := asGenerational(ctx, new)
+		if err != nil {
+			return err
+		}
+		if newGeneration.Spec.Generation == 0 {
+			// If new is missing Generation, we need to "add" instead of "replace".
+			// We see this for Service resources because the initial generation is
+			// added to the managed Configuration and Route, but not the Service
+			// that manages them.
+			// TODO(#642): Remove this.
+			operation = "add"
+		}
+		*patches = append(*patches, jsonpatch.JsonPatchOperation{
+			Operation: operation,
+			Path:      "/spec/generation",
+			Value:     oldGeneration.Spec.Generation + 1,
+		})
+		return nil
 	}
-	*patches = append(*patches, genBump...)
+	logger.Info("No changes in the spec, not bumping generation")
 	return nil
-}
-
-func createPatch(before, after interface{}) ([]jsonpatch.JsonPatchOperation, error) {
-	// Marshal the before and after.
-	rawBefore, err := json.Marshal(before)
-	if err != nil {
-		return nil, err
-	}
-
-	rawAfter, err := json.Marshal(after)
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonpatch.CreatePatch(rawBefore, rawAfter)
 }
 
 func asGenerational(ctx context.Context, crd pkgwebhook.GenericCRD) (*duckv1alpha1.Generational, error) {
@@ -559,38 +586,4 @@ func getSpecJSON(crd pkgwebhook.GenericCRD) ([]byte, error) {
 		return nil, err
 	}
 	return []byte(hs.Spec), nil
-}
-
-func hasChanged(ctx context.Context, old, new pkgwebhook.GenericCRD) (bool, error) {
-	if old == nil {
-		return true, nil
-	}
-	logger := logging.FromContext(ctx)
-
-	oldSpecJSON, err := getSpecJSON(old)
-	if err != nil {
-		logger.Error("Failed to get Spec JSON for old", zap.Error(err))
-		return false, err
-	}
-	newSpecJSON, err := getSpecJSON(new)
-	if err != nil {
-		logger.Error("Failed to get Spec JSON for new", zap.Error(err))
-		return false, err
-	}
-
-	specPatches, err := jsonpatch.CreatePatch(oldSpecJSON, newSpecJSON)
-	if err != nil {
-		fmt.Printf("Error creating JSON patch:%v", err)
-		return false, err
-	}
-	if len(specPatches) == 0 {
-		return false, nil
-	}
-	specPatchesJSON, err := json.Marshal(specPatches)
-	if err != nil {
-		logger.Error("Failed to marshal spec patches", zap.Error(err))
-		return false, err
-	}
-	logger.Infof("Specs differ:\n%+v\n", string(specPatchesJSON))
-	return true, nil
 }

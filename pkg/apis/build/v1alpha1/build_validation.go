@@ -31,19 +31,15 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	//var volumes []corev1.Volume
 	//var tmpl BuildTemplateInterface
 	if bs.Template != nil {
-		tmplName := bs.Template.Name
-		if tmplName == "" {
-			return apis.ErrMissingField("build.spec.template.name")
-		}
-		if bs.Template.Kind != "" {
-			return bs.Template.Validate()
-		}
+		return bs.Template.Validate()
 	}
 	if err := validateVolumes(bs.Volumes); err != nil {
 		return err
 	}
-
 	if err := validateTimeout(bs.Timeout); err != nil {
+		return err
+	}
+	if err := validateSteps(bs.Steps); err != nil {
 		return err
 	}
 	return nil
@@ -51,13 +47,19 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 
 // Validate templateKind
 func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
-	switch b.Kind {
-	case ClusterBuildTemplateKind,
-		BuildTemplateKind:
-		return nil
-	default:
-		return apis.ErrInvalidValue(string(b.Kind), apis.CurrentField)
+	if b.Name == "" {
+		return apis.ErrMissingField("build.spec.template.name")
 	}
+	if b.Kind != "" {
+		switch b.Kind {
+		case ClusterBuildTemplateKind,
+			BuildTemplateKind:
+			return nil
+		default:
+			return apis.ErrInvalidValue(string(b.Kind), apis.CurrentField)
+		}
+	}
+	return nil
 }
 
 func validateTimeout(timeout metav1.Duration) *apis.FieldError {
