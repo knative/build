@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/knative/pkg/apis"
@@ -47,8 +46,6 @@ func validateObjectMetadata(meta metav1.Object) *apis.FieldError {
 	}
 	return nil
 }
-
-var nestedPlaceholderRE = regexp.MustCompile(`\${[^}]+\$`)
 
 func validateParameters(params []ParameterSpec) *apis.FieldError {
 	// Template must not duplicate parameter names.
