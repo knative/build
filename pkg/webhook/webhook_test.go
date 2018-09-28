@@ -578,3 +578,123 @@ func TestAdmitClusterBuildTemplate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateTemplate(t *testing.T) {
+	ctx := context.Background()
+	hasDefault := "has-default"
+	for _, c := range []struct {
+		desc   string
+		tmpl   *v1alpha1.BuildTemplate
+		reason string // if "", expect success.
+	}{{
+		desc: "Single named step",
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		desc: "Multiple unnamed steps",
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "step-name-${FOO${BAR}}",
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}, {
+					Name:    "BAR",
+					Default: &hasDefault,
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}} {
+		name := c.desc
+		if c.reason != "" {
+			name = "invalid-" + c.reason
+		}
+		t.Run(name, func(t *testing.T) {
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+			verr := ac.validateBuildTemplate(ctx, nil, nil, c.tmpl)
+			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
+			}
+		})
+	}
+}
+
+func TestValidateClusterBuildTemplate(t *testing.T) {
+	ctx := context.Background()
+	hasDefault := "has-default"
+	for _, c := range []struct {
+		desc   string
+		tmpl   *v1alpha1.ClusterBuildTemplate
+		reason string // if "", expect success.
+	}{{
+		desc: "Single named step",
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		desc: "Multiple unnamed steps",
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}, {
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		tmpl: &v1alpha1.ClusterBuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "step-name-${FOO${BAR}}",
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}, {
+					Name:    "BAR",
+					Default: &hasDefault,
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}} {
+		name := c.desc
+		if c.reason != "" {
+			name = "invalid-" + c.reason
+		}
+		t.Run(name, func(t *testing.T) {
+			ac := NewAdmissionController(fakekubeclientset.NewSimpleClientset(), fakebuildclientset.NewSimpleClientset(), &nop.Builder{}, defaultOptions, testLogger)
+			verr := ac.validateClusterBuildTemplate(ctx, nil, nil, c.tmpl)
+			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
+				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
+			}
+		})
+	}
+}
