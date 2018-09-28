@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestValidateTemplate(t *testing.T) {
@@ -20,6 +21,22 @@ func TestValidateTemplate(t *testing.T) {
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
 				}},
+			},
+		},
+	}, {
+		desc:   "long name",
+		reason: "long name",
+		tmpl: &BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "*********************************************************************************************",
+			},
+		},
+	}, {
+		desc:   "invalid name",
+		reason: "invalid name",
+		tmpl: &BuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "b.c",
 			},
 		},
 	}, {

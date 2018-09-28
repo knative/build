@@ -9,9 +9,6 @@ import (
 )
 
 func TestValidateBuild(t *testing.T) {
-	//ctx := context.Background()
-	//hasDefault := "has-default"
-	//empty := ""
 	for _, c := range []struct {
 		desc   string
 		build  *Build
@@ -34,6 +31,33 @@ func TestValidateBuild(t *testing.T) {
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
 				}},
+			},
+		},
+	}, {
+		desc:   "No template and steps",
+		reason: "no template & steps",
+		build: &Build{
+			Spec: BuildSpec{},
+		},
+	}, {
+		desc:   "Bad template kind",
+		reason: "invalid template",
+		build: &Build{
+			Spec: BuildSpec{
+				Template: &TemplateInstantiationSpec{
+					Kind: "bad-kind",
+					Name: "bad-tmpl",
+				},
+			},
+		},
+	}, {
+		desc: "good template kind",
+		build: &Build{
+			Spec: BuildSpec{
+				Template: &TemplateInstantiationSpec{
+					Kind: ClusterBuildTemplateKind,
+					Name: "goo-tmpl",
+				},
 			},
 		},
 	}, {
@@ -137,39 +161,6 @@ func TestValidateBuild(t *testing.T) {
 			name = "invalid-" + c.reason
 		}
 		t.Run(name, func(t *testing.T) {
-			// client := fakekubeclientset.NewSimpleClientset()
-			// buildClient := fakebuildclientset.NewSimpleClientset()
-			// // Create a BuildTemplate.
-			// if c.tmpl != nil {
-			// 	if _, err := buildClient.BuildV1alpha1().BuildTemplates("").Create(c.tmpl); err != nil {
-			// 		t.Fatalf("Failed to create BuildTemplate: %v", err)
-			// 	}
-			// } else if c.ctmpl != nil {
-			// 	if _, err := buildClient.BuildV1alpha1().ClusterBuildTemplates().Create(c.ctmpl); err != nil {
-			// 		t.Fatalf("Failed to create ClusterBuildTemplate: %v", err)
-			// 	}
-			// }
-			// Create ServiceAccount or create the default ServiceAccount.
-			// if c.sa != nil {
-			// 	if _, err := client.CoreV1().ServiceAccounts(c.sa.Namespace).Create(c.sa); err != nil {
-			// 		t.Fatalf("Failed to create ServiceAccount: %v", err)
-			// 	}
-			// } else {
-			// 	if _, err := client.CoreV1().ServiceAccounts("").Create(&corev1.ServiceAccount{
-			// 		ObjectMeta: metav1.ObjectMeta{Name: "default"},
-			// 	}); err != nil {
-			// 		t.Fatalf("Failed to create ServiceAccount: %v", err)
-			// 	}
-			// }
-			// // Create any necessary Secrets.
-			// for _, s := range c.secrets {
-			// 	if _, err := client.CoreV1().Secrets("").Create(s); err != nil {
-			// 		t.Fatalf("Failed to create Secret %q: %v", s.Name, err)
-			// 	}
-			// }
-
-			//ac := NewAdmissionController(client, buildClient, &nop.Builder{}, defaultOptions, testLogger)
-			//verr := ac.validateBuild(ctx, nil, nil, c.build)
 			verr := c.build.Validate()
 			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
 				t.Errorf("validateBuild(%s); got %#v, want %q", name, verr, c.reason)

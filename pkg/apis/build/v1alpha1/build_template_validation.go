@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
@@ -15,8 +14,6 @@ import (
 func (b *BuildTemplate) Validate() *apis.FieldError {
 	return validateObjectMetadata(b.GetObjectMeta()).ViaField("metadata").Also(b.Spec.Validate().ViaField("spec"))
 }
-
-var errInvalidBuildTemplate = errors.New("failed to convert to BuildTemplate")
 
 // Validate Build Template
 func (b *BuildTemplateSpec) Validate() *apis.FieldError {

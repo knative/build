@@ -76,6 +76,11 @@ func TestBuildConditions(t *testing.T) {
 		t.Errorf("Unexpected build condition type; want %v got %v", want, b.Status.GetConditions())
 	}
 
+	fooStatus := b.Status.GetCondition(foo.Type)
+	if cmp.Diff(fooStatus, foo, ignoreVolatileTime) != "" {
+		t.Errorf("Unexpected build condition type; want %v got %v", fooStatus, foo)
+	}
+
 	// Add a second condition.
 	b.Status.SetCondition(bar)
 
