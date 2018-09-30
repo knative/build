@@ -48,7 +48,6 @@ func (nb *operation) Checkpoint(_ *v1alpha1.Build, status *v1alpha1.BuildStatus)
 		status.Google = &v1alpha1.GoogleSpec{}
 	}
 	status.Google.Operation = nb.Name()
-	status.CreationTime = startTime
 	status.StartTime = startTime
 	status.SetCondition(&duckv1alpha1.Condition{
 		Type:   v1alpha1.BuildSucceeded,
@@ -69,7 +68,6 @@ func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		Google: &v1alpha1.GoogleSpec{
 			Operation: nb.Name(),
 		},
-		CreationTime:   startTime,
 		StartTime:      startTime,
 		CompletionTime: completionTime,
 	}

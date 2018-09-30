@@ -201,8 +201,6 @@ type BuildStatus struct {
 	// Google provides additional information if the builder is Google.
 	Google *GoogleSpec `json:"google,omitempty"`
 
-	// Creation is the time the build is created.
-	CreationTime metav1.Time `json:"creationTime,omitEmpty"`
 	// StartTime is the time the build is actually started.
 	StartTime metav1.Time `json:"startTime,omitEmpty"`
 	// CompletionTime is the time the build completed.
