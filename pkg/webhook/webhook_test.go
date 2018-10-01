@@ -235,7 +235,37 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "DuplicateVolumeName",
+		reason: "DuplicateVolumeNameForBuildTemplate",
+	}, {
+		build: &v1alpha1.Build{
+			Spec: v1alpha1.BuildSpec{
+				Template: &v1alpha1.TemplateInstantiationSpec{
+					Name: "foo-bar",
+					Kind: v1alpha1.ClusterBuildTemplateKind,
+				},
+			},
+		},
+		ctmpl: &v1alpha1.ClusterBuildTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "foo-bar"},
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+				Volumes: []corev1.Volume{{
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}, {
+					Name: "foo",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		},
+		reason: "DuplicateVolumeNameForClusterBuildTemplate",
 	}, {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
@@ -581,7 +611,6 @@ func TestAdmitClusterBuildTemplate(t *testing.T) {
 
 func TestValidateTemplate(t *testing.T) {
 	ctx := context.Background()
-	hasDefault := "has-default"
 	for _, c := range []struct {
 		desc   string
 		tmpl   *v1alpha1.BuildTemplate
@@ -617,9 +646,60 @@ func TestValidateTemplate(t *testing.T) {
 				}},
 				Parameters: []v1alpha1.ParameterSpec{{
 					Name: "FOO",
-				}, {
-					Name:    "BAR",
-					Default: &hasDefault,
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "step-name",
+					Args: []string{"step-name-${FOO${BAR}}"},
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name: "step-name",
+					Env: []corev1.EnvVar{{
+						Value: "step-name-${FOO${BAR}}",
+					}},
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:       "step-name",
+					WorkingDir: "step-name-${FOO${BAR}}",
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
+				}},
+			},
+		},
+		reason: "NestedPlaceholder",
+	}, {
+		tmpl: &v1alpha1.BuildTemplate{
+			Spec: v1alpha1.BuildTemplateSpec{
+				Steps: []corev1.Container{{
+					Name:    "step-name",
+					Command: []string{"step-name-${FOO${BAR}}"},
+				}},
+				Parameters: []v1alpha1.ParameterSpec{{
+					Name: "FOO",
 				}},
 			},
 		},
