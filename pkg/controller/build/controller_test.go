@@ -269,7 +269,7 @@ func TestTimeoutFlows(t *testing.T) {
 	}
 
 	// Update status to past time by substracting buffer time
-	first.Status.CreationTime.Time = metav1.Now().Time.Add(-buffer)
+	first.Status.StartTime.Time = metav1.Now().Time.Add(-buffer)
 
 	if builder.IsDone(&first.Status) {
 		t.Error("First IsDone; wanted not done, got done.")

@@ -76,13 +76,10 @@ func TestBasicFlow(t *testing.T) {
 	if buildercommon.IsDone(&build.Status) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if build.Status.CreationTime.IsZero() {
-		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
-	}
 	if !build.Status.CompletionTime.IsZero() {
 		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !build.Status.StartTime.IsZero() {
+	if build.Status.StartTime.IsZero() {
 		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&build.Status)
@@ -118,9 +115,6 @@ func TestBasicFlow(t *testing.T) {
 		}
 		if status.StartTime.IsZero() {
 			t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
-		}
-		if status.CreationTime.IsZero() {
-			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 		}
 	}()
 	// Wait until the test thread is ready for us to update things.
@@ -181,13 +175,10 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 	if buildercommon.IsDone(&build.Status) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if build.Status.CreationTime.IsZero() {
-		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
-	}
 	if !build.Status.CompletionTime.IsZero() {
 		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !build.Status.StartTime.IsZero() {
+	if build.Status.StartTime.IsZero() {
 		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&build.Status)
@@ -206,9 +197,6 @@ func TestNonFinalUpdateFlow(t *testing.T) {
 		status, err := op.Wait()
 		if err != nil {
 			t.Fatalf("Unexpected error waiting for builder.Operation: %v", err)
-		}
-		if status.CreationTime.IsZero() {
-			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 		}
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
@@ -280,13 +268,10 @@ func TestFailureFlow(t *testing.T) {
 	if buildercommon.IsDone(&build.Status) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if build.Status.CreationTime.IsZero() {
-		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
-	}
 	if !build.Status.CompletionTime.IsZero() {
 		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !build.Status.StartTime.IsZero() {
+	if build.Status.StartTime.IsZero() {
 		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&build.Status)
@@ -316,9 +301,6 @@ func TestFailureFlow(t *testing.T) {
 		}
 		if msg, failed := buildercommon.ErrorMessage(status); !failed || msg != expectedErrorMessage {
 			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedErrorMessage, msg)
-		}
-		if status.CreationTime.IsZero() {
-			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 		}
 		if status.CompletionTime.IsZero() {
 			t.Errorf("status.CompletionTime; want non-zero, got %v", status.CompletionTime)
@@ -387,13 +369,10 @@ func TestPodPendingFlow(t *testing.T) {
 	if buildercommon.IsDone(&build.Status) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if build.Status.CreationTime.IsZero() {
-		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
-	}
 	if !build.Status.CompletionTime.IsZero() {
 		t.Errorf("build.Status.CompletionTime; want zero, got %v", build.Status.CompletionTime)
 	}
-	if !build.Status.StartTime.IsZero() {
+	if build.Status.StartTime.IsZero() {
 		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
 	op, err = builder.OperationFromStatus(&build.Status)
@@ -423,9 +402,6 @@ func TestPodPendingFlow(t *testing.T) {
 		}
 		if msg := statusMessage(status); msg != expectedPendingMsg {
 			t.Errorf("ErrorMessage(%v); wanted %q, got %q", status, expectedPendingMsg, msg)
-		}
-		if status.CreationTime.IsZero() {
-			t.Errorf("status.CreationTime; want non-zero, got %v", status.CreationTime)
 		}
 		if status.StartTime.IsZero() {
 			t.Errorf("status.StartTime; want non-zero, got %v", status.StartTime)
@@ -503,10 +479,7 @@ func TestStepFailureFlow(t *testing.T) {
 	if buildercommon.IsDone(&build.Status) {
 		t.Errorf("IsDone(%v); wanted not done, got done.", build.Status)
 	}
-	if build.Status.CreationTime.IsZero() {
-		t.Errorf("build.Status.CreationTime; want zero, got %v", build.Status.CreationTime)
-	}
-	if !build.Status.StartTime.IsZero() {
+	if build.Status.StartTime.IsZero() {
 		t.Errorf("build.Status.StartTime; want non-zero, got %v", build.Status.StartTime)
 	}
 	if !build.Status.CompletionTime.IsZero() {
@@ -541,9 +514,6 @@ func TestStepFailureFlow(t *testing.T) {
 			// We expect the error to contain the step name and exit code.
 			!strings.Contains(msg, `"step-name"`) || !strings.Contains(msg, "128") {
 			t.Errorf("ErrorMessage(%v); got %q, want %q", status, msg, expectedErrorMessage)
-		}
-		if status.CreationTime.IsZero() {
-			t.Errorf("status.CreationTime; got %v, want non-zero", status.CreationTime)
 		}
 		if status.StartTime.IsZero() {
 			t.Errorf("status.StartTime; got %v, want non-zero", status.StartTime)
