@@ -63,6 +63,16 @@ func teardownBuild(clients *clients, logger *logging.BaseLogger, name string) {
 	}
 }
 
+func teardownClusterTemplate(clients *clients, logger *logging.BaseLogger, name string) {
+	if clients != nil && clients.buildClient != nil {
+		logger.Infof("Deleting cluster template %q", name)
+
+		if err := clients.buildClient.clusterTemplates.Delete(name, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
+			logger.Fatalf("Error deleting cluster template %q: %v", name, err)
+		}
+	}
+}
+
 func buildClients(logger *logging.BaseLogger) *clients {
 	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
 	if err != nil {
@@ -112,7 +122,12 @@ func newClients(configPath string, clusterName string, namespace string) (*clien
 	if err != nil {
 		return nil, err
 	}
-	buildClient := &buildClient{builds: bcs.BuildV1alpha1().Builds(namespace)}
+
+	buildClient := &buildClient{
+		builds:           bcs.BuildV1alpha1().Builds(namespace),
+		buildTemplates:   bcs.BuildV1alpha1().BuildTemplates(namespace),
+		clusterTemplates: bcs.BuildV1alpha1().ClusterBuildTemplates(),
+	}
 
 	return &clients{
 		kubeClient:  kubeClient,
@@ -121,7 +136,9 @@ func newClients(configPath string, clusterName string, namespace string) (*clien
 }
 
 type buildClient struct {
-	builds buildtyped.BuildInterface
+	builds           buildtyped.BuildInterface
+	buildTemplates   buildtyped.BuildTemplateInterface
+	clusterTemplates buildtyped.ClusterBuildTemplateInterface
 }
 
 func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
