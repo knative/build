@@ -23,9 +23,10 @@ import (
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/pkg/logging"
+	pkgwebhook "github.com/knative/pkg/webhook"
 )
 
-func (ac *AdmissionController) validateClusterBuildTemplate(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new genericCRD) error {
+func (ac *AdmissionController) validateClusterBuildTemplate(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new pkgwebhook.GenericCRD) error {
 	_, tmpl, err := unmarshalClusterBuildTemplates(ctx, old, new)
 	if err != nil {
 		return err
@@ -38,7 +39,7 @@ func (ac *AdmissionController) validateClusterBuildTemplate(ctx context.Context,
 
 var errInvalidClusterBuildTemplate = errors.New("failed to convert to ClusterBuildTemplate")
 
-func unmarshalClusterBuildTemplates(ctx context.Context, old, new genericCRD) (*v1alpha1.ClusterBuildTemplate, *v1alpha1.ClusterBuildTemplate, error) {
+func unmarshalClusterBuildTemplates(ctx context.Context, old, new pkgwebhook.GenericCRD) (*v1alpha1.ClusterBuildTemplate, *v1alpha1.ClusterBuildTemplate, error) {
 	logger := logging.FromContext(ctx)
 
 	var oldbt *v1alpha1.ClusterBuildTemplate

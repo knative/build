@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/kmeta"
 )
@@ -44,6 +45,10 @@ type Build struct {
 
 // Check that our resource implements several interfaces.
 var _ kmeta.OwnerRefable = (*Build)(nil)
+
+// Check that Build may be validated and defaulted.
+var _ apis.Validatable = (*Build)(nil)
+var _ apis.Defaultable = (*Build)(nil)
 
 // BuildSpec is the spec for a Build resource.
 type BuildSpec struct {

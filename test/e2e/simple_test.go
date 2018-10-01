@@ -115,6 +115,114 @@ func TestFailingBuild(t *testing.T) {
 	}
 }
 
+func TestBuildWithTemplate(t *testing.T) {
+	logger := logging.GetContextLogger("TestBuildWithTemplate")
+
+	clients := buildClients(logger)
+	buildName := "build-with-template"
+	templateName := "simple-template"
+
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
+
+	if _, err := clients.buildClient.buildTemplates.Create(&v1alpha1.BuildTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      templateName,
+		},
+		Spec: v1alpha1.BuildTemplateSpec{
+			Steps: []corev1.Container{{
+				Image:   "ubuntu:latest",
+				Command: []string{"/bin/bash"},
+				Args:    []string{"-c", "echo some stuff > /im/a/custom/mount/path/file"},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "custom",
+					MountPath: "/im/a/custom/mount/path",
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name:         "custom",
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build template: %v", err)
+	}
+
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Name: templateName,
+				Kind: v1alpha1.BuildTemplateKind,
+			},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
+		t.Fatalf("watchBuild returned unexpected error: %s", err.Error())
+	}
+}
+
+func TestBuildWithClusterTemplate(t *testing.T) {
+	logger := logging.GetContextLogger("TestBuildWithClusterTemplate")
+
+	clients := buildClients(logger)
+	buildName := "build-with-template"
+	templateName := "cluster-template"
+
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
+	defer teardownClusterTemplate(clients, logger, templateName)
+
+	if _, err := clients.buildClient.clusterTemplates.Create(&v1alpha1.ClusterBuildTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: templateName,
+		},
+		Spec: v1alpha1.BuildTemplateSpec{
+			Steps: []corev1.Container{{
+				Image:   "ubuntu:latest",
+				Command: []string{"/bin/bash"},
+				Args:    []string{"-c", "echo some stuff > /im/a/custom/mount/path/file"},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "custom",
+					MountPath: "/im/a/custom/mount/path",
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name:         "custom",
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating cluster build template: %v", err)
+	}
+
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Name: templateName,
+				Kind: v1alpha1.ClusterBuildTemplateKind,
+			},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
+		t.Fatalf("watchBuild returned unexpected error: %s", err.Error())
+	}
+}
+
 func TestBuildLowTimeout(t *testing.T) {
 	logger := logging.GetContextLogger("TestBuildLowTimeout")
 

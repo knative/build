@@ -26,28 +26,7 @@ import (
 var nestedPlaceholderRE = regexp.MustCompile(`\${[^}]+\$`)
 
 func validateTemplate(tmpl v1alpha1.BuildTemplateInterface) error {
-	if err := validateSteps(tmpl.TemplateSpec().Steps); err != nil {
-		return err
-	}
-	if err := validateVolumes(tmpl.TemplateSpec().Volumes); err != nil {
-		return err
-	}
-	if err := validateParameters(tmpl.TemplateSpec().Parameters); err != nil {
-		return err
-	}
 	return validatePlaceholders(tmpl.TemplateSpec().Steps)
-}
-
-func validateParameters(params []v1alpha1.ParameterSpec) error {
-	// Template must not duplicate parameter names.
-	seen := map[string]struct{}{}
-	for _, p := range params {
-		if _, ok := seen[p.Name]; ok {
-			return validationError("DuplicateParamName", "duplicate template parameter name %q", p.Name)
-		}
-		seen[p.Name] = struct{}{}
-	}
-	return nil
 }
 
 func validatePlaceholders(steps []corev1.Container) error {
