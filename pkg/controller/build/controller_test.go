@@ -533,7 +533,7 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	}
 
 	// Update status to past time by substracting buffer time
-	first.Status.CreationTime.Time = metav1.Now().Time.Add(-buffer)
+	first.Status.StartTime.Time = metav1.Now().Time.Add(-buffer)
 
 	// We have to manually update the index, or the controller won't see the update.
 	f.updateIndex(i, []*v1alpha1.Build{first})
