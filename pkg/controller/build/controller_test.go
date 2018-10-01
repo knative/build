@@ -25,17 +25,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-
-	"github.com/knative/build/pkg/builder"
-	"github.com/knative/build/pkg/builder/nop"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
-
 	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
@@ -43,6 +38,8 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/builder"
+	"github.com/knative/build/pkg/builder/nop"
 	"github.com/knative/build/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 )
@@ -183,40 +180,19 @@ func TestBuildNotFoundError(t *testing.T) {
 }
 
 func TestBuildWithNonExistentTemplates(t *testing.T) {
-	tests := []struct {
-		bldr  builder.Interface
-		build func() *v1alpha1.Build
-	}{{
-		bldr: &nop.Builder{},
-		build: func() *v1alpha1.Build {
-			build := newBuild("test-buildtemplate")
-			build.Spec = v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Kind: v1alpha1.BuildTemplateKind,
-					Name: "not-existent-template",
-				},
-			}
-			return build
-		},
-	}, {
-		bldr: &nop.Builder{},
-		build: func() *v1alpha1.Build {
-			build := newBuild("test-clusterbuild-template")
-			build.Spec = v1alpha1.BuildSpec{
-				Template: &v1alpha1.TemplateInstantiationSpec{
-					Kind: v1alpha1.ClusterBuildTemplateKind,
-					Name: "not-existent-template",
-				},
-			}
-			return build
-		},
-	}}
+	for _, kind := range []v1alpha1.TemplateKind{v1alpha1.BuildTemplateKind, v1alpha1.ClusterBuildTemplateKind} {
+		build := newBuild("test-buildtemplate")
 
-	for _, test := range tests {
+		build.Spec = v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Kind: kind,
+				Name: "not-existent-template",
+			},
+		}
 		f := &fixture{
 			t:          t,
-			objects:    []runtime.Object{test.build()},
-			client:     fake.NewSimpleClientset(test.build()),
+			objects:    []runtime.Object{build},
+			client:     fake.NewSimpleClientset(build),
 			kubeclient: k8sfake.NewSimpleClientset(),
 		}
 
@@ -225,24 +201,19 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 		defer close(stopCh)
 		defer close(eventCh)
 
-		c, i, k8sI := f.newController(test.bldr, eventCh)
-		f.updateIndex(i, []*v1alpha1.Build{test.build()})
+		c, i, k8sI := f.newController(&nop.Builder{}, eventCh)
+		f.updateIndex(i, []*v1alpha1.Build{build})
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
 
-		err := c.syncHandler(getKey(test.build(), t))
-		if err == nil {
+		if err := c.syncHandler(getKey(build, t)); err == nil {
 			t.Errorf("Expect error syncing build")
-		}
-		if !kuberrors.IsNotFound(err) {
+		} else if !kuberrors.IsNotFound(err) {
 			t.Errorf("Expect error to be not found err: %s", err.Error())
 		}
 	}
 }
-
-func TestBuilWithTemplate(t *testing.T) {
-	bldr := &nop.Builder{}
-
+func TestBuildWithTemplate(t *testing.T) {
 	tmpl := &v1alpha1.BuildTemplate{
 		TypeMeta: metav1.TypeMeta{APIVersion: v1alpha1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
@@ -273,7 +244,7 @@ func TestBuilWithTemplate(t *testing.T) {
 	defer close(stopCh)
 	defer close(eventCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
+	c, i, k8sI := f.newController(&nop.Builder{}, eventCh)
 
 	err := i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
 	if err != nil {
@@ -438,8 +409,6 @@ func TestErrFlows(t *testing.T) {
 }
 
 func TestTimeoutFlows(t *testing.T) {
-	bldr := &nop.Builder{}
-
 	build := newBuild("test")
 	buffer := 1 * time.Minute
 
@@ -457,7 +426,7 @@ func TestTimeoutFlows(t *testing.T) {
 	defer close(stopCh)
 	defer close(eventCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
+	c, i, k8sI := f.newController(&nop.Builder{}, eventCh)
 
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
@@ -576,7 +545,6 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 }
 
 func TestRunController(t *testing.T) {
-	bldr := &nop.Builder{}
 	build := newBuild("test-run")
 
 	f := &fixture{
@@ -593,7 +561,7 @@ func TestRunController(t *testing.T) {
 	defer close(eventCh)
 	defer close(errChan)
 
-	c, i, _ := f.newController(bldr, eventCh)
+	c, i, _ := f.newController(&nop.Builder{}, eventCh)
 
 	i.Start(stopCh)
 
