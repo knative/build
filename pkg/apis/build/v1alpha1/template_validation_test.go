@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Validate both cluster build template and build template
 func TestValidateClusterBuildTemplate(t *testing.T) {
 	hasDefault := "has-default"
 	for _, c := range []struct {
