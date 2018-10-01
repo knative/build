@@ -58,7 +58,7 @@ func (nb *operation) Checkpoint(_ *v1alpha1.Build, status *v1alpha1.BuildStatus)
 }
 
 func (nb *operation) Terminate() error {
-	return nil
+	return nb.builder.OpErr
 }
 
 func (nb *operation) Wait() (*v1alpha1.BuildStatus, error) {
@@ -109,6 +109,9 @@ type Builder struct {
 
 	// Err is the error that should be returned from calls to this builder.
 	Err error
+
+	// Operation error
+	OpErr error
 }
 
 func (nb *Builder) Builder() v1alpha1.BuildProvider {
@@ -130,5 +133,8 @@ func (nb *Builder) BuildFromSpec(*v1alpha1.Build) (buildercommon.Build, error) {
 
 // OperationFromStatus returns the no-op operation.
 func (nb *Builder) OperationFromStatus(*v1alpha1.BuildStatus) (buildercommon.Operation, error) {
+	if nb.Err != nil {
+		return nil, nb.Err
+	}
 	return &operation{builder: nb}, nil
 }
