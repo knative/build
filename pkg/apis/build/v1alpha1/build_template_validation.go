@@ -9,6 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	maxLength = 63
+)
+
 // Validate build template
 func (b *BuildTemplate) Validate() *apis.FieldError {
 	return validateObjectMetadata(b.GetObjectMeta()).ViaField("metadata").Also(b.Spec.Validate().ViaField("spec"))
@@ -38,7 +42,7 @@ func validateObjectMetadata(meta metav1.Object) *apis.FieldError {
 		}
 	}
 
-	if len(name) > 63 {
+	if len(name) > maxLength {
 		return &apis.FieldError{
 			Message: "Invalid resource name: length must be no more than 63 characters",
 			Paths:   []string{"name"},
@@ -52,7 +56,7 @@ func validateParameters(params []ParameterSpec) *apis.FieldError {
 	seen := map[string]struct{}{}
 	for _, p := range params {
 		if _, ok := seen[p.Name]; ok {
-			return apis.ErrMultipleOneOf("ParamName")
+			return apis.ErrInvalidKeyName("ParamName", "b.spec.params")
 		}
 		seen[p.Name] = struct{}{}
 	}

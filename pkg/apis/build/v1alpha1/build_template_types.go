@@ -120,3 +120,6 @@ func (bt *BuildTemplate) Copy() BuildTemplateInterface {
 func (bt *BuildTemplate) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("BuildTemplate")
 }
+
+// SetDefaults for build template
+func (bt *BuildTemplate) SetDefaults() {}
