@@ -10,7 +10,7 @@ func TestSetDefault(t *testing.T) {
 	if emptyBuild.Spec.ServiceAccountName != "default" {
 		t.Errorf("Expect default to be the serviceaccount name but got %s", emptyBuild.Spec.ServiceAccountName)
 	}
-	if emptyBuild.Spec.Timeout.Duration != DefaultTime {
+	if emptyBuild.Spec.Timeout.Duration != DefaultTimeout {
 		t.Errorf("Expect build timeout to be set")
 	}
 }
