@@ -22,6 +22,9 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 readonly BUILD_RELEASE_GCS
 readonly BUILD_RELEASE_GCR
 
+# Location of the base image for creds-init and git images
+readonly BUILD_BASE_GCR="${BUILD_RELEASE_GCR}/github.com/knative/build/build-base"
+
 # Local generated yaml file
 readonly OUTPUT_YAML=release.yaml
 
@@ -37,8 +40,8 @@ run_validation_tests ./test/presubmit-tests.sh
 banner "Building the release"
 
 # Build and push the base image for creds-init and git images.
-docker build -t $BUILD_RELEASE_GCR/build-base -f images/Dockerfile images/
-docker push $BUILD_RELEASE_GCR/build-base
+docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
+docker push ${BUILD_BASE}
 
 # Set the repository
 export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
