@@ -200,7 +200,7 @@
   revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
 
 [[projects]]
-  digest = "1:14713b17aa705a1bccff5366356e97358f2d55f78c5c136cb1ba736fbba938f4"
+  digest = "1:fec02f15c59c001b37a6e1d9d9facf9dc51da346815217358f8b2cfe76bc1636"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -215,10 +215,10 @@
     "test",
     "test/logging",
     "test/spoof",
-    "webhook"
+    "webhook",
   ]
   pruneopts = "NUT"
-  revision = "3155feb33006c8e0379a58237a819a36fae98c2d"
+  revision = "8e471c3d74eda15fbb9405d076008e2cf2008548"
 
 [[projects]]
   branch = "master"
@@ -789,6 +789,7 @@
     "github.com/knative/pkg/signals",
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
+    "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra",
     "github.com/mattbaird/jsonpatch",
     "go.uber.org/zap",
