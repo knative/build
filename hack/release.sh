@@ -41,7 +41,7 @@ banner "Building the release"
 
 # Build and push the base image for creds-init and git images.
 docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
-docker push ${BUILD_BASE}
+docker push ${BUILD_BASE_GCR}
 
 # Set the repository
 export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
