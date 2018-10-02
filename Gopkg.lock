@@ -200,7 +200,7 @@
   revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
 
 [[projects]]
-  digest = "1:72293976500f25109c1e59904e1cd1ac6c727515ecad06aa8228a5110b89d9bb"
+  digest = "1:fec02f15c59c001b37a6e1d9d9facf9dc51da346815217358f8b2cfe76bc1636"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -215,10 +215,10 @@
     "test",
     "test/logging",
     "test/spoof",
-    "webhook"
+    "webhook",
   ]
   pruneopts = "NUT"
-  revision = "f81d0f8f0fac9943f3892c5e86007dc00382a909"
+  revision = "8e471c3d74eda15fbb9405d076008e2cf2008548"
 
 [[projects]]
   branch = "master"
@@ -541,11 +541,12 @@
   version = "kubernetes-1.11.0"
 
 [[projects]]
-  digest = "1:cfc8072be6ac85c93c499687f89244d02a157331d20be6012323818675024367"
+  digest = "1:3fdf3f975a310ca0e23293b8b9ec6c0db3f8c5daaf26de9c787d94184167ec37"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
     "discovery/fake",
+    "dynamic",
     "informers",
     "informers/admissionregistration",
     "informers/admissionregistration/v1alpha1",
@@ -788,6 +789,7 @@
     "github.com/knative/pkg/signals",
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
+    "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra",
     "github.com/mattbaird/jsonpatch",
     "go.uber.org/zap",

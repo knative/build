@@ -44,6 +44,11 @@ required = [
   # It seems to be broken at HEAD.
   revision = "1ff28809256a84bb6966640ff3d0371af82ccba4"
 
+[[constraint]]
+  name = "github.com/knative/pkg"
+  # HEAD as of 2018-10-02
+  revision = "8e471c3d74eda15fbb9405d076008e2cf2008548"
+
 [prune]
   go-tests = true
   unused-packages = true
@@ -63,9 +68,3 @@ required = [
   name = "github.com/knative/test-infra"
   unused-packages = false
   non-go = false
-
-[[constraint]]
-  name = "github.com/knative/pkg"
-  # HEAD as of 2018-09-26
-  revision = "f81d0f8f0fac9943f3892c5e86007dc00382a909"
-

@@ -30,7 +30,9 @@ import (
 const bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"
 
 func TestBuildImplementsConditions(t *testing.T) {
-	duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{})
+	if err := duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{}); err != nil {
+		t.Errorf("Expect Build to implement duck verify type: err %#v", err)
+	}
 }
 
 func TestParsing(t *testing.T) {
