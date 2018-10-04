@@ -18,19 +18,14 @@ package main
 import (
 	"flag"
 	"log"
-	"time"
 
 	"go.uber.org/zap"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/knative/build/pkg"
-	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
-	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/webhook"
 	pkgwebhook "github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -75,14 +70,6 @@ func main() {
 		logger.Fatal("Failed to get the client set", zap.Error(err))
 	}
 
-	buildClient, err := buildclientset.NewForConfig(cfg)
-	if err != nil {
-		log.Fatalf("Error building Build clientset: %s", err.Error())
-	}
-
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
-
 	pkgoptions := pkgwebhook.ControllerOptions{
 		ServiceName:    "build-webhook",
 		DeploymentName: "build-webhook",
@@ -102,8 +89,9 @@ func main() {
 		},
 		Logger: logger,
 	}
-	go pkgcontroller.Run(stopCh)
 
-	buildWebhookController := webhook.NewAdmissionController(kubeClient, buildClient, bldr, pkgoptions, logger)
-	go buildWebhookController.Run(stopCh)
+	err = pkgcontroller.Run(stopCh)
+	if err != nil {
+		logger.Errorf("Error running webhook controller: %v", err)
+	}
 }

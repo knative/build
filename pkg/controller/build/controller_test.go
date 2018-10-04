@@ -74,6 +74,29 @@ func newBuild(name string) *v1alpha1.Build {
 	}
 }
 
+func (f *fixture) testSetup() error {
+	//t.Helper()
+	if _, err := f.kubeclient.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(&corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
+	}); err != nil {
+		f.t.Fatalf("Failed to create ServiceAccount: %v", err)
+	}
+
+	configMaps := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "extension-apiserver-authentication",
+		},
+		Data: map[string]string{"requestheader-client-ca-file": "test-client-file"},
+	}
+
+	_, cMapsErr := f.kubeclient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Create(configMaps)
+	if cMapsErr != nil {
+		f.t.Errorf("Failed to create new test config map %#v", cMapsErr)
+		return cMapsErr
+	}
+	return nil
+}
+
 func (f *fixture) newController(b builder.Interface, eventCh chan string) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
@@ -113,6 +136,9 @@ func TestBuildNotFoundFlow(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
@@ -145,6 +171,9 @@ func TestBuildWithBadKey(t *testing.T) {
 		t:          t,
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 	eventCh := make(chan string, 1024)
 	c, _, _ := f.newController(bldr, eventCh)
 
@@ -163,7 +192,9 @@ func TestBuildNotFoundError(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)
@@ -194,6 +225,9 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			objects:    []runtime.Object{build},
 			client:     fake.NewSimpleClientset(build),
 			kubeclient: k8sfake.NewSimpleClientset(),
+		}
+		if err := f.testSetup(); err != nil {
+			t.Fatalf("testSetup() = %v", err)
 		}
 
 		stopCh := make(chan struct{})
@@ -238,7 +272,9 @@ func TestBuildWithTemplate(t *testing.T) {
 		client:     fake.NewSimpleClientset(build, tmpl),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)
@@ -289,7 +325,9 @@ func TestBasicFlows(t *testing.T) {
 			client:     fake.NewSimpleClientset(build),
 			kubeclient: k8sfake.NewSimpleClientset(),
 		}
-
+		if err := f.testSetup(); err != nil {
+			t.Fatalf("testSetup() = %v", err)
+		}
 		stopCh := make(chan struct{})
 		eventCh := make(chan string, 1024)
 		defer close(stopCh)
@@ -369,7 +407,9 @@ func TestErrFlows(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)
@@ -420,7 +460,9 @@ func TestTimeoutFlows(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)
@@ -510,7 +552,9 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-
+	if err := f.testSetup(); err != nil {
+		t.Fatalf("testSetup() = %v", err)
+	}
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)

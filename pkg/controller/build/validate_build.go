@@ -13,25 +13,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package webhook
+package build
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/mattbaird/jsonpatch"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/pkg/logging"
 	pkgwebhook "github.com/knative/pkg/webhook"
 )
 
-func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch.JsonPatchOperation, old, new pkgwebhook.GenericCRD) error {
-	_, b, err := unmarshalBuilds(ctx, old, new)
+func (ac *Controller) validateBuild(old pkgwebhook.GenericCRD) error {
+	b, err := unmarshalBuilds(old)
 	if err != nil {
 		return err
 	}
@@ -42,17 +39,16 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
-	var volumes []corev1.Volume
 	var tmpl v1alpha1.BuildTemplateInterface
 	if b.Spec.Template != nil {
 		tmplName := b.Spec.Template.Name
 		if b.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind && tmplName != "" {
-			tmpl, err = ac.buildClient.BuildV1alpha1().ClusterBuildTemplates().Get(tmplName, metav1.GetOptions{})
+			tmpl, err = ac.buildclientset.BuildV1alpha1().ClusterBuildTemplates().Get(tmplName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 		} else if b.Spec.Template.Kind == v1alpha1.BuildTemplateKind || b.Spec.Template.Kind == "" && tmplName != "" {
-			tmpl, err = ac.buildClient.BuildV1alpha1().BuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
+			tmpl, err = ac.buildclientset.BuildV1alpha1().BuildTemplates(b.Namespace).Get(tmplName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -63,11 +59,15 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 		if err := validateArguments(b.Spec.Template.Arguments, tmpl); err != nil {
 			return err
 		}
-		volumes = tmpl.TemplateSpec().Volumes
-	}
 
-	if err := validateVolumes(volumes); err != nil {
-		return err
+		if err := validateVolumes(tmpl.TemplateSpec().Volumes); err != nil {
+			return err
+		}
+
+		// Validate build template
+		if err = validateTemplate(tmpl); err != nil {
+			return err
+		}
 	}
 
 	// Do builder-implementation-specific validation.
@@ -76,44 +76,31 @@ func (ac *AdmissionController) validateBuild(ctx context.Context, _ *[]jsonpatch
 
 var errInvalidBuild = errors.New("failed to convert to Build")
 
-func unmarshalBuilds(ctx context.Context, old, new pkgwebhook.GenericCRD) (*v1alpha1.Build, *v1alpha1.Build, error) {
-	logger := logging.FromContext(ctx)
-
-	var oldb *v1alpha1.Build
-	if old != nil {
-		ok := false
-		oldb, ok = old.(*v1alpha1.Build)
-		if !ok {
-			return nil, nil, errInvalidBuild
-		}
-	}
-	logger.Infof("OLD Build is\n%+v", oldb)
-
+func unmarshalBuilds(new pkgwebhook.GenericCRD) (*v1alpha1.Build, error) {
 	newbt, ok := new.(*v1alpha1.Build)
 	if !ok {
-		return nil, nil, errInvalidBuild
+		return nil, errInvalidBuild
 	}
-	logger.Infof("NEW Build is\n%+v", newbt)
 
-	return oldb, newbt, nil
+	return newbt, nil
 }
 
 // validateSecrets checks that if the Build specifies a ServiceAccount, that it
 // exists, and that any Secrets referenced by it exist, and have valid
 // annotations.
-func (ac *AdmissionController) validateSecrets(b *v1alpha1.Build) error {
+func (ac *Controller) validateSecrets(b *v1alpha1.Build) error {
 	saName := b.Spec.ServiceAccountName
 	if saName == "" {
 		saName = "default"
 	}
 
-	sa, err := ac.client.CoreV1().ServiceAccounts(b.Namespace).Get(saName, metav1.GetOptions{})
+	sa, err := ac.kubeclientset.CoreV1().ServiceAccounts(b.Namespace).Get(saName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	for _, se := range sa.Secrets {
-		sec, err := ac.client.CoreV1().Secrets(b.Namespace).Get(se.Name, metav1.GetOptions{})
+		sec, err := ac.kubeclientset.CoreV1().Secrets(b.Namespace).Get(se.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

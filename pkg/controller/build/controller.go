@@ -264,6 +264,13 @@ func (c *Controller) syncHandler(key string) error {
 
 		return err
 	}
+	// Validate build
+	err = c.validateBuild(build)
+	if err != nil {
+		c.logger.Errorf("Failed to validate build: %v", err)
+		return err
+	}
+
 	// Don't mutate the informer's copy of our object.
 	build = build.DeepCopy()
 
