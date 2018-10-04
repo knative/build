@@ -64,17 +64,6 @@ var (
 	}}
 )
 
-func validateVolumes(vs []corev1.Volume) error {
-	seen := make(map[string]interface{})
-	for i, v := range vs {
-		if _, ok := seen[v.Name]; ok {
-			return validation.NewError("DuplicateVolume", "saw Volume %q defined multiple times", v.Name)
-		}
-		seen[v.Name] = i
-	}
-	return nil
-}
-
 const (
 	// Prefixes to add to the name of the init containers.
 	// IMPORTANT: Changing these values without changing fluentd collection configuration
@@ -333,7 +322,7 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	// declared user volumes.
 	volumes := append(build.Spec.Volumes, implicitVolumes...)
 	volumes = append(volumes, secrets...)
-	if err := validateVolumes(volumes); err != nil {
+	if err := v1alpha1.ValidateVolumes(volumes); err != nil {
 		return nil, err
 	}
 

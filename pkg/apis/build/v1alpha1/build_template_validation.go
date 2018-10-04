@@ -23,7 +23,7 @@ func (b *BuildTemplateSpec) Validate() *apis.FieldError {
 	if err := validateSteps(b.Steps); err != nil {
 		return err
 	}
-	if err := validateVolumes(b.Volumes); err != nil {
+	if err := ValidateVolumes(b.Volumes); err != nil {
 		return err
 	}
 	if err := validateParameters(b.Parameters); err != nil {
@@ -63,7 +63,8 @@ func validateParameters(params []ParameterSpec) *apis.FieldError {
 	return nil
 }
 
-func validateVolumes(volumes []corev1.Volume) *apis.FieldError {
+//validateVolumes for any build CRD
+func ValidateVolumes(volumes []corev1.Volume) *apis.FieldError {
 	// Build must not duplicate volume names.
 	vols := map[string]struct{}{}
 	for _, v := range volumes {

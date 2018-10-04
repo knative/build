@@ -16,23 +16,15 @@ limitations under the License.
 package build
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	pkgwebhook "github.com/knative/pkg/webhook"
 )
 
-func (ac *Controller) validateBuild(old pkgwebhook.GenericCRD) error {
-	b, err := unmarshalBuilds(old)
-	if err != nil {
-		return err
-	}
-
+func (ac *Controller) validateBuild(b *v1alpha1.Build) error {
 	if err := ac.validateSecrets(b); err != nil {
 		return err
 	}
@@ -40,6 +32,7 @@ func (ac *Controller) validateBuild(old pkgwebhook.GenericCRD) error {
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
 	var tmpl v1alpha1.BuildTemplateInterface
+	var err error
 	if b.Spec.Template != nil {
 		tmplName := b.Spec.Template.Name
 		if b.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind && tmplName != "" {
@@ -60,29 +53,18 @@ func (ac *Controller) validateBuild(old pkgwebhook.GenericCRD) error {
 			return err
 		}
 
-		if err := validateVolumes(tmpl.TemplateSpec().Volumes); err != nil {
+		if err := v1alpha1.ValidateVolumes(tmpl.TemplateSpec().Volumes); err != nil {
 			return err
 		}
 
 		// Validate build template
-		if err = validateTemplate(tmpl); err != nil {
+		if err := validateTemplate(tmpl); err != nil {
 			return err
 		}
 	}
 
 	// Do builder-implementation-specific validation.
 	return ac.builder.Validate(b)
-}
-
-var errInvalidBuild = errors.New("failed to convert to Build")
-
-func unmarshalBuilds(new pkgwebhook.GenericCRD) (*v1alpha1.Build, error) {
-	newbt, ok := new.(*v1alpha1.Build)
-	if !ok {
-		return nil, errInvalidBuild
-	}
-
-	return newbt, nil
 }
 
 // validateSecrets checks that if the Build specifies a ServiceAccount, that it
@@ -154,18 +136,6 @@ func validateArguments(args []v1alpha1.ArgumentSpec, tmpl v1alpha1.BuildTemplate
 			}
 			return validationError("UnsatisfiedParameter", "build does not specify these required parameters: %s", unused)
 		}
-	}
-	return nil
-}
-
-func validateVolumes(volumes []corev1.Volume) error {
-	// Build must not duplicate volume names.
-	vols := map[string]struct{}{}
-	for _, v := range volumes {
-		if _, ok := vols[v.Name]; ok {
-			return validationError("DuplicateVolumeName", "duplicate volume name %q", v.Name)
-		}
-		vols[v.Name] = struct{}{}
 	}
 	return nil
 }

@@ -33,7 +33,7 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	if bs.Template != nil {
 		return bs.Template.Validate()
 	}
-	if err := validateVolumes(bs.Volumes); err != nil {
+	if err := ValidateVolumes(bs.Volumes); err != nil {
 		return err
 	}
 	if err := validateTimeout(bs.Timeout); err != nil {
