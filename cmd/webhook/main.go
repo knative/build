@@ -90,8 +90,5 @@ func main() {
 		Logger: logger,
 	}
 
-	err = pkgcontroller.Run(stopCh)
-	if err != nil {
-		logger.Errorf("Error running webhook controller: %v", err)
-	}
+	pkgcontroller.Run(stopCh)
 }

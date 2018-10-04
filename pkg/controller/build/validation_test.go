@@ -429,7 +429,7 @@ func TestValidateTemplate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			verr := validateTemplate(c.tmpl)
 			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
-				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
+				t.Errorf("validateTemplate(%s); got %v, want %q", name, verr, c.reason)
 			}
 		})
 	}
