@@ -130,7 +130,7 @@ func (ac *AdmissionController) validateSecrets(b *v1alpha1.Build) error {
 		// them outright before a Build ever uses them. This would
 		// remove latency at Build-time.
 		for k, v := range sec.Annotations {
-			if strings.HasPrefix(k, "build.dev/docker-") && v == "index.docker.io" {
+			if strings.HasPrefix(k, "build.knative.dev/docker-") && v == "index.docker.io" {
 				return validationError("BadSecretAnnotation", `Secret %q has incorrect annotation %q / %q, value should be "https://index.docker.io/v1/"`, se.Name, k, v)
 			}
 		}

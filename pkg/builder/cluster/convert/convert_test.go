@@ -78,10 +78,10 @@ func TestRoundtrip(t *testing.T) {
 				}},
 			}, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "multi-creds",
-					Annotations: map[string]string{"build.dev/docker-0": "https://us.gcr.io",
-						"build.dev/docker-1": "https://docker.io",
-						"build.dev/git-0":    "github.com",
-						"build.dev/git-1":    "gitlab.com",
+					Annotations: map[string]string{"build.knative.dev/docker-0": "https://us.gcr.io",
+						"build.knative.dev/docker-1": "https://docker.io",
+						"build.knative.dev/git-0":    "github.com",
+						"build.knative.dev/git-1":    "gitlab.com",
 					}},
 				Type: "kubernetes.io/basic-auth",
 				Data: map[string][]byte{
