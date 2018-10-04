@@ -401,7 +401,7 @@ func TestValidateBuild(t *testing.T) {
 		secrets: []*corev1.Secret{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "good-sekrit",
-				Annotations: map[string]string{"build.dev/docker-0": "https://index.docker.io/v1/"},
+				Annotations: map[string]string{"build.knative.dev/docker-0": "https://index.docker.io/v1/"},
 			},
 		}, {
 			ObjectMeta: metav1.ObjectMeta{
@@ -411,7 +411,7 @@ func TestValidateBuild(t *testing.T) {
 		}, {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "one-more-good-sekrit",
-				Annotations: map[string]string{"build.dev/docker-1": "gcr.io"},
+				Annotations: map[string]string{"build.knative.dev/docker-1": "gcr.io"},
 			},
 		}, {
 			ObjectMeta: metav1.ObjectMeta{
@@ -433,7 +433,7 @@ func TestValidateBuild(t *testing.T) {
 		secrets: []*corev1.Secret{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "bad-sekrit",
-				Annotations: map[string]string{"build.dev/docker-0": "index.docker.io"},
+				Annotations: map[string]string{"build.knative.dev/docker-0": "index.docker.io"},
 			},
 		}},
 		reason: "BadSecretAnnotation",
