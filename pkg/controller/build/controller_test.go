@@ -75,7 +75,7 @@ func newBuild(name string) *v1alpha1.Build {
 }
 
 func (f *fixture) testSetup() error {
-	//t.Helper()
+	f.t.Helper()
 	if _, err := f.kubeclient.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(&corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "default"},
 	}); err != nil {

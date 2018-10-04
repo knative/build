@@ -23,16 +23,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/knative/build/pkg"
-
-	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	pkgwebhook "github.com/knative/pkg/webhook"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
+	pkgwebhook "github.com/knative/pkg/webhook"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/knative/build/pkg"
+	"github.com/knative/build/pkg/apis/build/v1alpha1"
 )
 
 const (
