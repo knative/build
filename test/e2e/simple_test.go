@@ -21,7 +21,6 @@ package e2e
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -47,11 +46,6 @@ func TestMain(m *testing.M) {
 		logging.InitializeMetricExporter()
 	}
 
-	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
-	if err != nil {
-		log.Fatalf("newClients: %v", err)
-	}
-
 	clients := setup(logger)
 	test.CleanupOnInterrupt(func() { teardownNamespace(clients, logger) }, logger)
 	var code int
@@ -71,11 +65,6 @@ func TestMain(m *testing.M) {
 func TestSimpleBuild(t *testing.T) {
 	logger := logging.GetContextLogger("TestSimpleBuild")
 	clients := buildClients(logger)
-
-	// Emit a metric for null-build latency (i.e., time to schedule and execute
-	// and finish watching a build).
-	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
-	defer span.End()
 
 	// Emit a metric for null-build latency (i.e., time to schedule and execute
 	// and finish watching a build).
