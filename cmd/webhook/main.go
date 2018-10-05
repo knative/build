@@ -27,7 +27,7 @@ import (
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
-	pkgwebhook "github.com/knative/pkg/webhook"
+	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/knative/build/pkg"
@@ -69,7 +69,7 @@ func main() {
 		logger.Fatal("Failed to get the client set", zap.Error(err))
 	}
 
-	pkgoptions := pkgwebhook.ControllerOptions{
+	pkgoptions := webhook.ControllerOptions{
 		ServiceName:    "build-webhook",
 		DeploymentName: "build-webhook",
 		Namespace:      pkg.GetBuildSystemNamespace(),
@@ -78,10 +78,10 @@ func main() {
 		WebhookName:    "webhook.build.knative.dev",
 	}
 
-	pkgcontroller := pkgwebhook.AdmissionController{
+	pkgcontroller := webhook.AdmissionController{
 		Client:  kubeClient,
 		Options: pkgoptions,
-		Handlers: map[schema.GroupVersionKind]pkgwebhook.GenericCRD{
+		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			v1alpha1.SchemeGroupVersion.WithKind("Build"):                &v1alpha1.Build{},
 			v1alpha1.SchemeGroupVersion.WithKind("ClusterBuildTemplate"): &v1alpha1.ClusterBuildTemplate{},
 			v1alpha1.SchemeGroupVersion.WithKind("BuildTemplate"):        &v1alpha1.BuildTemplate{},

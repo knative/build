@@ -24,7 +24,8 @@ func (b *BuildTemplateSpec) Validate() *apis.FieldError {
 	return nil
 }
 
-//ValidateVolumes for any build CRD
+//ValidateVolumes validates collection of volumes that are available to mount into the
+// steps of the build ot build template.
 func ValidateVolumes(volumes []corev1.Volume) *apis.FieldError {
 	// Build must not duplicate volume names.
 	vols := map[string]struct{}{}
