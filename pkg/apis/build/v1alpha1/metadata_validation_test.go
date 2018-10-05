@@ -16,9 +16,22 @@ limitations under the License.
 
 package v1alpha1
 
-import "github.com/knative/pkg/apis"
+import (
+	"strings"
+	"testing"
 
-// Validate ClusterBuildTemplate
-func (b *ClusterBuildTemplate) Validate() *apis.FieldError {
-	return validateObjectMetadata(b.GetObjectMeta()).ViaField("metadata").Also(b.Spec.Validate().ViaField("spec"))
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+func TestMetadataInvalidLongName(t *testing.T) {
+
+	invalidMetas := []*metav1.ObjectMeta{
+		&metav1.ObjectMeta{Name: strings.Repeat("s", maxLength+1)},
+		&metav1.ObjectMeta{Name: "bad.name"},
+	}
+	for _, invalidMeta := range invalidMetas {
+		if err := validateObjectMetadata(invalidMeta); err == nil {
+			t.Errorf("Failed to validate object meta data: %s", err)
+		}
+	}
 }

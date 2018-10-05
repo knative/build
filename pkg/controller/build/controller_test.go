@@ -69,8 +69,20 @@ func newBuild(name string) *v1alpha1.Build {
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: metav1.Duration{Duration: 20 * time.Minute},
+			Timeout: &metav1.Duration{Duration: 20 * time.Minute},
 		},
+	}
+}
+
+func (f *fixture) createServceAccount() {
+	f.t.Helper()
+
+	if _, err := f.kubeclient.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+		},
+	); err != nil {
+		f.t.Fatalf("Failed to create ServiceAccount: %v", err)
 	}
 }
 
@@ -114,6 +126,8 @@ func TestBuildNotFoundFlow(t *testing.T) {
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
 
+	f.createServceAccount()
+
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)
@@ -145,6 +159,8 @@ func TestBuildWithBadKey(t *testing.T) {
 		t:          t,
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	f.createServceAccount()
+
 	eventCh := make(chan string, 1024)
 	c, _, _ := f.newController(bldr, eventCh)
 
@@ -163,6 +179,7 @@ func TestBuildNotFoundError(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	f.createServceAccount()
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
@@ -195,6 +212,7 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			client:     fake.NewSimpleClientset(build),
 			kubeclient: k8sfake.NewSimpleClientset(),
 		}
+		f.createServceAccount()
 
 		stopCh := make(chan struct{})
 		eventCh := make(chan string, 1024)
@@ -238,6 +256,7 @@ func TestBuildWithTemplate(t *testing.T) {
 		client:     fake.NewSimpleClientset(build, tmpl),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	f.createServceAccount()
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
@@ -289,6 +308,7 @@ func TestBasicFlows(t *testing.T) {
 			client:     fake.NewSimpleClientset(build),
 			kubeclient: k8sfake.NewSimpleClientset(),
 		}
+		f.createServceAccount()
 
 		stopCh := make(chan struct{})
 		eventCh := make(chan string, 1024)
@@ -369,6 +389,7 @@ func TestErrFlows(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	f.createServceAccount()
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
@@ -412,7 +433,7 @@ func TestTimeoutFlows(t *testing.T) {
 	build := newBuild("test")
 	buffer := 1 * time.Minute
 
-	build.Spec.Timeout = metav1.Duration{Duration: 1 * time.Second}
+	build.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
 
 	f := &fixture{
 		t:          t,
@@ -420,6 +441,7 @@ func TestTimeoutFlows(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	f.createServceAccount()
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
@@ -502,7 +524,7 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	build := newBuild("test")
 	buffer := 10 * time.Minute
 
-	build.Spec.Timeout = metav1.Duration{Duration: 1 * time.Second}
+	build.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
 
 	f := &fixture{
 		t:          t,
@@ -510,6 +532,7 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 		client:     fake.NewSimpleClientset(build),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
+	f.createServceAccount()
 
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
