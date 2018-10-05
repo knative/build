@@ -17,7 +17,9 @@ _By default `go test` will not run [the e2e tests](#running-end-to-end-tests), w
 
 ## Running end to end tests
 
-To run [the e2e tests](./e2e), you need to have a running environment that meets
+### Go e2e tests
+
+To run [the Go e2e tests](./e2e), you need to have a running environment that meets
 [the e2e test environment requirements](#environment-requirements), and you need to specify the build tag `e2e`.
 
 ```bash
@@ -25,6 +27,15 @@ go test -v -tags=e2e -count=1 ./test/e2e/...
 ```
 
 `-count=1` is the idiomatic way to bypass test caching, so that tests will always run.
+
+### YAML e2e tests
+
+To run the YAML e2e tests, you need to have a running environment that meets
+[the e2e test environment requirements](#environment-requirements).
+
+```bash
+./test/e2e-yaml-tests.sh
+```
 
 ### One test case
 
