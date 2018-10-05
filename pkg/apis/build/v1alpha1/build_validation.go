@@ -64,10 +64,11 @@ func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
 }
 
 func (bt *BuildSpec) validateTimeout() *apis.FieldError {
-	maxTimeout := time.Duration(24 * time.Hour)
 	if bt.Timeout == nil {
 		return nil
 	}
+	maxTimeout := time.Duration(24 * time.Hour)
+
 	if bt.Timeout.Duration > maxTimeout {
 		return apis.ErrInvalidValue(fmt.Sprintf("%s should be < 24h", bt.Timeout), "b.spec.timeout")
 	} else if bt.Timeout.Duration < 0 {
