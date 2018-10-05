@@ -14,32 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs the end-to-end tests against the build controller
-# built from source. It is started by prow for each PR.
-# For convenience, it can also be executed manually.
-
-# If you already have the *_OVERRIDE environment variables set, call
-# this script with the --run-tests arguments and it will use the cluster
-# and run the tests.
-
-# Calling this script without arguments will create a new cluster in
-# project $PROJECT_ID, start the controller, run the tests and delete
-# the cluster.
+# This script runs the YAML end-to-end tests against the build controller
+# built from source. It is not run by prow for each PR, see e2e-tests.sh for that.
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 source $(dirname $0)/e2e-common.sh
-
-
-# Script entry point.
-
-initialize $@
 
 # Fail fast during setup.
 set -o errexit
 set -o pipefail
 
 header "Building and starting the controller"
-export KO_DOCKER_REPO=${DOCKER_REPO_OVERRIDE}
 ko apply -f config/ || fail_test
 
 # Handle test failures ourselves, so we can dump useful info.
@@ -53,9 +38,6 @@ kubectl delete --ignore-not-found=true buildtemplates --all
 # Run the tests
 
 failed=0
-
-header "Running Go e2e tests"
-report_go_test -tags e2e ./test/e2e/... -count=1 || failed=1
 
 header "Running YAML e2e tests"
 if ! run_yaml_tests; then
