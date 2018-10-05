@@ -105,5 +105,5 @@ func main() {
 	go pkgcontroller.Run(stopCh)
 
 	buildWebhookController := webhook.NewAdmissionController(kubeClient, buildClient, bldr, pkgoptions, logger)
-	go buildWebhookController.Run(stopCh)
+	buildWebhookController.Run(stopCh)
 }
