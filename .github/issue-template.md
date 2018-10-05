@@ -1,25 +1,26 @@
 <!--
-Uncomment leaving one or more of the following to ensure that the appropriate
-working groups are aware of the issue:
+Uncomment and remove leading >, leaving one or more of the following to ensure
+that the appropriate working groups are aware of the issue:
 
-/area API
-/area monitoring
-/area test-and-release
+> /area API
+> /area monitoring
+> /area test-and-release
 
 -->
 
 <!--
-Uncomment leaving one or more of the following to classify the kind of issue:
+Uncomment and remove leading >, leaving one or more of the following to
+classify the kind of issue:
 
-/kind bug
-/kind dev
-/kind doc
+> /kind bug
+> /kind dev
+> /kind doc
 -->
 
 <!--
-You may also assign an issue via:
+You may also assign an issue via (remove leading >)
 
-/assign @user
+> /assign @user
 -->
 
 ## Expected Behavior
