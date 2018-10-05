@@ -55,8 +55,8 @@ var (
 	testCtx    = logging.WithLogger(context.TODO(), testLogger)
 )
 
-func testBuild(name string) v1alpha1.Build {
-	return v1alpha1.Build{
+func testBuild(name string) *v1alpha1.Build {
+	return &v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
 			Name:      name,
@@ -67,8 +67,8 @@ func testBuild(name string) v1alpha1.Build {
 	}
 }
 
-func testBuildTemplate(name string) v1alpha1.BuildTemplate {
-	return v1alpha1.BuildTemplate{
+func testBuildTemplate(name string) *v1alpha1.BuildTemplate {
+	return &v1alpha1.BuildTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
 			Name:      name,
@@ -77,8 +77,8 @@ func testBuildTemplate(name string) v1alpha1.BuildTemplate {
 	}
 }
 
-func testClusterBuildTemplate(name string) v1alpha1.ClusterBuildTemplate {
-	return v1alpha1.ClusterBuildTemplate{
+func testClusterBuildTemplate(name string) *v1alpha1.ClusterBuildTemplate {
+	return &v1alpha1.ClusterBuildTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
 			Name:      name,
@@ -109,7 +109,8 @@ func TestAdmitBuild(t *testing.T) {
 		op          admissionv1beta1.Operation
 		kind        string
 		wantAllowed bool
-		new, old    v1alpha1.Build
+		new         v1alpha1.Build
+		old         *v1alpha1.Build
 		wantPatches []jsonpatch.JsonPatchOperation
 	}{{
 		desc:        "delete op",
@@ -128,7 +129,7 @@ func TestAdmitBuild(t *testing.T) {
 		desc:        "create valid",
 		op:          admissionv1beta1.Create,
 		kind:        "Build",
-		new:         testBuild("valid-build"),
+		new:         *testBuild("valid-build"),
 		wantAllowed: true,
 		wantPatches: []jsonpatch.JsonPatchOperation{{
 			Operation: "add",
@@ -140,7 +141,7 @@ func TestAdmitBuild(t *testing.T) {
 		op:          admissionv1beta1.Update,
 		kind:        "Build",
 		old:         testBuild("valid-build"),
-		new:         testBuild("valid-build"),
+		new:         *testBuild("valid-build"),
 		wantAllowed: true,
 		wantPatches: nil,
 	}} {
@@ -489,7 +490,8 @@ func TestAdmitBuildTemplate(t *testing.T) {
 		op          admissionv1beta1.Operation
 		kind        string
 		wantAllowed bool
-		new, old    v1alpha1.BuildTemplate
+		new         v1alpha1.BuildTemplate
+		old         *v1alpha1.BuildTemplate
 		wantPatches []jsonpatch.JsonPatchOperation
 	}{{
 		desc:        "delete op",
@@ -508,7 +510,7 @@ func TestAdmitBuildTemplate(t *testing.T) {
 		desc:        "create valid",
 		op:          admissionv1beta1.Create,
 		kind:        "BuildTemplate",
-		new:         testBuildTemplate("valid-build-template"),
+		new:         *testBuildTemplate("valid-build-template"),
 		wantAllowed: true,
 		wantPatches: []jsonpatch.JsonPatchOperation{{
 			Operation: "add",
@@ -520,7 +522,7 @@ func TestAdmitBuildTemplate(t *testing.T) {
 		op:          admissionv1beta1.Update,
 		kind:        "BuildTemplate",
 		old:         testBuildTemplate("valid-build-template"),
-		new:         testBuildTemplate("valid-build-template"),
+		new:         *testBuildTemplate("valid-build-template"),
 		wantAllowed: true,
 		wantPatches: nil,
 	}} {
@@ -552,7 +554,8 @@ func TestAdmitClusterBuildTemplate(t *testing.T) {
 		op          admissionv1beta1.Operation
 		kind        string
 		wantAllowed bool
-		new, old    v1alpha1.ClusterBuildTemplate
+		new         v1alpha1.ClusterBuildTemplate
+		old         *v1alpha1.ClusterBuildTemplate
 		wantPatches []jsonpatch.JsonPatchOperation
 	}{{
 		desc:        "delete op",
@@ -571,7 +574,7 @@ func TestAdmitClusterBuildTemplate(t *testing.T) {
 		desc:        "create valid",
 		op:          admissionv1beta1.Create,
 		kind:        "ClusterBuildTemplate",
-		new:         testClusterBuildTemplate("valid-build-template"),
+		new:         *testClusterBuildTemplate("valid-build-template"),
 		wantAllowed: true,
 		wantPatches: []jsonpatch.JsonPatchOperation{{
 			Operation: "add",
@@ -583,7 +586,7 @@ func TestAdmitClusterBuildTemplate(t *testing.T) {
 		op:          admissionv1beta1.Update,
 		kind:        "ClusterBuildTemplate",
 		old:         testClusterBuildTemplate("valid-build-template"),
-		new:         testClusterBuildTemplate("valid-build-template"),
+		new:         *testClusterBuildTemplate("valid-build-template"),
 		wantAllowed: true,
 		wantPatches: nil,
 	}} {
