@@ -80,7 +80,7 @@ func IsDone(status *v1alpha1.BuildStatus) bool {
 
 // IsTimeout returns true if the build's execution time is greater than
 // specified build spec timeout.
-func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout metav1.Duration) bool {
+func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout *metav1.Duration) bool {
 	var timeout time.Duration
 	var defaultTimeout = 10 * time.Minute
 
@@ -88,7 +88,7 @@ func IsTimeout(status *v1alpha1.BuildStatus, buildTimeout metav1.Duration) bool 
 		return false
 	}
 
-	if buildTimeout.Duration == 0 {
+	if buildTimeout == nil {
 		// Set default timeout to 10 minute if build timeout is not set
 		timeout = defaultTimeout
 	} else {

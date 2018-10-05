@@ -69,7 +69,7 @@ func newBuild(name string) *v1alpha1.Build {
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Timeout: metav1.Duration{Duration: 20 * time.Minute},
+			Timeout: &metav1.Duration{Duration: 20 * time.Minute},
 		},
 	}
 }
@@ -433,7 +433,7 @@ func TestTimeoutFlows(t *testing.T) {
 	build := newBuild("test")
 	buffer := 1 * time.Minute
 
-	build.Spec.Timeout = metav1.Duration{Duration: 1 * time.Second}
+	build.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
 
 	f := &fixture{
 		t:          t,
@@ -524,7 +524,7 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	build := newBuild("test")
 	buffer := 10 * time.Minute
 
-	build.Spec.Timeout = metav1.Duration{Duration: 1 * time.Second}
+	build.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
 
 	f := &fixture{
 		t:          t,

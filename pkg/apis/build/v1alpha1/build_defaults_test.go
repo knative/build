@@ -17,7 +17,7 @@ func TestSetDefault(t *testing.T) {
 	if emptyBuild.Spec.ServiceAccountName != "default" {
 		t.Errorf("Expect default to be the serviceaccount name but got %s", emptyBuild.Spec.ServiceAccountName)
 	}
-	if emptyBuild.Spec.Timeout.Duration != DefaultTimeout {
+	if emptyBuild.Spec.Timeout != nil && emptyBuild.Spec.Timeout.Duration != DefaultTimeout {
 		t.Errorf("Expect build timeout to be set")
 	}
 	if emptyBuild.Spec.Template != nil && emptyBuild.Spec.Template.Kind != BuildTemplateKind {
@@ -27,7 +27,7 @@ func TestSetDefault(t *testing.T) {
 
 func TestAlreadySetDefault(t *testing.T) {
 	setAccountName := "test-account-name"
-	setTimeout := metav1.Duration{Duration: 20 * time.Minute}
+	setTimeout := &metav1.Duration{Duration: 20 * time.Minute}
 	setDefaultBuild := &Build{
 		Spec: BuildSpec{
 			ServiceAccountName: setAccountName,

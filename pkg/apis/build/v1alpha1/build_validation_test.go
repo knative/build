@@ -26,7 +26,7 @@ func TestValidateBuild(t *testing.T) {
 		reason: "negative build timeout",
 		build: &Build{
 			Spec: BuildSpec{
-				Timeout: metav1.Duration{Duration: -48 * time.Hour},
+				Timeout: &metav1.Duration{Duration: -48 * time.Hour},
 				Steps: []corev1.Container{{
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
@@ -64,7 +64,7 @@ func TestValidateBuild(t *testing.T) {
 		reason: "maximum timeout",
 		build: &Build{
 			Spec: BuildSpec{
-				Timeout: metav1.Duration{Duration: 48 * time.Hour},
+				Timeout: &metav1.Duration{Duration: 48 * time.Hour},
 				Steps: []corev1.Container{{
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
@@ -74,7 +74,7 @@ func TestValidateBuild(t *testing.T) {
 	}, {
 		build: &Build{
 			Spec: BuildSpec{
-				Timeout: metav1.Duration{Duration: 5 * time.Minute},
+				Timeout: &metav1.Duration{Duration: 5 * time.Minute},
 				Steps: []corev1.Container{{
 					Name:  "foo",
 					Image: "gcr.io/foo-bar/baz:latest",
