@@ -67,7 +67,7 @@ func TestInvalidBuild(t *testing.T) {
 		},
 		Spec: v1alpha1.BuildSpec{
 			Steps:   []corev1.Container{{Image: "busybox"}},
-			Timeout: metav1.Duration{time.Duration(-1 * time.Hour)},
+			Timeout: &metav1.Duration{time.Duration(-1 * time.Hour)},
 		},
 	}, {
 		ObjectMeta: metav1.ObjectMeta{
@@ -76,7 +76,7 @@ func TestInvalidBuild(t *testing.T) {
 		},
 		Spec: v1alpha1.BuildSpec{
 			Steps:   []corev1.Container{{Image: "busybox"}},
-			Timeout: metav1.Duration{time.Duration(36 * time.Hour)},
+			Timeout: &metav1.Duration{time.Duration(36 * time.Hour)},
 		},
 	}} {
 		if _, err := clients.buildClient.builds.Create(b); err == nil {
