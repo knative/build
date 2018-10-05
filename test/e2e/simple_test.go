@@ -403,7 +403,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		},
 		Spec: v1alpha1.BuildSpec{
 			Steps: []corev1.Container{{
-				Image:   "busybox",
+				Image:   "ubuntu",
 				Command: []string{"bash"},
 				Args:    []string{"-c", "echo foo > /cache/foo"},
 				VolumeMounts: []corev1.VolumeMount{{
@@ -438,8 +438,8 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		},
 		Spec: v1alpha1.BuildSpec{
 			Steps: []corev1.Container{{
-				Image: "busybox",
-				Args:  []string{"cat", "/cache/from"},
+				Image: "ubuntu",
+				Args:  []string{"cat", "/cache/foo"},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      "cache",
 					MountPath: "/cache",
