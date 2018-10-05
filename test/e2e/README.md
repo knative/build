@@ -4,7 +4,7 @@
 
 ## Adding end to end tests
 
-Knative Serving e2e tests [test the end to end functionality of the Knative Build API](#requirements) to verify the behavior of this specific implementation.
+Knative Build e2e tests [test the end to end functionality of the Knative Build API](#requirements) to verify the behavior of this specific implementation.
 
 ### Requirements
 
