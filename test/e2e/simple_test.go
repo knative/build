@@ -19,6 +19,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"flag"
 	"os"
 	"testing"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
+	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -39,6 +41,10 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 	logging.InitializeLogger(test.Flags.LogVerbose)
 	logger := logging.GetContextLogger("TestSetup")
+	flag.Set("alsologtostderr", "true")
+	if test.Flags.EmitMetrics {
+		logging.InitializeMetricExporter()
+	}
 
 	clients := setup(logger)
 	test.CleanupOnInterrupt(func() { teardownNamespace(clients, logger) }, logger)
@@ -59,6 +65,12 @@ func TestMain(m *testing.M) {
 func TestSimpleBuild(t *testing.T) {
 	logger := logging.GetContextLogger("TestSimpleBuild")
 	clients := buildClients(logger)
+
+	// Emit a metric for null-build latency (i.e., time to schedule and execute
+	// and finish watching a build).
+	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
+	defer span.End()
+
 	buildName := "simple-build"
 
 	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
