@@ -1,25 +1,23 @@
 <!--
-Uncomment leaving one or more of the following to ensure that the appropriate
-working groups are aware of the issue:
+Pro-tip: You can leave this block commented, and it still works!
 
-/area API
-/area monitoring
-/area test-and-release
+Select the appropriate areas for your issue and remove the leading >
 
--->
+> /area API
+> /area monitoring
+> /area test-and-release
 
-<!--
-Uncomment leaving one or more of the following to classify the kind of issue:
+Classify what kind of issue this is:
 
-/kind bug
-/kind dev
-/kind doc
--->
+> /kind question
+> /kind bug
+> /kind cleanup
+> /kind doc
+> /kind feature
+> /kind good-first-issue
+> /kind process
+> /kind spec
 
-<!--
-You may also assign an issue via:
-
-/assign @user
 -->
 
 ## Expected Behavior
