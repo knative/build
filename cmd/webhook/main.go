@@ -30,8 +30,8 @@ import (
 	"github.com/knative/pkg/webhook"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/knative/build/pkg"
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/system"
 )
 
 const (
@@ -72,7 +72,7 @@ func main() {
 	pkgoptions := webhook.ControllerOptions{
 		ServiceName:    "build-webhook",
 		DeploymentName: "build-webhook",
-		Namespace:      pkg.GetBuildSystemNamespace(),
+		Namespace:      system.Namespace,
 		Port:           443,
 		SecretName:     "build-webhook-certs",
 		WebhookName:    "webhook.build.knative.dev",
