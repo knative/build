@@ -17,10 +17,20 @@ _By default `go test` will not run [the e2e tests](#running-end-to-end-tests), w
 
 ## Running end to end tests
 
+### Environment requirements
+
+Setting up a running `Knative Build` cluster.
+
+1. A Kubernetes cluster v1.10 or newer with the `MutatingAdmissionWebhook` admission controller enabled. `kubectl` v1.10 is also required. [see here](https://github.com/knative/docs/blob/master/install/Knative-with-any-k8s.md)
+
+1. Configure `ko` to point to your registry. [see here](https://github.com/knative/build/blob/master/DEVELOPMENT.md#one-time-setup)
+
 ### Go e2e tests
 
 To run [the Go e2e tests](./e2e), you need to have a running environment that meets
-[the e2e test environment requirements](#environment-requirements), and you need to specify the build tag `e2e`.
+[the e2e test environment requirements](#environment-requirements) and [stand up a version of this controller on-cluster](https://github.com/knative/build/blob/master/DEVELOPMENT.md#standing-it-up).
+
+Finally run the Go e2e tests with the build tag `e2e`.
 
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e/...
@@ -44,7 +54,3 @@ To run one e2e test case, e.g. TestSimpleBuild, use [the `-run` flag with `go te
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e/... -run=<regex>
 ```
-
-### Environment requirements
-
-These tests require [a running `Knative Build` cluster.](/DEVELOPMENT.md#getting-started)
