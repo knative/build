@@ -128,6 +128,15 @@ func TestBuildNotFoundFlow(t *testing.T) {
 
 	f.createServceAccount()
 
+	// induce failure when fetching build information in controller
+	reactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		if action.GetVerb() == "get" && action.GetResource().Resource == "builds" {
+			return true, nil, fmt.Errorf("Inducing failure for %q action of %q", action.GetVerb(), action.GetResource().Resource)
+		}
+		return false, nil, nil
+	}
+	f.client.PrependReactor("*", "*", reactor)
+
 	stopCh := make(chan struct{})
 	eventCh := make(chan string, 1024)
 	defer close(stopCh)
@@ -137,15 +146,6 @@ func TestBuildNotFoundFlow(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
-
-	// induce failure when fetching build information in controller
-	reactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-		if action.GetVerb() == "get" && action.GetResource().Resource == "builds" {
-			return true, nil, fmt.Errorf("Inducing failure for %q action of %q", action.GetVerb(), action.GetResource().Resource)
-		}
-		return false, nil, nil
-	}
-	f.client.PrependReactor("*", "*", reactor)
 
 	if err := c.syncHandler(getKey(build, t)); err == nil {
 		t.Errorf("Expect error syncing build")
