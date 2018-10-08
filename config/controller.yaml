@@ -15,7 +15,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: build-controller
-  namespace: knative-build
 spec:
   replicas: 1
   selector:
@@ -31,6 +30,7 @@ spec:
       - name: build-controller
         image: github.com/knative/build/cmd/controller
         args: [
+          # "-limited-scope",
           "-logtostderr",
           "-stderrthreshold", "INFO",
           "-creds-image", "github.com/knative/build/cmd/creds-init",

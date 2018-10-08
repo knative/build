@@ -18,7 +18,6 @@ metadata:
   labels:
     app: build-controller
   name: build-controller
-  namespace: knative-build
 spec:
   ports:
   - name: metrics

@@ -23,6 +23,7 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/api/core/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -37,6 +38,7 @@ import (
 	"github.com/knative/build/pkg/reconciler/build"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
+	"github.com/knative/build/pkg/system"
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
@@ -54,8 +56,9 @@ const (
 )
 
 var (
-	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig   = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	masterURL    = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	limitedScope = flag.Bool("limited-scope", false, "Whether the build namespace will be the only target for builds.")
 )
 
 func main() {
@@ -97,9 +100,9 @@ func main() {
 		logger.Fatalf("Error building Caching clientset: %v", err)
 	}
 
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, time.Second*30)
-	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, time.Second*30)
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(kubeClient, time.Second*30, kubeinformers.WithNamespace(getScope()))
+	buildInformerFactory := informers.NewSharedInformerFactoryWithOptions(buildClient, time.Second*30, informers.WithNamespace(getScope()))
+	cachingInformerFactory := cachinginformers.NewSharedInformerFactoryWithOptions(cachingClient, time.Second*30, cachinginformers.WithNamespace(getScope()))
 
 	buildInformer := buildInformerFactory.Build().V1alpha1().Builds()
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
@@ -151,4 +154,11 @@ func main() {
 	if err := g.Wait(); err != nil {
 		logger.Fatalf("Error running controller: %s", err.Error())
 	}
+}
+
+func getScope() string {
+	if *limitedScope {
+		return system.Namespace
+	}
+	return v1.NamespaceAll
 }

@@ -16,7 +16,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: build-webhook
-  namespace: knative-build
 spec:
   replicas: 1
   selector:

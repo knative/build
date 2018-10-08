@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: build-controller-admin
 subjects:
   - kind: ServiceAccount
     name: build-controller
-    namespace: knative-build
 roleRef:
   kind: ClusterRole
   name: knative-build-admin

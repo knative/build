@@ -18,7 +18,6 @@ metadata:
   labels:
     role: build-webhook
   name: build-webhook
-  namespace: knative-build
 spec:
   ports:
     - port: 443
