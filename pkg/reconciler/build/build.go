@@ -18,21 +18,28 @@ package build
 
 import (
 	"context"
+	"reflect"
 
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	podinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	podlisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 
+	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
+	"github.com/knative/build/pkg/reconciler/build/resources"
 )
 
 const controllerAgentName = "build-controller"
@@ -45,6 +52,7 @@ type Reconciler struct {
 	buildclientset clientset.Interface
 
 	buildsLister listers.BuildLister
+	podsLister   podlisters.PodLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -69,6 +77,7 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
 	buildInformer informers.BuildInformer,
+	podInformer podinformers.PodInformer,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
@@ -78,6 +87,7 @@ func NewController(
 		kubeclientset:  kubeclientset,
 		buildclientset: buildclientset,
 		buildsLister:   buildInformer.Lister(),
+		podsLister:     podInformer.Lister(),
 		Logger:         logger,
 	}
 	impl := controller.NewImpl(r, logger, "Builds")
@@ -89,7 +99,7 @@ func NewController(
 		UpdateFunc: controller.PassNew(impl.Enqueue),
 	})
 
-	// TODO(mattmoor): Set up a Pod informer, so that Pod updates
+	// TODO(jasonhall): Set up a Pod informer, so that Pod updates
 	// trigger Build reconciliations.
 
 	return impl
@@ -107,29 +117,74 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Get the Build resource with this namespace/name
-	if _, err := c.buildsLister.Builds(namespace).Get(name); errors.IsNotFound(err) {
+	orig, err := c.buildsLister.Builds(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		// The Build resource may no longer exist, in which case we stop processing.
 		logger.Errorf("build %q in work queue no longer exists", key)
 		return nil
 	} else if err != nil {
 		return err
 	}
+	// Don't modify the informer's copy.
+	b := orig.DeepCopy()
 
-	// TODO(jasonhall): adopt the standard reconcile pattern.
-	// For Build this looks something like:
-	// podName := names.Pod(build)
-	// pod, err := c.podLister.Pods(build.Namespace).Get(podName)
-	// if IsNotFound(err) {
-	// 	desired := resources.MakePod(build)
-	// 	pod, err = c.kubeclientset.V1().Pods(build.Namespace).Create(desired)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// } else if err != nil {
-	// 	return err
-	// }
-	//
-	// // Update build.Status based on pod.Status
+	// Reconcile this copy of the build and then write back any status
+	// updates regardless of whether the reconciliation errored out.
+	err = c.reconcile(ctx, b)
+	if equality.Semantic.DeepEqual(orig.Status, b.Status) {
+		// If we didn't change anything then don't call updateStatus.
+		// This is important because the copy we loaded from the
+		// informer's cache may be stale and we don't want to overwrite
+		// a prior update to status with this stale state.
+	} else if _, err := c.updateStatus(b); err != nil {
+		logger.Warn("Failed to update build status", zap.Error(err))
+		return err
+	}
+	return err
+}
 
+func (c *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Build) error {
+	logger := logging.FromContext(ctx)
+	// If the build doesn't define a pod name, it doesn't have a pod. Create one.
+	podName := ""
+	if b.Status.Cluster == nil || b.Status.Cluster.PodName == "" {
+		logger.Infof("Build %q does not have a pod, creating one", b.Name)
+		b.Status.StartTime = metav1.Now()
+		pod, err := resources.FromCRD(b, c.kubeclientset)
+		if err != nil {
+			return err
+		}
+		pod, err = c.kubeclientset.CoreV1().Pods(b.Namespace).Create(pod)
+		if err != nil {
+			return err
+		}
+		logger.Infof("Created pod %q for build %q", pod.Name, b.Name)
+		podName = pod.Name
+	} else {
+		podName = b.Status.Cluster.PodName
+	}
+	pod, err := c.podsLister.Pods(b.Namespace).Get(podName)
+	if err != nil {
+		return err
+	}
+
+	// Update the build's status from the pod's status.
+	b, err = resources.ToCRD(pod)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (c *Reconciler) updateStatus(b *v1alpha1.Build) (*v1alpha1.Build, error) {
+	newb, err := c.buildsLister.Builds(b.Namespace).Get(b.Name)
+	if err != nil {
+		return nil, err
+	}
+	if !reflect.DeepEqual(newb.Status, b.Status) {
+		newb.Status = b.Status
+		// TODO: for CRD there's no updatestatus, so use normal update.
+		return c.buildclientset.BuildV1alpha1().Builds(b.Namespace).Update(newb)
+	}
+	return newb, nil
 }

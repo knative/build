@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package convert provides methods to convert a Build CRD to a k8s Pod
+// Package pod provides methods to convert a Build CRD to a k8s Pod
 // resource.
-package convert
+package resources
 
 import (
 	"flag"
@@ -24,13 +24,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/builder/validation"
 	"github.com/knative/build/pkg/credentials"
 	"github.com/knative/build/pkg/credentials/dockercreds"
 	"github.com/knative/build/pkg/credentials/gitcreds"
@@ -107,10 +107,10 @@ var (
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
 func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 	if git.Url == "" {
-		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
+		return nil, newValidationError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
 	}
 	if git.Revision == "" {
-		return nil, validation.NewError("MissingRevision", "git sources are expected to specify a Revision, got: %v", git)
+		return nil, newValidationError("MissingRevision", "git sources are expected to specify a Revision, got: %v", git)
 	}
 	return &corev1.Container{
 		Name:  initContainerPrefix + gitSource,
@@ -143,7 +143,7 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 
 func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
 	if gcs.Location == "" {
-		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
+		return nil, newValidationError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
 	return &corev1.Container{
 		Name:         initContainerPrefix + gcsSource,
@@ -175,7 +175,7 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 
 func customToContainer(source *corev1.Container) (*corev1.Container, error) {
 	if source.Name != "" {
-		return nil, validation.NewError("OmitName", "custom source containers are expected to omit Name, got: %v", source.Name)
+		return nil, newValidationError("OmitName", "custom source containers are expected to omit Name, got: %v", source.Name)
 	}
 	custom := source.DeepCopy()
 	custom.Name = customSource
@@ -277,7 +277,8 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			if err != nil {
 				return nil, err
 			}
-			// Prepend the custom container to the steps, to be augmented later with env, volume mounts, etc.
+			// Prepend the custom container to the steps, to be
+			// augmented later with env, volume mounts, etc.
 			build.Spec.Steps = append([]corev1.Container{*cust}, build.Spec.Steps...)
 		}
 
@@ -436,8 +437,12 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		return nil, fmt.Errorf("unrecognized container spec, got: %v", podSpec.Containers)
 	}
 
+	spec := v1alpha1.BuildSpec{
+		ServiceAccountName: podSpec.ServiceAccountName,
+		NodeSelector:       podSpec.NodeSelector,
+		Affinity:           podSpec.Affinity,
+	}
 	subPath := ""
-	var steps []corev1.Container
 	for _, step := range podSpec.InitContainers {
 		if step.WorkingDir == workspaceDir {
 			step.WorkingDir = ""
@@ -455,39 +460,128 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		} else {
 			step.Name = strings.TrimPrefix(step.Name, initContainerPrefix)
 		}
-		steps = append(steps, step)
+		spec.Steps = append(spec.Steps, step)
 	}
-	volumes := filterImplicitVolumes(podSpec.Volumes)
+	spec.Volumes = filterImplicitVolumes(podSpec.Volumes)
 
 	// Strip the credential initializer.
-	if steps[0].Name == credsInit {
-		steps = steps[1:]
+	if spec.Steps[0].Name == credsInit {
+		spec.Steps = spec.Steps[1:]
 	}
 
-	var scm *v1alpha1.SourceSpec
-	if conv, ok := containerToSourceMap[steps[0].Name]; ok {
-		src, err := conv(steps[0])
+	if conv, ok := containerToSourceMap[spec.Steps[0].Name]; ok {
+		src, err := conv(spec.Steps[0])
 		if err != nil {
 			return nil, err
 		}
-		// The first init container is actually a source step.  Convert
-		// it to our source spec and pop it off the list of steps.
-		scm = src
-		if subPath != "" {
-			scm.SubPath = subPath
+		spec.Source = src
+		spec.Source.SubPath = subPath
+		// Trim the source container.
+		spec.Steps = spec.Steps[1:]
+	}
+
+	status := v1alpha1.BuildStatus{
+		Builder: v1alpha1.ClusterBuildProvider,
+		Cluster: &v1alpha1.ClusterSpec{
+			Namespace: pod.Namespace,
+			PodName:   pod.Name,
+		},
+		CompletionTime: metav1.Now(),
+	}
+
+	for _, ics := range pod.Status.InitContainerStatuses {
+		if ics.State.Terminated != nil {
+			status.StepsCompleted = append(status.StepsCompleted, ics.Name)
 		}
-		steps = steps[1:]
+		status.StepStates = append(status.StepStates, ics.State)
+	}
+
+	if pod.Status.Phase == corev1.PodFailed {
+		msg := getFailureMessage(pod)
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Message: msg,
+		})
+	} else if pod.Status.Phase == corev1.PodPending {
+		msg := getWaitingMessage(pod)
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionUnknown,
+			Message: "Pending",
+			Reason:  msg,
+		})
+	} else {
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:   v1alpha1.BuildSucceeded,
+			Status: corev1.ConditionTrue,
+		})
 	}
 
 	return &v1alpha1.Build{
-		// TODO(mattmoor): What should we do for ObjectMeta stuff?
-		Spec: v1alpha1.BuildSpec{
-			Source:             scm,
-			Steps:              steps,
-			ServiceAccountName: podSpec.ServiceAccountName,
-			Volumes:            volumes,
-			NodeSelector:       podSpec.NodeSelector,
-			Affinity:           podSpec.Affinity,
-		},
+		Spec:   spec,
+		Status: status,
 	}, nil
+}
+
+func getWaitingMessage(pod *corev1.Pod) string {
+	// First, try to surface reason for pending/unknown about the actual build step.
+	for _, status := range pod.Status.InitContainerStatuses {
+		wait := status.State.Waiting
+		if wait != nil && wait.Message != "" {
+			return fmt.Sprintf("build step %q is pending with reason %q",
+				status.Name, wait.Message)
+		}
+	}
+	// Try to surface underlying reason by inspecting pod's recent status if condition is not true
+	for i, podStatus := range pod.Status.Conditions {
+		if podStatus.Status != corev1.ConditionTrue {
+			return fmt.Sprintf("pod status %q:%q; message: %q",
+				pod.Status.Conditions[i].Type,
+				pod.Status.Conditions[i].Status,
+				pod.Status.Conditions[i].Message)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	// Lastly fall back on a generic pending message.
+	return "Pending"
+}
+
+func getFailureMessage(pod *corev1.Pod) string {
+	// First, try to surface an error about the actual build step that failed.
+	for _, status := range pod.Status.InitContainerStatuses {
+		term := status.State.Terminated
+		if term != nil && term.ExitCode != 0 {
+			return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
+				status.Name, term.ExitCode, status.ImageID,
+				pod.Namespace, pod.Name, status.Name)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+	// Lastly fall back on a generic error message.
+	return "build failed for unspecified reasons."
+}
+
+type validationError struct {
+	Reason  string
+	Message string
+}
+
+func (ve *validationError) Error() string {
+	return fmt.Sprintf("%s: %s", ve.Reason, ve.Message)
+}
+
+// validationError returns a new validation error.
+func newValidationError(reason, format string, fmtArgs ...interface{}) error {
+	return &validationError{
+		Reason:  reason,
+		Message: fmt.Sprintf(format, fmtArgs...),
+	}
 }
