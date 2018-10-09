@@ -130,6 +130,7 @@ func TestRoundtrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
 			}
+			b.Status = v1alpha1.BuildStatus{} // Ignore populated status.
 
 			if d := cmp.Diff(og, b, ignorePrivateResourceFields); d != "" {
 				t.Errorf("Diff:\n%s", d)

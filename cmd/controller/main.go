@@ -102,11 +102,10 @@ func main() {
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
-	podInformer := kubeInformerFactory.Core().V1().Pods()
 
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []*controller.Impl{
-		build.NewController(logger, kubeClient, buildClient, buildInformer, podInformer),
+		build.NewController(logger, kubeClient, buildClient, buildInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient, cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient, cachingClient, buildTemplateInformer, imageInformer),
 	}

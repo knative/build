@@ -15,16 +15,3 @@ limitations under the License.
 */
 
 package buildtest
-
-import (
-	"encoding/json"
-)
-
-// PrettyJSON pretty-prints a struct to a string.
-func PrettyJSON(x interface{}) (string, error) {
-	b, err := json.MarshalIndent(x, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}

@@ -24,10 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	podinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	podlisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/pkg/controller"
@@ -52,14 +50,13 @@ type Reconciler struct {
 	buildclientset clientset.Interface
 
 	buildsLister listers.BuildLister
-	podsLister   podlisters.PodLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
 	// and use the returned raw logger instead. In addition to the
 	// performance benefits, raw logger also preserves type-safety at
 	// the expense of slightly greater verbosity.
-	Logger *zap.SugaredLogger
+	logger *zap.SugaredLogger
 }
 
 // Check that we implement the controller.Reconciler interface.
@@ -77,7 +74,6 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
 	buildInformer informers.BuildInformer,
-	podInformer podinformers.PodInformer,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
@@ -87,8 +83,7 @@ func NewController(
 		kubeclientset:  kubeclientset,
 		buildclientset: buildclientset,
 		buildsLister:   buildInformer.Lister(),
-		podsLister:     podInformer.Lister(),
-		Logger:         logger,
+		logger:         logger,
 	}
 	impl := controller.NewImpl(r, logger, "Builds")
 
@@ -163,7 +158,7 @@ func (c *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Build) error {
 	} else {
 		podName = b.Status.Cluster.PodName
 	}
-	pod, err := c.podsLister.Pods(b.Namespace).Get(podName)
+	pod, err := c.kubeclientset.CoreV1().Pods(b.Namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
