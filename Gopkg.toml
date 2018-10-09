@@ -18,19 +18,19 @@ required = [
 
 [[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.3"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.3"
 
 [[constraint]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.3"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.11.3"
 
 [[override]]
   name = "github.com/json-iterator/go"
@@ -44,10 +44,10 @@ required = [
   # It seems to be broken at HEAD.
   revision = "1ff28809256a84bb6966640ff3d0371af82ccba4"
 
-[[constraint]]
+[[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2018-10-02
-  revision = "8e471c3d74eda15fbb9405d076008e2cf2008548"
+  # HEAD as of 2018-10-09
+  revision = "ba1a828cd571f605684f9a4506e85bc13cb65b8d"
 
 [prune]
   go-tests = true
