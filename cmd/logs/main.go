@@ -25,7 +25,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-var namespace = flag.String("namespace", "default", "The namespace scope for this CLI request")
+var namespace = flag.String("n", "default", "The namespace scope for this CLI request")
 
 func main() {
 	flag.Parse()
