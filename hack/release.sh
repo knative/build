@@ -17,7 +17,7 @@
 set -o errexit
 set -o pipefail
 
-source "$(dirname $(readlink -f ${BASH_SOURCE}))/../tests/library.sh"
+source "$(dirname $(readlink -f ${BASH_SOURCE}))/../test/library.sh"
 
 function cleanup() {
   restore_override_vars
@@ -33,7 +33,7 @@ echo "@@@@ RUNNING RELEASE VALIDATION TESTS @@@@"
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
 # Run tests.
-./tests/presubmit-tests.sh
+./test/presubmit-tests.sh
 
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@@@@     BUILDING THE RELEASE    @@@@"

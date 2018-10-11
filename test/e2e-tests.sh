@@ -47,7 +47,7 @@ function teardown() {
   header "Tearing down test environment"
   # Free resources in GCP project.
   if (( ! USING_EXISTING_CLUSTER )); then
-    ko delete --ignore-not-found=true -R -f tests/
+    ko delete --ignore-not-found=true -R -f test/
     ko delete --ignore-not-found=true -f config/
   fi
 
@@ -79,7 +79,7 @@ function exit_if_test_failed() {
 function abort_test() {
   echo "$1"
   # If formatting fails for any reason, use yaml as a fall back.
-  kubectl get builds -o=custom-columns-file=./tests/columns.txt || \
+  kubectl get builds -o=custom-columns-file=./test/columns.txt || \
     kubectl get builds -oyaml
   false  # Force exit
   exit_if_test_failed
@@ -185,7 +185,7 @@ kubectl delete buildtemplates --all
 
 header "Running tests"
 
-ko apply -R -f tests/
+ko apply -R -f test/
 exit_if_test_failed
 
 # Wait for tests to finish.
