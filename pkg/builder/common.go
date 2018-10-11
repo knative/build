@@ -52,6 +52,14 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl v1alpha1.BuildTemplateInterface) (*v1
 		}
 	}
 
+	build = ApplyReplacements(build, replacements)
+	return build, nil
+}
+
+// ApplyReplacements replaces placeholders for declared parameters with the specified replacements.
+func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v1alpha1.Build {
+	build = build.DeepCopy()
+
 	applyReplacements := func(in string) string {
 		for k, v := range replacements {
 			in = strings.Replace(in, fmt.Sprintf("${%s}", k), v, -1)
@@ -92,8 +100,7 @@ func ApplyTemplate(u *v1alpha1.Build, tmpl v1alpha1.BuildTemplateInterface) (*v1
 			steps[i].Env = applyEnvOverride(steps[i].Env, buildTmpl.Env)
 		}
 	}
-
-	return build, nil
+	return build
 }
 
 func applyEnvOverride(src, override []corev1.EnvVar) []corev1.EnvVar {
