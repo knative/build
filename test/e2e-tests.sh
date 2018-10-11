@@ -128,7 +128,7 @@ if [[ -z $1 ]]; then
   kubetest "${CLUSTER_CREATION_ARGS[@]}" \
     --up \
     --down \
-    --extract "v${BUILD_GKE_VERSION}" \
+    --extract "${BUILD_GKE_VERSION}" \
     --test-cmd "${SCRIPT_CANONICAL_PATH}" \
     --test-cmd-args --run-tests
   result="$(cat ${TEST_RESULT_FILE})"

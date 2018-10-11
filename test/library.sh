@@ -19,7 +19,7 @@
 # called from command line.
 
 # Default GKE version to be used with build-crd
-readonly BUILD_GKE_VERSION=1.9.6-gke.1
+readonly BUILD_GKE_VERSION=gke-latest
 
 # Useful environment variables
 [[ -n "${PROW_JOB_ID}" ]] && IS_PROW=1 || IS_PROW=0
