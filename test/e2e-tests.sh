@@ -47,7 +47,7 @@ function teardown() {
   header "Tearing down test environment"
   # Free resources in GCP project.
   if (( ! USING_EXISTING_CLUSTER )); then
-    ko delete --ignore-not-found=true -R -f tests/
+    ko delete --ignore-not-found=true -R -f test/
     ko delete --ignore-not-found=true -f config/
   fi
 
@@ -79,7 +79,7 @@ function exit_if_test_failed() {
 function abort_test() {
   echo "$1"
   # If formatting fails for any reason, use yaml as a fall back.
-  kubectl get builds -o=custom-columns-file=./tests/columns.txt || \
+  kubectl get builds -o=custom-columns-file=./test/columns.txt || \
     kubectl get builds -oyaml
   false  # Force exit
   exit_if_test_failed
@@ -101,7 +101,7 @@ if [[ -z $1 ]]; then
   header "Creating test cluster"
   # Smallest cluster required to run the end-to-end-tests
   CLUSTER_CREATION_ARGS=(
-    --gke-create-args="--enable-autoscaling --min-nodes=1 --max-nodes=${E2E_CLUSTER_NODES} --scopes=cloud-platform"
+    --gke-create-args="--enable-autoscaling --min-nodes=1 --max-nodes=${E2E_CLUSTER_NODES} --scopes=cloud-platform --enable-basic-auth --no-issue-client-certificate"
     --gke-shape={\"default\":{\"Nodes\":${E2E_CLUSTER_NODES}\,\"MachineType\":\"${E2E_CLUSTER_MACHINE}\"}}
     --provider=gke
     --deployment=gke
@@ -116,6 +116,7 @@ if [[ -z $1 ]]; then
   fi
   # SSH keys are not used, but kubetest checks for their existence.
   # Touch them so if they don't exist, empty files are create to satisfy the check.
+  mkdir -p $HOME/.ssh
   touch $HOME/.ssh/google_compute_engine.pub
   touch $HOME/.ssh/google_compute_engine
   # Clear user and cluster variables, so they'll be set to the test cluster.
@@ -127,7 +128,7 @@ if [[ -z $1 ]]; then
   kubetest "${CLUSTER_CREATION_ARGS[@]}" \
     --up \
     --down \
-    --extract "v${BUILD_GKE_VERSION}" \
+    --extract "${BUILD_GKE_VERSION}" \
     --test-cmd "${SCRIPT_CANONICAL_PATH}" \
     --test-cmd-args --run-tests
   result="$(cat ${TEST_RESULT_FILE})"
@@ -184,7 +185,7 @@ kubectl delete buildtemplates --all
 
 header "Running tests"
 
-ko apply -R -f tests/
+ko apply -R -f test/
 exit_if_test_failed
 
 # Wait for tests to finish.
