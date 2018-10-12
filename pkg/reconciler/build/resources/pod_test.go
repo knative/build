@@ -124,17 +124,6 @@ func TestRoundtrip(t *testing.T) {
 					seen[vm.MountPath] = struct{}{}
 				}
 			}
-
-			// Verify that reverse transformation works.
-			b, err := ToCRD(p)
-			if err != nil {
-				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
-			}
-			b.Status = v1alpha1.BuildStatus{} // Ignore populated status.
-
-			if d := cmp.Diff(og, b, ignorePrivateResourceFields); d != "" {
-				t.Errorf("Diff:\n%s", d)
-			}
 		})
 	}
 }
@@ -362,4 +351,8 @@ func TestFromCRD(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStatusFromPod(t *testing.T) {
+	// TODO
 }

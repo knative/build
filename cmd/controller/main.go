@@ -105,7 +105,7 @@ func main() {
 
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []*controller.Impl{
-		build.NewController(logger, kubeClient, buildClient, buildInformer),
+		build.NewController(logger, kubeClient, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient, cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient, cachingClient, buildTemplateInformer, imageInformer),
 	}
@@ -119,7 +119,6 @@ func main() {
 		buildTemplateInformer.Informer().HasSynced,
 		clusterBuildTemplateInformer.Informer().HasSynced,
 		imageInformer.Informer().HasSynced,
-		podInformer.Informer().HasSynced,
 	} {
 		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)

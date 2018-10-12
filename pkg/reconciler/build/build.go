@@ -18,12 +18,16 @@ package build
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
@@ -49,7 +53,9 @@ type Reconciler struct {
 	// buildclientset is a clientset for our own API group
 	buildclientset clientset.Interface
 
-	buildsLister listers.BuildLister
+	buildsLister                listers.BuildLister
+	buildTemplatesLister        listers.BuildTemplateLister
+	clusterBuildTemplatesLister listers.ClusterBuildTemplateLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -74,16 +80,20 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
 	buildInformer informers.BuildInformer,
+	buildTemplateInformer informers.BuildTemplateInformer,
+	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
 	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
 
 	r := &Reconciler{
-		kubeclientset:  kubeclientset,
-		buildclientset: buildclientset,
-		buildsLister:   buildInformer.Lister(),
-		logger:         logger,
+		kubeclientset:               kubeclientset,
+		buildclientset:              buildclientset,
+		buildsLister:                buildInformer.Lister(),
+		buildTemplatesLister:        buildTemplateInformer.Lister(),
+		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
+		logger:                      logger,
 	}
 	impl := controller.NewImpl(r, logger, "Builds")
 
@@ -112,7 +122,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Get the Build resource with this namespace/name
-	orig, err := c.buildsLister.Builds(namespace).Get(name)
+	// TODO(jasonhall): Use a lister?
+	orig, err := c.buildclientset.BuildV1alpha1().Builds(namespace).Get(name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		// The Build resource may no longer exist, in which case we stop processing.
 		logger.Errorf("build %q in work queue no longer exists", key)
@@ -131,7 +142,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		// This is important because the copy we loaded from the
 		// informer's cache may be stale and we don't want to overwrite
 		// a prior update to status with this stale state.
-	} else if _, err := c.updateStatus(b); err != nil {
+	} else if err := c.updateStatus(b); err != nil {
 		logger.Warn("Failed to update build status", zap.Error(err))
 		return err
 	}
@@ -140,11 +151,24 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 func (c *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Build) error {
 	logger := logging.FromContext(ctx)
-	// If the build doesn't define a pod name, it doesn't have a pod. Create one.
-	podName := ""
+
+	// If the build doesn't define a pod name, it means it's new. We should
+	// apply any template and create its pod.
 	if b.Status.Cluster == nil || b.Status.Cluster.PodName == "" {
-		logger.Infof("Build %q does not have a pod, creating one", b.Name)
-		b.Status.StartTime = metav1.Now()
+		tmpl, err := c.fetchTemplate(b)
+		if err != nil {
+			return err
+		}
+		b, err = applyTemplate(b, tmpl)
+		if err != nil {
+			return err
+		}
+
+		// Validate the build after applying the template.
+		if err := b.Spec.Validate(); err != nil {
+			return err
+		}
+
 		pod, err := resources.FromCRD(b, c.kubeclientset)
 		if err != nil {
 			return err
@@ -154,32 +178,149 @@ func (c *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Build) error {
 			return err
 		}
 		logger.Infof("Created pod %q for build %q", pod.Name, b.Name)
-		podName = pod.Name
-	} else {
-		podName = b.Status.Cluster.PodName
+		b.Status.Cluster = &v1alpha1.ClusterSpec{
+			PodName:   pod.Name,
+			Namespace: b.Namespace,
+		}
 	}
-	pod, err := c.kubeclientset.CoreV1().Pods(b.Namespace).Get(podName, metav1.GetOptions{})
+
+	// TODO: Use podsLister here, for speed?
+	pod, err := c.kubeclientset.CoreV1().Pods(b.Namespace).Get(b.Status.Cluster.PodName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	// Update the build's status from the pod's status.
-	b, err = resources.ToCRD(pod)
+	status, err := resources.StatusFromPod(pod)
 	if err != nil {
+		return err
+	}
+	// If the pod is complete and the build doesn't already have a
+	// completionTIme, set the completionTime.
+	status.CompletionTime = b.Status.CompletionTime
+	if status.CompletionTime.IsZero() && (pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed) {
+		status.CompletionTime = metav1.Now()
+	}
+
+	b.Status = *status
+	return nil
+}
+
+func (c *Reconciler) updateStatus(b *v1alpha1.Build) error {
+	newb, err := c.buildsLister.Builds(b.Namespace).Get(b.Name)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(newb.Status, b.Status) {
+		newb.Status = b.Status
+		// TODO: for CRD there's no updatestatus, so use normal update.
+		_, err := c.buildclientset.BuildV1alpha1().Builds(b.Namespace).Update(newb)
 		return err
 	}
 	return nil
 }
 
-func (c *Reconciler) updateStatus(b *v1alpha1.Build) (*v1alpha1.Build, error) {
-	newb, err := c.buildsLister.Builds(b.Namespace).Get(b.Name)
-	if err != nil {
-		return nil, err
+func (c *Reconciler) fetchTemplate(b *v1alpha1.Build) (v1alpha1.BuildTemplateInterface, error) {
+	if b.Spec.Template != nil {
+		if b.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
+			tmpl, err := c.clusterBuildTemplatesLister.Get(b.Spec.Template.Name)
+			// The ClusterBuildTemplate resource may not exist.
+			if errors.IsNotFound(err) {
+				runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", b.Spec.Template.Name))
+			}
+			return tmpl, err
+		} else {
+			tmpl, err := c.buildTemplatesLister.BuildTemplates(b.Namespace).Get(b.Spec.Template.Name)
+			// The BuildTemplate resource may not exist.
+			if errors.IsNotFound(err) {
+				runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", b.Spec.Template.Name, b.Namespace))
+			}
+			return tmpl, err
+		}
 	}
-	if !reflect.DeepEqual(newb.Status, b.Status) {
-		newb.Status = b.Status
-		// TODO: for CRD there's no updatestatus, so use normal update.
-		return c.buildclientset.BuildV1alpha1().Builds(b.Namespace).Update(newb)
+	return nil, nil
+}
+
+// applyTemplate applies the values in the template to the build, and replaces
+// placeholders for declared parameters with the build's matching arguments.
+func applyTemplate(b *v1alpha1.Build, tmpl v1alpha1.BuildTemplateInterface) (*v1alpha1.Build, error) {
+	if tmpl == nil {
+		return b, nil
 	}
-	return newb, nil
+	tmpl = tmpl.Copy()
+	b.Spec.Steps = tmpl.TemplateSpec().Steps
+	b.Spec.Volumes = append(b.Spec.Volumes, tmpl.TemplateSpec().Volumes...)
+
+	// Apply template arguments or parameter defaults.
+	replacements := map[string]string{}
+	for _, p := range tmpl.TemplateSpec().Parameters {
+		if p.Default != nil {
+			replacements[p.Name] = *p.Default
+		}
+	}
+	if b.Spec.Template != nil {
+		for _, a := range b.Spec.Template.Arguments {
+			replacements[a.Name] = a.Value
+		}
+	}
+
+	applyReplacements := func(in string) string {
+		for k, v := range replacements {
+			in = strings.Replace(in, fmt.Sprintf("${%s}", k), v, -1)
+		}
+		return in
+	}
+
+	// Apply variable expansion to steps fields.
+	steps := b.Spec.Steps
+	for i := range steps {
+		steps[i].Name = applyReplacements(steps[i].Name)
+		steps[i].Image = applyReplacements(steps[i].Image)
+		for ia, a := range steps[i].Args {
+			steps[i].Args[ia] = applyReplacements(a)
+		}
+		for ie, e := range steps[i].Env {
+			steps[i].Env[ie].Value = applyReplacements(e.Value)
+		}
+		steps[i].WorkingDir = applyReplacements(steps[i].WorkingDir)
+		for ic, c := range steps[i].Command {
+			steps[i].Command[ic] = applyReplacements(c)
+		}
+		for iv, v := range steps[i].VolumeMounts {
+			steps[i].VolumeMounts[iv].Name = applyReplacements(v.Name)
+			steps[i].VolumeMounts[iv].MountPath = applyReplacements(v.MountPath)
+			steps[i].VolumeMounts[iv].SubPath = applyReplacements(v.SubPath)
+		}
+	}
+
+	if buildTmpl := b.Spec.Template; buildTmpl != nil && len(buildTmpl.Env) > 0 {
+		// Apply variable expansion to the build's overridden
+		// environment variables
+		for i, e := range buildTmpl.Env {
+			buildTmpl.Env[i].Value = applyReplacements(e.Value)
+		}
+
+		for i := range steps {
+			steps[i].Env = applyEnvOverride(steps[i].Env, buildTmpl.Env)
+		}
+	}
+
+	return b, nil
+}
+
+func applyEnvOverride(src, override []corev1.EnvVar) []corev1.EnvVar {
+	result := make([]corev1.EnvVar, 0, len(src)+len(override))
+	overrides := make(map[string]bool)
+
+	for _, env := range override {
+		overrides[env.Name] = true
+	}
+
+	for _, env := range src {
+		if _, present := overrides[env.Name]; !present {
+			result = append(result, env)
+		}
+	}
+
+	return append(result, override...)
 }
