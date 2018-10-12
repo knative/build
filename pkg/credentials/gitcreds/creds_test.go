@@ -21,9 +21,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
-
+	"github.com/google/go-cmp/cmp"
 	"github.com/knative/build/pkg/credentials"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestBasicFlagHandling(t *testing.T) {
@@ -383,6 +384,56 @@ func TestSshMalformedValues(t *testing.T) {
 		cfg := sshGitConfig{}
 		if err := cfg.Set(test); err == nil {
 			t.Errorf("Set(%v); got success, wanted error.", test)
+		}
+	}
+}
+
+func TestMatchingAnnotations(t *testing.T) {
+	tests := []struct {
+		secret   *corev1.Secret
+		wantFlag []string
+	}{{
+		secret: &corev1.Secret{
+			Type: corev1.SecretTypeBasicAuth,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "git",
+				Annotations: map[string]string{
+					fmt.Sprintf("%s.testkeys", annotationPrefix): "basickeys",
+				},
+			},
+		},
+		wantFlag: []string{fmt.Sprintf("-%s=git=basickeys", basicAuthFlag)},
+	}, {
+		secret: &corev1.Secret{
+			Type: corev1.SecretTypeSSHAuth,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ssh",
+				Annotations: map[string]string{
+					fmt.Sprintf("%s.testkeys", annotationPrefix): "keys",
+				},
+			},
+		},
+		wantFlag: []string{fmt.Sprintf("-%s=ssh=keys", sshFlag)},
+	}, {
+		secret: &corev1.Secret{
+			Type: corev1.SecretTypeSSHAuth,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ssh",
+				Annotations: map[string]string{
+					fmt.Sprintf("%s.testkeys1", annotationPrefix): "keys1",
+					fmt.Sprintf("%s.testkeys2", annotationPrefix): "keys2",
+					fmt.Sprintf("%s.testkeys3", annotationPrefix): "keys3",
+				},
+			},
+		},
+		wantFlag: []string{fmt.Sprintf("-%s=ssh=keys1", sshFlag), fmt.Sprintf("-%s=ssh=keys2", sshFlag), fmt.Sprintf("-%s=ssh=keys3", sshFlag)},
+	}}
+
+	nb := NewBuilder()
+	for _, ts := range tests {
+		gotFlag := nb.MatchingAnnotations(ts.secret)
+		if !cmp.Equal(ts.wantFlag, gotFlag) {
+			t.Errorf("MatchingAnnotations() Mismatch of flags; wanted: %v got: %v", ts.wantFlag, gotFlag)
 		}
 	}
 }
