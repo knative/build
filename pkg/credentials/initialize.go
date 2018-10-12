@@ -44,14 +44,13 @@ func VolumeName(secretName string) string {
 	return fmt.Sprintf("%s/%s", VolumePath, secretName)
 }
 
-// SortAnnotations alphabetically
+// SortAnnotations return sorted array of strings which has annotationPrefix
+// as the prefix in secrets key
 func SortAnnotations(secrets map[string]string, annotationPrefix string) []string {
 	var mk []string
-	i := 0
 	for k, v := range secrets {
 		if strings.HasPrefix(k, annotationPrefix) {
 			mk = append(mk, v)
-			i++
 		}
 	}
 	sort.Strings(mk)
