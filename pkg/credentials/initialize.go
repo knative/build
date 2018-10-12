@@ -18,6 +18,8 @@ package credentials
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -40,4 +42,17 @@ type Builder interface {
 // VolumeName returns the full path to the secret, inside the VolumePath.
 func VolumeName(secretName string) string {
 	return fmt.Sprintf("%s/%s", VolumePath, secretName)
+}
+
+// SortAnnotations return sorted array of strings which has annotationPrefix
+// as the prefix in secrets key
+func SortAnnotations(secrets map[string]string, annotationPrefix string) []string {
+	var mk []string
+	for k, v := range secrets {
+		if strings.HasPrefix(k, annotationPrefix) {
+			mk = append(mk, v)
+		}
+	}
+	sort.Strings(mk)
+	return mk
 }

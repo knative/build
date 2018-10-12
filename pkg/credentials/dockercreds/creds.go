@@ -131,10 +131,8 @@ func (*dockerConfigBuilder) MatchingAnnotations(secret *corev1.Secret) []string 
 		return flags
 	}
 
-	for k, v := range secret.Annotations {
-		if strings.HasPrefix(k, annotationPrefix) {
-			flags = append(flags, fmt.Sprintf("-basic-docker=%s=%s", secret.Name, v))
-		}
+	for _, v := range credentials.SortAnnotations(secret.Annotations, annotationPrefix) {
+		flags = append(flags, fmt.Sprintf("-basic-docker=%s=%s", secret.Name, v))
 	}
 	return flags
 }
