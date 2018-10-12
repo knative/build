@@ -19,7 +19,6 @@ package gitcreds
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -71,10 +70,8 @@ func (*gitConfigBuilder) MatchingAnnotations(secret *corev1.Secret) []string {
 		return flags
 	}
 
-	for k, v := range secret.Annotations {
-		if strings.HasPrefix(k, annotationPrefix) {
-			flags = append(flags, fmt.Sprintf("-%s=%s=%s", flagName, secret.Name, v))
-		}
+	for _, v := range credentials.SortAnnotations(secret.Annotations, annotationPrefix) {
+		flags = append(flags, fmt.Sprintf("-%s=%s=%s", flagName, secret.Name, v))
 	}
 	return flags
 }

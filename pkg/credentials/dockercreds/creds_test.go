@@ -15,12 +15,15 @@ package dockercreds
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/credentials"
 )
@@ -161,5 +164,58 @@ func TestMalformedValueTooFew(t *testing.T) {
 	cfg := dockerConfig{make(map[string]entry)}
 	if err := cfg.Set("bar"); err == nil {
 		t.Error("Second Set(); got success, wanted error.")
+	}
+}
+
+func TestMatchingAnnotations(t *testing.T) {
+	tests := []struct {
+		secret   *corev1.Secret
+		wantFlag []string
+	}{{
+		secret: &corev1.Secret{
+			Type: corev1.SecretTypeBasicAuth,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "git",
+				Annotations: map[string]string{
+					fmt.Sprintf("%s.testkeys", annotationPrefix): "basickeys",
+				},
+			},
+		},
+		wantFlag: []string{"-basic-docker=git=basickeys"},
+	}, {
+		secret: &corev1.Secret{
+			Type: corev1.SecretTypeSSHAuth,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ssh",
+				Annotations: map[string]string{
+					fmt.Sprintf("%s.testkeys", annotationPrefix): "keys",
+				},
+			},
+		},
+		wantFlag: []string(nil),
+	}, {
+		secret: &corev1.Secret{
+			Type: corev1.SecretTypeBasicAuth,
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ssh",
+				Annotations: map[string]string{
+					fmt.Sprintf("%s.testkeys1", annotationPrefix): "keys1",
+					fmt.Sprintf("%s.testkeys2", annotationPrefix): "keys2",
+					fmt.Sprintf("%s.testkeys3", annotationPrefix): "keys3",
+				},
+			},
+		},
+		wantFlag: []string{"-basic-docker=ssh=keys1",
+			"-basic-docker=ssh=keys2",
+			"-basic-docker=ssh=keys3",
+		},
+	}}
+
+	nb := NewBuilder()
+	for _, ts := range tests {
+		gotFlag := nb.MatchingAnnotations(ts.secret)
+		if !cmp.Equal(ts.wantFlag, gotFlag) {
+			t.Errorf("MatchingAnnotations() Mismatch of flags; wanted: %v got: %v ", ts.wantFlag, gotFlag)
+		}
 	}
 }
