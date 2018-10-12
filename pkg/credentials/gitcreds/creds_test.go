@@ -431,9 +431,9 @@ func TestMatchingAnnotations(t *testing.T) {
 
 	nb := NewBuilder()
 	for _, ts := range tests {
-		flags := nb.MatchingAnnotations(ts.secret)
-		if d := cmp.Diff(ts.wantFlag, flags); d != "" {
-			t.Errorf("MatchingAnnotations() (-want ,+got): %v", d)
+		gotFlag := nb.MatchingAnnotations(ts.secret)
+		if !cmp.Equal(ts.wantFlag, gotFlag) {
+			t.Errorf("MatchingAnnotations() Mismatch of flags; wanted: %v got: %v", ts.wantFlag, gotFlag)
 		}
 	}
 }
