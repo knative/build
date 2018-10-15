@@ -37,6 +37,11 @@ spec:
           "-git-image", "github.com/knative/build/cmd/git-init",
           "-nop-image", "github.com/knative/build/cmd/nop",
         ]
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging
