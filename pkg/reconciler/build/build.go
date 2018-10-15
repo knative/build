@@ -230,14 +230,13 @@ func (c *Reconciler) fetchTemplate(b *v1alpha1.Build) (v1alpha1.BuildTemplateInt
 				runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", b.Spec.Template.Name))
 			}
 			return tmpl, err
-		} else {
-			tmpl, err := c.buildTemplatesLister.BuildTemplates(b.Namespace).Get(b.Spec.Template.Name)
-			// The BuildTemplate resource may not exist.
-			if errors.IsNotFound(err) {
-				runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", b.Spec.Template.Name, b.Namespace))
-			}
-			return tmpl, err
 		}
+		tmpl, err := c.buildTemplatesLister.BuildTemplates(b.Namespace).Get(b.Spec.Template.Name)
+		// The BuildTemplate resource may not exist.
+		if errors.IsNotFound(err) {
+			runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", b.Spec.Template.Name, b.Namespace))
+		}
+		return tmpl, err
 	}
 	return nil, nil
 }
