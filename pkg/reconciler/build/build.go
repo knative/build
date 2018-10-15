@@ -195,6 +195,7 @@ func (c *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Build) error {
 	if err != nil {
 		return err
 	}
+
 	// If the pod is complete and the build doesn't already have a
 	// completionTIme, set the completionTime.
 	status.CompletionTime = b.Status.CompletionTime

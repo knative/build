@@ -62,6 +62,15 @@ var (
 		Name:         "home",
 		VolumeSource: emptyVolumeSource,
 	}}
+
+	// Names of implicit steps added during FromCRD. Statuses for these
+	// steps are ignored when populating a BuildStatus from a PodStatus.
+	implicitStepNames = map[string]bool{
+		initContainerPrefix + credsInit:    true,
+		initContainerPrefix + gcsSource:    true,
+		initContainerPrefix + gitSource:    true,
+		initContainerPrefix + customSource: true,
+	}
 )
 
 const (
@@ -394,6 +403,11 @@ func StatusFromPod(pod *corev1.Pod) (*v1alpha1.BuildStatus, error) {
 	}
 
 	for _, ics := range pod.Status.InitContainerStatuses {
+		// Ignore statuses for implicit steps added by FromCRD (e.g., creds init, source fetching).
+		if implicitStepNames[ics.Name] {
+			continue
+		}
+
 		if ics.State.Terminated != nil {
 			status.StepsCompleted = append(status.StepsCompleted, ics.Name)
 		}

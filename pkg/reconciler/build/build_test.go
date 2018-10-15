@@ -24,6 +24,18 @@ import (
 
 const namespace = "namespace"
 
+var (
+	// Implicit steps which should be filtered out when populating. BuildStatus.
+	credsInitContainerStatus = corev1.ContainerStatus{
+		Name:  "build-step-credential-initializer",
+		State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{}},
+	}
+	gitSourceContainerStatus = corev1.ContainerStatus{
+		Name:  "build-step-git-source",
+		State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{}},
+	}
+)
+
 var ignoreVolatileTime = cmp.Comparer(func(_, _ apis.VolatileTime) bool { return true })
 
 // TestBuildFlow creates a build and checks that a pod is created as a result.
@@ -102,7 +114,43 @@ func TestBuildFlow(t *testing.T) {
 		t.Errorf("Got diff: %s", diff)
 	}
 
-	// TODO: Check state of created pod (build-step- prefixed container names, credsinit, etc.)
+	// Check state of created pod (build-step- prefixed container names, creds-init, etc.)
+	pod, err := kubeClient.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Getting pod %q: %v", podName, err)
+	}
+	implicitEnv := []corev1.EnvVar{{Name: "HOME", Value: "/builder/home"}}
+	implicitVolumeMounts := []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}, {Name: "home", MountPath: "/builder/home"}}
+	if diff := cmp.Diff(pod.Spec, corev1.PodSpec{
+		InitContainers: []corev1.Container{{
+			Name:         "build-step-credential-initializer",
+			Image:        "override-with-creds:latest",
+			Args:         []string{},
+			WorkingDir:   "/workspace",
+			Env:          implicitEnv,
+			VolumeMounts: implicitVolumeMounts,
+		}, {
+			Name:         "build-step-foo",
+			Image:        "bar",
+			WorkingDir:   "/workspace",
+			Env:          implicitEnv,
+			VolumeMounts: implicitVolumeMounts,
+		}},
+		Containers: []corev1.Container{{
+			Name:  "nop",
+			Image: "override-with-nop:latest",
+		}},
+		Volumes: []corev1.Volume{{
+			Name:         "workspace",
+			VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+		}, {
+			Name:         "home",
+			VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+		}},
+		RestartPolicy: corev1.RestartPolicyNever,
+	}); diff != "" {
+		t.Fatalf("Got created pod spec diff: %s", diff)
+	}
 
 	// Simulate the pod starting (step hasn't started yet).
 	podStart := metav1.Now()
@@ -114,12 +162,13 @@ func TestBuildFlow(t *testing.T) {
 		Status: corev1.PodStatus{
 			StartTime: &podStart,
 			Phase:     corev1.PodRunning,
-			InitContainerStatuses: []corev1.ContainerStatus{{
-				Name: "build-step-foo",
-				State: corev1.ContainerState{
-					Waiting: &corev1.ContainerStateWaiting{},
-				},
-			}},
+			InitContainerStatuses: []corev1.ContainerStatus{
+				credsInitContainerStatus, gitSourceContainerStatus, {
+					Name: "build-step-foo",
+					State: corev1.ContainerState{
+						Waiting: &corev1.ContainerStateWaiting{},
+					},
+				}},
 		},
 	}); err != nil {
 		t.Fatalf("Updating pod: %v", err)
@@ -162,14 +211,15 @@ func TestBuildFlow(t *testing.T) {
 		Status: corev1.PodStatus{
 			StartTime: &podStart,
 			Phase:     corev1.PodRunning,
-			InitContainerStatuses: []corev1.ContainerStatus{{
-				Name: "build-step-foo",
-				State: corev1.ContainerState{
-					Running: &corev1.ContainerStateRunning{
-						StartedAt: stepStart,
+			InitContainerStatuses: []corev1.ContainerStatus{
+				credsInitContainerStatus, gitSourceContainerStatus, {
+					Name: "build-step-foo",
+					State: corev1.ContainerState{
+						Running: &corev1.ContainerStateRunning{
+							StartedAt: stepStart,
+						},
 					},
-				},
-			}},
+				}},
 		},
 	}); err != nil {
 		t.Fatalf("Updating pod: %v", err)
@@ -214,15 +264,16 @@ func TestBuildFlow(t *testing.T) {
 		Status: corev1.PodStatus{
 			StartTime: &podStart,
 			Phase:     corev1.PodSucceeded,
-			InitContainerStatuses: []corev1.ContainerStatus{{
-				Name: "build-step-foo",
-				State: corev1.ContainerState{
-					Terminated: &corev1.ContainerStateTerminated{
-						StartedAt:  stepStart,
-						FinishedAt: stepFinish,
+			InitContainerStatuses: []corev1.ContainerStatus{
+				credsInitContainerStatus, gitSourceContainerStatus, {
+					Name: "build-step-foo",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							StartedAt:  stepStart,
+							FinishedAt: stepFinish,
+						},
 					},
-				},
-			}},
+				}},
 		},
 	}); err != nil {
 		t.Fatalf("Updating pod: %v", err)
