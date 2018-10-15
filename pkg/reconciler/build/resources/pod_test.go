@@ -21,6 +21,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/knative/pkg/apis"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +32,10 @@ import (
 	"github.com/knative/build/pkg/buildtest"
 )
 
-var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
+var (
+	ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
+	ignoreVolatileTime          = cmp.Comparer(func(_, _ apis.VolatileTime) bool { return true })
+)
 
 var nopContainer = corev1.Container{
 	Name:  "nop",
@@ -354,5 +359,387 @@ func TestFromCRD(t *testing.T) {
 }
 
 func TestStatusFromPod(t *testing.T) {
-	// TODO
+	namespace := "namespace"
+	podName := "pod-name"
+	podStart, stepStart, stepFinish := metav1.Now(), metav1.Now(), metav1.Now()
+	for _, c := range []struct {
+		desc    string
+		pod     *corev1.Pod
+		want    *v1alpha1.BuildStatus
+		wantErr bool
+	}{{
+		desc: "ongoing multiple steps",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							StartedAt:  stepStart,
+							FinishedAt: stepFinish,
+						},
+					},
+				}, {
+					Name: initContainerPrefix + "ongoing",
+					State: corev1.ContainerState{
+						Running: &corev1.ContainerStateRunning{
+							StartedAt: stepStart,
+						},
+					},
+				}},
+				Phase: corev1.PodRunning,
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					StartedAt:  stepStart,
+					FinishedAt: stepFinish,
+				},
+			}, {
+				Running: &corev1.ContainerStateRunning{
+					StartedAt: stepStart,
+				},
+			}},
+			StepsCompleted: []string{initContainerPrefix + "done"},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   v1alpha1.BuildSucceeded,
+				Status: corev1.ConditionUnknown,
+			}},
+		},
+	}, {
+		desc: "successful",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							StartedAt:  stepStart,
+							FinishedAt: stepFinish,
+						},
+					},
+				}},
+				Phase: corev1.PodSucceeded,
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					StartedAt:  stepStart,
+					FinishedAt: stepFinish,
+				},
+			}},
+			StepsCompleted: []string{initContainerPrefix + "done"},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:   v1alpha1.BuildSucceeded,
+				Status: corev1.ConditionTrue,
+			}},
+		},
+	}, {
+		desc: "failed with exit code",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							StartedAt:  stepStart,
+							FinishedAt: stepFinish,
+							ExitCode:   123,
+						},
+					},
+					ImageID: "image-id",
+				}},
+				Phase: corev1.PodFailed,
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					StartedAt:  stepStart,
+					FinishedAt: stepFinish,
+					ExitCode:   123,
+				},
+			}},
+			StepsCompleted: []string{initContainerPrefix + "done"},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Message: `build step "build-step-done" exited with code 123 (image: "image-id"); for logs run: kubectl -n namespace logs pod-name -c build-step-done`,
+			}},
+		},
+	}, {
+		desc: "failed with message",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							StartedAt:  stepStart,
+							FinishedAt: stepFinish,
+						},
+					},
+				}},
+				Phase:   corev1.PodFailed,
+				Message: "failure message",
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					StartedAt:  stepStart,
+					FinishedAt: stepFinish,
+				},
+			}},
+			StepsCompleted: []string{initContainerPrefix + "done"},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Message: "failure message",
+			}},
+		},
+	}, {
+		desc: "failed without message",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{
+							StartedAt:  stepStart,
+							FinishedAt: stepFinish,
+						},
+					},
+				}},
+				Phase: corev1.PodFailed,
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					StartedAt:  stepStart,
+					FinishedAt: stepFinish,
+				},
+			}},
+			StepsCompleted: []string{initContainerPrefix + "done"},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Message: "build failed for unspecified reasons.",
+			}},
+		},
+	}, {
+		desc: "pending with reason",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Waiting: &corev1.ContainerStateWaiting{
+							Message: "pending reason",
+						},
+					},
+				}},
+				Phase: corev1.PodPending,
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Waiting: &corev1.ContainerStateWaiting{
+					Message: "pending reason",
+				},
+			}},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionUnknown,
+				Message: "Pending",
+				Reason:  `build step "build-step-done" is pending with reason "pending reason"`,
+			}},
+		},
+	}, {
+		desc: "pending with status",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Waiting: &corev1.ContainerStateWaiting{},
+					},
+				}},
+				Phase: corev1.PodPending,
+				Conditions: []corev1.PodCondition{{
+					Type:    "condition-type",
+					Status:  "condition-status",
+					Message: "condition-message",
+				}},
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Waiting: &corev1.ContainerStateWaiting{},
+			}},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionUnknown,
+				Message: "Pending",
+				Reason:  `pod status "condition-type":"condition-status"; message: "condition-message"`,
+			}},
+		},
+	}, {
+		desc: "pending without status",
+		pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      podName,
+			},
+			Status: corev1.PodStatus{
+				StartTime: &podStart,
+				InitContainerStatuses: []corev1.ContainerStatus{{
+					Name: initContainerPrefix + credsInit, // Ignored.
+				}, {
+					Name: initContainerPrefix + gitSource, // Ignored.
+				}, {
+					Name: initContainerPrefix + "done",
+					State: corev1.ContainerState{
+						Waiting: &corev1.ContainerStateWaiting{},
+					},
+				}},
+				Phase: corev1.PodPending,
+			},
+		},
+		want: &v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: namespace,
+				PodName:   podName,
+			},
+			StartTime: podStart,
+			StepStates: []corev1.ContainerState{{
+				Waiting: &corev1.ContainerStateWaiting{},
+			}},
+			Conditions: []duckv1alpha1.Condition{{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionUnknown,
+				Message: "Pending",
+				Reason:  "Pending",
+			}},
+		},
+	}} {
+		t.Run(c.desc, func(t *testing.T) {
+			got, err := StatusFromPod(c.pod)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("Got error %v, wanted error = %t", err, c.wantErr)
+			}
+			if d := cmp.Diff(got, c.want, ignoreVolatileTime); d != "" {
+				t.Fatalf("Diff: %s", d)
+			}
+		})
+	}
 }

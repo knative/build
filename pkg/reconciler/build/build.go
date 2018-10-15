@@ -184,7 +184,7 @@ func (c *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Build) error {
 		}
 	}
 
-	// TODO: Use podsLister here, for speed?
+	// TODO(jasonhall): Use podsLister here, for speed?
 	pod, err := c.kubeclientset.CoreV1().Pods(b.Namespace).Get(b.Status.Cluster.PodName, metav1.GetOptions{})
 	if err != nil {
 		return err
