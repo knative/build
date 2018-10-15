@@ -16,8 +16,17 @@ limitations under the License.
 
 package system
 
-const (
+import "os"
+
+var (
 	// Namespace holds the K8s namespace where our build system
 	// components run.
-	Namespace = "knative-build"
+	Namespace string
 )
+
+func init() {
+	Namespace = os.Getenv("SYSTEM_NAMESPACE")
+	if Namespace == "" {
+		Namespace = "knative-build"
+	}
+}

@@ -38,6 +38,11 @@ spec:
           "-logtostderr",
           "-stderrthreshold", "INFO",
         ]
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging
