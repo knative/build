@@ -55,9 +55,7 @@ kubectl delete --ignore-not-found=true buildtemplates --all
 failed=0
 
 header "Running Go e2e tests"
-options=""
-(( EMIT_METRICS )) && options="-emitmetrics"
-report_go_test -tags e2e ./test/e2e/... -count=1 ${options} || failed=1
+go_test_e2e ./test/e2e/... || failed=1
 
 header "Running YAML e2e tests"
 if ! run_yaml_tests; then

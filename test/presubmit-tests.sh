@@ -38,7 +38,9 @@ function unit_tests() {
 }
 
 function integration_tests() {
-  ./test/e2e-tests.sh
+  local options=""
+  (( EMIT_METRICS )) && options="--emit-metrics"
+  ./test/e2e-tests.sh ${options}
 }
 
 main $@
