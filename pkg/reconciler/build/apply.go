@@ -98,6 +98,15 @@ func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v
 			steps[i].Env = applyEnvOverride(steps[i].Env, buildTmpl.Env)
 		}
 	}
+
+	// Apply variable expansion to volumes fields.
+	if volumes := build.Spec.Volumes; volumes != nil && len(volumes) > 0 {
+
+		for i := range volumes {
+			applyVolumeReplacements(&volumes[i], applyReplacements)
+		}
+	}
+
 	return build
 }
 
@@ -116,4 +125,18 @@ func applyEnvOverride(src, override []corev1.EnvVar) []corev1.EnvVar {
 	}
 
 	return append(result, override...)
+}
+
+func applyVolumeReplacements(volume *corev1.Volume, applyReplacements func(string) string) {
+	if volume == nil {
+		return
+	}
+
+	volume.Name = applyReplacements(volume.Name)
+
+	// Apply variable expansion to configMap's name
+	// TODO: Apply variable expansion to other volumeSource
+	if volume.VolumeSource.ConfigMap != nil {
+		volume.ConfigMap.Name = applyReplacements(volume.ConfigMap.Name)
+	}
 }
