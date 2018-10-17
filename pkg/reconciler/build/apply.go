@@ -101,7 +101,6 @@ func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v
 
 	// Apply variable expansion to volumes fields.
 	if volumes := build.Spec.Volumes; volumes != nil && len(volumes) > 0 {
-
 		for i := range volumes {
 			applyVolumeReplacements(&volumes[i], applyReplacements)
 		}

@@ -725,18 +725,16 @@ func TestApplyReplacements(t *testing.T) {
 			args: args{
 				build: &v1alpha1.Build{
 					Spec: v1alpha1.BuildSpec{
-						Volumes: []corev1.Volume{
-							{
-								Name: "${name}",
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										corev1.LocalObjectReference{"${configmapname}"},
-										nil,
-										nil,
-										nil,
-									},
+						Volumes: []corev1.Volume{{
+							Name: "${name}",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									corev1.LocalObjectReference{"${configmapname}"},
+									nil,
+									nil,
+									nil,
 								},
-							},
+							}},
 						},
 					},
 				},
@@ -747,18 +745,16 @@ func TestApplyReplacements(t *testing.T) {
 			},
 			want: &v1alpha1.Build{
 				Spec: v1alpha1.BuildSpec{
-					Volumes: []corev1.Volume{
-						{
-							Name: "myname",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									corev1.LocalObjectReference{"cfgmapname"},
-									nil,
-									nil,
-									nil,
-								},
+					Volumes: []corev1.Volume{{
+						Name: "myname",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								corev1.LocalObjectReference{"cfgmapname"},
+								nil,
+								nil,
+								nil,
 							},
-						},
+						}},
 					},
 				},
 			},
