@@ -19,13 +19,16 @@ container_pull(
     name = "base",
     registry = "gcr.io",
     repository = "distroless/base",
+    # "gcr.io/distroless/base:latest" circa 2018-10-16 21:01 -0400
+    digest = "sha256:472206d4c501691d9e72cafca4362f2adbc610fecff3dfa42e5b345f9b7d05e5"
 )
 
 container_pull(
     name = "base-debug",
     registry = "gcr.io",
     repository = "distroless/base",
-    tag = "debug",
+    # "gcr.io/distroless/base:debug" circa 2018-10-16 21:01 -0400
+    digest = "sha256:bb7b331d3132e95c48556dbd3b28079f0eb3014f2726f5ddd7225b9c9df16a91",
 )
 
 # Load distroless rules
