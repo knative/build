@@ -44,7 +44,8 @@ readonly BUILD_BASE_REPO
 readonly OUTPUT_YAML=release.yaml
 
 function bazel_cleanup() {
-  bazel clean --expunge
+  # Don't cleanup bazel if running on Prow, or it will erase the test results.
+  (( ! IS_PROW )) && bazel clean --expunge
 }
 
 function ko_build() {
