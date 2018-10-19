@@ -101,6 +101,34 @@ dpkg_list(
       "git",
       # "libc6" # provided by distroless/base
       "libcurl3-gnutls",
+        # libcurl3-gnutls deps
+        "libgnutls30",
+          # libgnutls30 deps
+          "libgmp10",
+          "libhogweed4",
+          "libidn11",
+          "libnettle6",
+          "libp11-kit0",
+            # libp11-kit0 deps
+            "libffi6",
+          "libtasn1-6",
+        # "libgssapi-krb5-2", provided by openssh-client
+        "libidn2-0",
+          # libidn2-0 deps
+          "libunistring0",
+        # "libkrb5-3" provided by openssh-client
+        "libldap-2.4-2",
+          # libldap-2.4.2 deps
+          "libldap-common",
+          "libsasl2-2",
+        "libnghttp2-14",
+        "libpsl5",
+        "librtmp1",
+        "libssh2-1",
+          # libssh2-1 deps
+          "libgcrypt20",
+          "libgpg-error0",
+          "rng-tools",
       "liberror-perl",
       "libexpat1",
       "libpcre3",
