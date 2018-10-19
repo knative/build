@@ -29,17 +29,6 @@
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 source $(dirname $0)/e2e-common.sh
 
-function wait_for_running_build_pods() {
-  echo "Waiting for knative build pods to be ready..."
-  local pods=$(kubectl get pods -o name -n knative-build)
-
-  for pod in $pods
-  do
-    kubectl wait --for=condition=Ready -n knative-build "$pod"
-  done
-  echo "Knative build pods are ready"
-}
-
 # Script entry point.
 
 initialize $@
@@ -60,7 +49,7 @@ set +o pipefail
 kubectl delete --ignore-not-found=true builds --all
 kubectl delete --ignore-not-found=true buildtemplates --all
 
-wait_for_running_build_pods
+wait_until_pods_running knative-build
 
 # Run the tests
 
