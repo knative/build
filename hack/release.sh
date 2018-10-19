@@ -16,12 +16,6 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 
-set -o errexit
-set -o pipefail
-
-# Script entry point
-parse_flags $@
-
 # Set default GCS/GCR
 : ${BUILD_RELEASE_GCS:="knative-releases/build"}
 : ${BUILD_RELEASE_GCR:="gcr.io/knative-releases"}
@@ -29,44 +23,24 @@ readonly BUILD_RELEASE_GCS
 readonly BUILD_RELEASE_GCR
 
 # Location of the base image for creds-init and git images
-if (( PUBLISH_RELEASE )); then
-  BUILD_BASE_REGISTRY="$(echo $BUILD_RELEASE_GCR | cut -d/ -f1)"
-else
-  BUILD_BASE_REGISTRY="ko.local"
-fi
-
-BUILD_BASE_REPO="$(echo $BUILD_RELEASE_GCR | cut -d/ -f2-)/github.com/knative/build/build-base"
-
-readonly BUILD_BASE_REGISTRY
-readonly BUILD_BASE_REPO
+readonly BUILD_BASE_GCR="${BUILD_RELEASE_GCR}/github.com/knative/build/build-base"
 
 # Local generated yaml file
 readonly OUTPUT_YAML=release.yaml
 
-function bazel_cleanup() {
-  bazel clean --expunge
-}
+# Script entry point
 
-function ko_build() {
-  echo "Building build-crd"
-  ko resolve ${KO_FLAGS} -f config/ > ${OUTPUT_YAML}
-  tag_images_in_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCR} ${TAG}
+parse_flags $@
 
-  echo "New release built successfully"
-}
-
-trap bazel_cleanup EXIT
+set -o errexit
+set -o pipefail
 
 run_validation_tests ./test/presubmit-tests.sh
 
 banner "Building the release"
 
-echo "Building base images"
 # Build the base image for creds-init and git images.
-bazel build \
-  --define registry=${BUILD_BASE_REGISTRY} \
-  --define repository=${BUILD_BASE_REPO} \
-  //images:all
+docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
 
 # Set the repository
 export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
@@ -75,28 +49,24 @@ export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 export K8S_USER_OVERRIDE=USER_NOT_SET
 export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
-if (( ! PUBLISH_RELEASE )); then
-  ko_build
-  exit 0
+if (( PUBLISH_RELEASE )); then
+  echo "- Destination GCR: ${BUILD_RELEASE_GCR}"
+  echo "- Destination GCS: ${BUILD_RELEASE_GCS}"
 fi
 
-echo "- Destination GCR: ${BUILD_RELEASE_GCR}"
-echo "- Destination GCS: ${BUILD_RELEASE_GCS}"
+echo "Building build-crd"
+ko resolve ${KO_FLAGS} -f config/ > ${OUTPUT_YAML}
+tag_images_in_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCR} ${TAG}
 
-# Push the base image for creds-init and git images. We push the
-# images first so that ko_build will pick up the latest changes
-echo "Pushing base images to ${BUILD_BASE_REGISTRY}/${BUILD_BASE_REPO}"
-bazel run \
-  --define registry=${BUILD_BASE_REGISTRY} \
-  --define repository=${BUILD_BASE_REPO} \
-  //images:push-build-base
+echo "New release built successfully"
 
-bazel run \
-  --define registry=${BUILD_BASE_REGISTRY} \
-  --define repository=${BUILD_BASE_REPO} \
-  //images:push-build-base-debug
+if (( ! PUBLISH_RELEASE )); then
+ exit 0
+fi
 
-ko_build
+# Push the base image for creds-init and git images.
+echo "Pushing base images to ${BUILD_BASE_GCR}"
+docker push ${BUILD_BASE_GCR}
 
 echo "Publishing ${OUTPUT_YAML}"
 publish_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCS} ${TAG}
