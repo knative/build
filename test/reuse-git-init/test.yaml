@@ -16,7 +16,7 @@ kind: Build
 metadata:
   name: test-reuse-git-init
   labels:
-    expect: succeeded
+    expect: succeeded     
 spec:
   # First, implicitly use git-init to fetch and checkout master.
   source:
