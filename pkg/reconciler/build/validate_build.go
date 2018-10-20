@@ -24,7 +24,7 @@ import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 )
 
-func (ac *Controller) validateBuild(b *v1alpha1.Build) error {
+func (ac *Reconciler) validateBuild(b *v1alpha1.Build) error {
 	if err := ac.validateSecrets(b); err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (ac *Controller) validateBuild(b *v1alpha1.Build) error {
 // validateSecrets checks that if the Build specifies a ServiceAccount, that it
 // exists, and that any Secrets referenced by it exist, and have valid
 // annotations.
-func (ac *Controller) validateSecrets(b *v1alpha1.Build) error {
+func (ac *Reconciler) validateSecrets(b *v1alpha1.Build) error {
 	saName := b.Spec.ServiceAccountName
 	if saName == "" {
 		saName = "default"
