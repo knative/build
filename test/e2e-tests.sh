@@ -38,7 +38,21 @@ set -o errexit
 set -o pipefail
 
 header "Building and starting the controller"
+echo "Staging build-base image..."
+
+export BUILD_BASE_REGISTRY=$(echo $DOCKER_REPO_OVERRIDE | cut -d/ -f1)
+export BUILD_BASE_REPO=$(echo $DOCKER_REPO_OVERRIDE | cut -d/ -f2-)
+export BUILD_BASE_TAG="e2e-$(date +'%s')"
+export KO_CONFIG_PATH=$(mktemp -d)
 export KO_DOCKER_REPO=${DOCKER_REPO_OVERRIDE}
+
+# We source the script to capture the BUILD_BASE_IMAGE
+source hack/upload-build-images.sh
+
+echo "Using build-base image ${BUILD_BASE_IMAGE}"
+cat .ko.yaml | sed -E "s,(^[ ]+.+:[ ]).*,\1 ${BUILD_BASE_IMAGE},g" \
+  > "${KO_CONFIG_PATH}/.ko.yaml"
+
 ko apply -f config/ || fail_test
 
 # Handle test failures ourselves, so we can dump useful info.
