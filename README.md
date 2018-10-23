@@ -11,7 +11,7 @@ A Knative build extends
 and utilizes existing Kubernetes primitives to provide you with the
 ability to run on-cluster container builds from source. For example, you can 
 write a build that uses Kubernetes-native resources to obtain your source code
-from a repository, build it into container a image, and then run that image. 
+from a repository, build a container image, then run that image. 
 
 While Knative builds are optimized for building, testing, and deploying source 
 code, you are still responsible for developing the corresponding components 
