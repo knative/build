@@ -29,6 +29,7 @@ import (
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 )
 
+// test
 func init() {
 	// Add build types to the default Kubernetes Scheme so Events can be
 	// logged for build types.
