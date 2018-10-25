@@ -46,7 +46,7 @@ set +o errexit
 set +o pipefail
 
 # Make sure that are no builds or build templates in the current namespace.
-kubectl delete --ignore-not-found=true builds --all
+kubectl delete --ignore-not-found=true builds.build.knative.dev --all
 kubectl delete --ignore-not-found=true buildtemplates --all
 
 wait_until_pods_running knative-build
@@ -63,8 +63,8 @@ if ! run_yaml_tests; then
   failed=1
   echo "ERROR: one or more YAML tests failed"
   # If formatting fails for any reason, use yaml as a fall back.
-  kubectl get builds -o=custom-columns-file=./test/columns.txt || \
-    kubectl get builds -oyaml
+  kubectl get builds.build.knative.dev -o=custom-columns-file=./test/columns.txt || \
+    kubectl get builds.build.knative.dev -oyaml
 fi
 
 (( failed )) && fail_test

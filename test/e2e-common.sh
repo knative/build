@@ -27,7 +27,7 @@ function run_yaml_tests() {
   echo ">> Waiting for tests to finish"
   local tests_finished=0
   for i in {1..60}; do
-    local finished="$(kubectl get builds --output=jsonpath='{.items[*].status.conditions[*].status}')"
+    local finished="$(kubectl get build.build.knative.dev --output=jsonpath='{.items[*].status.conditions[*].status}')"
     if [[ ! "$finished" == *"Unknown"* ]]; then
       tests_finished=1
       break
@@ -43,7 +43,7 @@ function run_yaml_tests() {
   local failed=0
   echo ">> Checking test results"
   for expected_status in succeeded failed; do
-    results="$(kubectl get builds -l expect=${expected_status} \
+    results="$(kubectl get build.build.knative.dev -l expect=${expected_status} \
 	--output=jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[*].type}{.status.conditions[*].status}{" "}{end}')"
     case $expected_status in
       succeeded)
