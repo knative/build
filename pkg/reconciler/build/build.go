@@ -33,6 +33,7 @@ import (
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
+	"github.com/knative/build/pkg/reconciler"
 )
 
 const controllerAgentName = "build-controller"
@@ -80,7 +81,8 @@ func NewController(
 		buildsLister:   buildInformer.Lister(),
 		Logger:         logger,
 	}
-	impl := controller.NewImpl(r, logger, "Builds")
+	impl := controller.NewImpl(r, logger, "Builds",
+		reconciler.MustNewStatsReporter("Builds", r.Logger))
 
 	logger.Info("Setting up event handlers")
 	// Set up an event handler for when Build resources change
