@@ -185,63 +185,64 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 		// if not timed out then wait async
 		go c.waitForOperation(build, op)
-	} else {
-		build.Status.Builder = c.builder.Builder()
-		// If the build hasn't even started, then start it and record the operation in our status.
-		// Note that by recording our status, we will trigger a reconciliation, so the wait above
-		// will kick in.
-		var tmpl v1alpha1.BuildTemplateInterface
-		if build.Spec.Template != nil {
-			if build.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
-				tmpl, err = c.clusterBuildTemplatesLister.Get(build.Spec.Template.Name)
-				if err != nil {
-					// The ClusterBuildTemplate resource may not exist.
-					if errors.IsNotFound(err) {
-						runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", build.Spec.Template.Name))
-					}
-					return err
-				}
-			} else {
-				tmpl, err = c.buildTemplatesLister.BuildTemplates(namespace).Get(build.Spec.Template.Name)
-				if err != nil {
-					// The BuildTemplate resource may not exist.
-					if errors.IsNotFound(err) {
-						runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", build.Spec.Template.Name, namespace))
-					}
-					return err
-				}
-			}
-		}
-		build, err = builder.ApplyTemplate(build, tmpl)
-		if err != nil {
-			return err
-		}
-		// TODO: Validate build except steps+template
-		b, err := c.builder.BuildFromSpec(build)
-		if err != nil {
-			return err
-		}
-		op, err := b.Execute()
-		if err != nil {
-			build.Status.SetCondition(&duckv1alpha1.Condition{
-				Type:    v1alpha1.BuildSucceeded,
-				Status:  corev1.ConditionFalse,
-				Reason:  "BuildExecuteFailed",
-				Message: err.Error(),
-			})
+		return nil
+	}
 
-			if _, err := c.updateStatus(build); err != nil {
+	// If the build hasn't even started, then start it and record the operation in our status.
+	// Note that by recording our status, we will trigger a reconciliation, so the wait above
+	// will kick in.
+	build.Status.Builder = c.builder.Builder()
+	var tmpl v1alpha1.BuildTemplateInterface
+	if build.Spec.Template != nil {
+		if build.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
+			tmpl, err = c.clusterBuildTemplatesLister.Get(build.Spec.Template.Name)
+			if err != nil {
+				// The ClusterBuildTemplate resource may not exist.
+				if errors.IsNotFound(err) {
+					runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", build.Spec.Template.Name))
+				}
 				return err
 			}
+		} else {
+			tmpl, err = c.buildTemplatesLister.BuildTemplates(namespace).Get(build.Spec.Template.Name)
+			if err != nil {
+				// The BuildTemplate resource may not exist.
+				if errors.IsNotFound(err) {
+					runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", build.Spec.Template.Name, namespace))
+				}
+				return err
+			}
+		}
+	}
+	build, err = builder.ApplyTemplate(build, tmpl)
+	if err != nil {
+		return err
+	}
+	// TODO: Validate build except steps+template
+	b, err := c.builder.BuildFromSpec(build)
+	if err != nil {
+		return err
+	}
+	op, err := b.Execute()
+	if err != nil {
+		build.Status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Reason:  "BuildExecuteFailed",
+			Message: err.Error(),
+		})
+
+		if _, err := c.updateStatus(build); err != nil {
 			return err
 		}
-		if err := op.Checkpoint(build, &build.Status); err != nil {
-			return err
-		}
-		build, err = c.updateStatus(build)
-		if err != nil {
-			return err
-		}
+		return err
+	}
+	if err := op.Checkpoint(build, &build.Status); err != nil {
+		return err
+	}
+	build, err = c.updateStatus(build)
+	if err != nil {
+		return err
 	}
 	return nil
 }
