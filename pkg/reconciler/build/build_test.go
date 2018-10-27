@@ -17,15 +17,16 @@ limitations under the License.
 package build
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +36,6 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/builder"
@@ -58,7 +58,6 @@ type fixture struct {
 	client     *fake.Clientset
 	kubeclient *k8sfake.Clientset
 	objects    []runtime.Object
-	eventCh    chan string
 }
 
 func newBuild(name string) *v1alpha1.Build {
@@ -86,17 +85,14 @@ func (f *fixture) createServceAccount() {
 	}
 }
 
-func (f *fixture) newController(b builder.Interface, eventCh chan string) (*Controller, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
-	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
+func (f *fixture) newController(b builder.Interface) (*controller.Impl, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
 	logger := zap.NewExample().Sugar()
-	c := NewController(b, f.kubeclient, f.client, k8sI, i, logger).(*Controller)
-
-	c.buildsSynced = func() bool { return true }
-	c.recorder = &record.FakeRecorder{
-		Events: eventCh,
-	}
-
+	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
+	buildInformer := i.Build().V1alpha1().Builds()
+	buildTemplateInformer := i.Build().V1alpha1().BuildTemplates()
+	clusterBuildTemplateInformer := i.Build().V1alpha1().ClusterBuildTemplates()
+	c := NewController(logger, f.kubeclient, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, b)
 	return c, i, k8sI
 }
 
@@ -138,16 +134,14 @@ func TestBuildNotFoundFlow(t *testing.T) {
 	f.client.PrependReactor("*", "*", reactor)
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	defer close(stopCh)
-	defer close(eventCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
+	c, i, k8sI := f.newController(bldr)
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	if err := c.syncHandler(getKey(build, t)); err == nil {
+	if err := c.Reconciler.Reconcile(context.Background(), getKey(build, t)); err == nil {
 		t.Errorf("Expect error syncing build")
 	}
 }
@@ -161,10 +155,9 @@ func TestBuildWithBadKey(t *testing.T) {
 	}
 	f.createServceAccount()
 
-	eventCh := make(chan string, 1024)
-	c, _, _ := f.newController(bldr, eventCh)
+	c, _, _ := f.newController(bldr)
 
-	if err := c.syncHandler("bad/worse/worst"); err != nil {
+	if err := c.Reconciler.Reconcile(context.Background(), "bad/worse/worst"); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
 }
@@ -182,16 +175,14 @@ func TestBuildNotFoundError(t *testing.T) {
 	f.createServceAccount()
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	defer close(stopCh)
-	defer close(eventCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
+	c, i, k8sI := f.newController(bldr)
 	// Don't update build informers with test build object
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	if err := c.syncHandler(getKey(build, t)); err != nil {
+	if err := c.Reconciler.Reconcile(context.Background(), getKey(build, t)); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
 }
@@ -215,16 +206,14 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 		f.createServceAccount()
 
 		stopCh := make(chan struct{})
-		eventCh := make(chan string, 1024)
 		defer close(stopCh)
-		defer close(eventCh)
 
-		c, i, k8sI := f.newController(&nop.Builder{}, eventCh)
+		c, i, k8sI := f.newController(&nop.Builder{})
 		f.updateIndex(i, []*v1alpha1.Build{build})
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
 
-		if err := c.syncHandler(getKey(build, t)); err == nil {
+		if err := c.Reconciler.Reconcile(context.Background(), getKey(build, t)); err == nil {
 			t.Errorf("Expect error syncing build")
 		} else if !kuberrors.IsNotFound(err) {
 			t.Errorf("Expect error to be not found err: %s", err.Error())
@@ -259,11 +248,9 @@ func TestBuildWithTemplate(t *testing.T) {
 	f.createServceAccount()
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	defer close(stopCh)
-	defer close(eventCh)
 
-	c, i, k8sI := f.newController(&nop.Builder{}, eventCh)
+	c, i, k8sI := f.newController(&nop.Builder{})
 
 	err := i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
 	if err != nil {
@@ -274,7 +261,7 @@ func TestBuildWithTemplate(t *testing.T) {
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	if err = c.syncHandler(getKey(build, t)); err != nil {
+	if err = c.Reconciler.Reconcile(context.Background(), getKey(build, t)); err != nil {
 		t.Errorf("unexpected expecting error while syncing build: %s", err.Error())
 	}
 
@@ -311,17 +298,16 @@ func TestBasicFlows(t *testing.T) {
 		f.createServceAccount()
 
 		stopCh := make(chan struct{})
-		eventCh := make(chan string, 1024)
 		defer close(stopCh)
-		defer close(eventCh)
 
-		c, i, k8sI := f.newController(test.bldr, eventCh)
+		c, i, k8sI := f.newController(test.bldr)
 		f.updateIndex(i, []*v1alpha1.Build{build})
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
 
 		// Run a single iteration of the syncHandler.
-		if err := c.syncHandler(getKey(build, t)); err != nil {
+		ctx := context.Background()
+		if err := c.Reconciler.Reconcile(ctx, getKey(build, t)); err != nil {
 			t.Errorf("error syncing build: %v", err)
 		}
 
@@ -344,7 +330,7 @@ func TestBasicFlows(t *testing.T) {
 		f.updateIndex(i, []*v1alpha1.Build{first})
 
 		// Run a second iteration of the syncHandler.
-		if err := c.syncHandler(getKey(build, t)); err != nil {
+		if err := c.Reconciler.Reconcile(ctx, getKey(build, t)); err != nil {
 			t.Errorf("error syncing build: %v", err)
 		}
 		// A second reconciliation will trigger an asynchronous "Wait()", which
@@ -363,24 +349,12 @@ func TestBasicFlows(t *testing.T) {
 		if msg, _ := builder.ErrorMessage(&second.Status); test.expectedErrorMessage != msg {
 			t.Errorf("Second ErrorMessage(%d); wanted %q, got %q.", idx, test.expectedErrorMessage, msg)
 		}
-
-		successEvent := "Normal Synced Build synced successfully"
-
-		select {
-		case statusEvent := <-eventCh:
-			if statusEvent != successEvent {
-				t.Errorf("Event; wanted %q, got %q", successEvent, statusEvent)
-			}
-		case <-time.After(2 * time.Second):
-			t.Fatalf("No events published")
-		}
 	}
 }
 
 func TestErrFlows(t *testing.T) {
 	bldrErr := errors.New("not okay")
 	bldr := &nop.Builder{Err: bldrErr}
-	expectedErrEventMsg := "Warning BuildExecuteFailed Failed to execute Build"
 
 	build := newBuild("test-err")
 	f := &fixture{
@@ -392,26 +366,15 @@ func TestErrFlows(t *testing.T) {
 	f.createServceAccount()
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	defer close(stopCh)
-	defer close(eventCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
+	c, i, k8sI := f.newController(bldr)
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	if err := c.syncHandler(getKey(build, t)); err == nil {
+	if err := c.Reconciler.Reconcile(context.Background(), getKey(build, t)); err == nil {
 		t.Errorf("Expect error syncing build")
-	}
-
-	select {
-	case statusEvent := <-eventCh:
-		if !strings.Contains(statusEvent, expectedErrEventMsg) {
-			t.Errorf("Event message; wanted %q, got %q", expectedErrEventMsg, statusEvent)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatalf("No events published")
 	}
 
 	// Fetch the build object and check the status
@@ -444,17 +407,16 @@ func TestTimeoutFlows(t *testing.T) {
 	f.createServceAccount()
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	defer close(stopCh)
-	defer close(eventCh)
 
-	c, i, k8sI := f.newController(&nop.Builder{}, eventCh)
+	c, i, k8sI := f.newController(&nop.Builder{})
 
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	if err := c.syncHandler(getKey(build, t)); err != nil {
+	ctx := context.Background()
+	if err := c.Reconciler.Reconcile(ctx, getKey(build, t)); err != nil {
 		t.Errorf("Not Expect error when syncing build")
 	}
 
@@ -475,7 +437,7 @@ func TestTimeoutFlows(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{first})
 
 	// Run a second iteration of the syncHandler.
-	if err := c.syncHandler(getKey(build, t)); err != nil {
+	if err := c.Reconciler.Reconcile(ctx, getKey(build, t)); err != nil {
 		t.Errorf("Unexpected error while syncing build: %v", err)
 	}
 
@@ -500,19 +462,6 @@ func TestTimeoutFlows(t *testing.T) {
 	if d := cmp.Diff(buildStatus, expectedStatus, ignoreLastTransitionTime); d != "" {
 		t.Errorf("Mismatch of build status: expected %#v ; got %#v; diff %s", expectedStatus, buildStatus, d)
 	}
-
-	expectedTimeoutMsg := fmt.Sprintf("Warning BuildTimeout %s", buildStatusMsg)
-	for i := 0; i < 2; i++ {
-		select {
-		case statusEvent := <-eventCh:
-			// Check 2nd event for timeout error msg. First event will sync build successfully
-			if !strings.Contains(statusEvent, expectedTimeoutMsg) && i != 0 {
-				t.Errorf("Event message; wanted %q got %q", expectedTimeoutMsg, statusEvent)
-			}
-		case <-time.After(4 * time.Second):
-			t.Fatalf("No events published")
-		}
-	}
 }
 
 func TestTimeoutFlowWithFailedOperation(t *testing.T) {
@@ -535,17 +484,16 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	f.createServceAccount()
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	defer close(stopCh)
-	defer close(eventCh)
 
-	c, i, k8sI := f.newController(bldr, eventCh)
+	c, i, k8sI := f.newController(bldr)
 
 	f.updateIndex(i, []*v1alpha1.Build{build})
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
-	if err := c.syncHandler(getKey(build, t)); err != nil {
+	ctx := context.Background()
+	if err := c.Reconciler.Reconcile(ctx, getKey(build, t)); err != nil {
 		t.Errorf("Not Expect error when syncing build: %s", err.Error())
 	}
 
@@ -562,7 +510,7 @@ func TestTimeoutFlowWithFailedOperation(t *testing.T) {
 	f.updateIndex(i, []*v1alpha1.Build{first})
 
 	// Run a second iteration of the syncHandler to receive error from operation.
-	if err = c.syncHandler(getKey(build, t)); err != oppErr {
+	if err = c.Reconciler.Reconcile(ctx, getKey(build, t)); err != oppErr {
 		t.Errorf("Expect error %#v when syncing build", oppErr)
 	}
 }
@@ -578,13 +526,11 @@ func TestRunController(t *testing.T) {
 	}
 
 	stopCh := make(chan struct{})
-	eventCh := make(chan string, 1024)
 	errChan := make(chan error, 1)
 
-	defer close(eventCh)
 	defer close(errChan)
 
-	c, i, _ := f.newController(&nop.Builder{}, eventCh)
+	c, i, _ := f.newController(&nop.Builder{})
 
 	i.Start(stopCh)
 
