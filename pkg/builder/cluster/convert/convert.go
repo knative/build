@@ -105,20 +105,28 @@ var (
 )
 
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
-func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
+func gitToContainer(git *v1alpha1.GitSourceSpec, name string) (*corev1.Container, error) {
 	if git.Url == "" {
 		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
 	}
 	if git.Revision == "" {
 		return nil, validation.NewError("MissingRevision", "git sources are expected to specify a Revision, got: %v", git)
 	}
+
+	args := []string{"-url", git.Url,
+		"-revision", git.Revision,
+	}
+	containerName := initContainerPrefix + gitSource
+
+	if name != "" {
+		args = append(args, []string{"-name", name}...)
+		containerName = containerName + "-" + name
+	}
+
 	return &corev1.Container{
-		Name:  initContainerPrefix + gitSource,
-		Image: *gitImage,
-		Args: []string{
-			"-url", git.Url,
-			"-revision", git.Revision,
-		},
+		Name:         containerName,
+		Image:        *gitImage,
+		Args:         args,
 		VolumeMounts: implicitVolumeMounts,
 		WorkingDir:   workspaceDir,
 		Env:          implicitEnvVars,
@@ -132,8 +140,10 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	if len(git.Args) < 3 {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
+
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
+		Name: "",
 		Git: &v1alpha1.GitSourceSpec{
 			Url:      git.Args[1],
 			Revision: git.Args[3],
@@ -141,12 +151,18 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	}, nil
 }
 
-func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
+func gcsToContainer(gcs *v1alpha1.GCSSourceSpec, name string) (*corev1.Container, error) {
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
+	containerName := initContainerPrefix + gcsSource
+
+	if name != "" {
+		containerName = containerName + "-" + name
+	}
+
 	return &corev1.Container{
-		Name:         initContainerPrefix + gcsSource,
+		Name:         containerName,
 		Image:        *gcsFetcherImage,
 		Args:         []string{"--type", string(gcs.Type), "--location", gcs.Location},
 		VolumeMounts: implicitVolumeMounts,
@@ -257,17 +273,28 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 
 	initContainers := []corev1.Container{*cred}
-	workspaceSubPath := ""
+	var sources []*v1alpha1.SourceSpec
+	// if source is present convert into sources
 	if source := build.Spec.Source; source != nil {
+		sources = convertIntoSources(source)
+	}
+	for _, source := range build.Spec.Sources {
+		if source != nil {
+			sources = append(sources, source)
+		}
+	}
+	workspaceSubPath := ""
+
+	for _, source := range sources {
 		switch {
 		case source.Git != nil:
-			git, err := gitToContainer(source.Git)
+			git, err := gitToContainer(source.Git, source.Name)
 			if err != nil {
 				return nil, err
 			}
 			initContainers = append(initContainers, *git)
 		case source.GCS != nil:
-			gcs, err := gcsToContainer(source.GCS)
+			gcs, err := gcsToContainer(source.GCS, source.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -280,8 +307,7 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			// Prepend the custom container to the steps, to be augmented later with env, volume mounts, etc.
 			build.Spec.Steps = append([]corev1.Container{*cust}, build.Spec.Steps...)
 		}
-
-		workspaceSubPath = build.Spec.Source.SubPath
+		workspaceSubPath = source.SubPath
 	}
 
 	for i, step := range build.Spec.Steps {
@@ -382,6 +408,10 @@ func filterImplicitEnvVars(evs []corev1.EnvVar) []corev1.EnvVar {
 		envs = append(envs, ev)
 	}
 	return envs
+}
+
+func convertIntoSources(source *v1alpha1.SourceSpec) []*v1alpha1.SourceSpec {
+	return []*v1alpha1.SourceSpec{source}
 }
 
 func isImplicitVolumeMount(vm corev1.VolumeMount) bool {

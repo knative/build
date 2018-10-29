@@ -60,6 +60,9 @@ type BuildSpec struct {
 	// Source specifies the input to the build.
 	Source *SourceSpec `json:"source,omitempty"`
 
+	// Sources specifies the inputs to the build.
+	Sources []*SourceSpec `json:"sources,omitempty"`
+
 	// Steps are the steps of the build; each step is run sequentially with the
 	// source mounted into /workspace.
 	Steps []corev1.Container `json:"steps,omitempty"`
@@ -151,6 +154,9 @@ type SourceSpec struct {
 	// build steps. (The specific source type may, in fact, not even fetch
 	// files not in the SubPath.)
 	SubPath string `json:"subPath,omitempty"`
+
+	// Name is the path under which source will be mounted.
+	Name string `json:"name"`
 }
 
 // GitSourceSpec describes a Git repo source input to the Build.

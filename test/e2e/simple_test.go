@@ -475,3 +475,49 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	}
 	logger.Infof("Second build finished successfully")
 }
+
+func TestSimpleBuildWithSources(t *testing.T) {
+	logger := logging.GetContextLogger("TestSimpleBuildWithSources")
+	clients := buildClients(logger)
+
+	// Emit a metric for null-build latency (i.e., time to schedule and execute
+	// and finish watching a build).
+	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
+	defer span.End()
+
+	buildName := "build-sources"
+
+	// test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	// defer teardownBuild(clients, logger, buildName)
+
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Sources: []*v1alpha1.SourceSpec{{
+				Name: "bazel",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "https://github.com/bazelbuild/rules_docker",
+					Revision: "master",
+				},
+			}},
+			Steps: []corev1.Container{{
+				Image: "ubuntu",
+				//	Command: []string{"bash"},
+				// cd into Name of source
+				Args: []string{"cd", "bazel"},
+			}, {
+				Image: "ubuntu",
+				Args:  []string{"cat", "WORKSPACE"},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
+		t.Fatalf("Error watching build: %v", err)
+	}
+}

@@ -28,6 +28,7 @@ import (
 var (
 	url      = flag.String("url", "", "The url of the Git repository to initialize.")
 	revision = flag.String("revision", "", "The Git revision to make the repository HEAD")
+	name     = flag.String("name", "", "Name of directory under which git repository will be mounted")
 )
 
 func run(logger *zap.SugaredLogger, cmd string, args ...string) {
@@ -66,10 +67,30 @@ func main() {
 		logger.Fatalf("Unexpected error creating symlink: %v", err)
 	}
 
+	dir, err := os.Getwd()
+	if err != nil {
+		logger.Errorf("Failed to get current dir", err)
+	}
+
+	if *name != "" {
+		// create dir name
+		// check error
+		path := dir + *name
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			os.Mkdir(path, os.ModePerm)
+		}
+
+		if err := os.Chdir(path); err != nil {
+			logger.Fatalf("Failed to change directory with path %s; err %v", path, err)
+		}
+		logger.Infof("Cloning under directory %q ", path)
+		dir = path
+	}
+
 	run(logger, "git", "init")
 	run(logger, "git", "remote", "add", "origin", *url)
 	runOrFail(logger, "git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *revision)
 	runOrFail(logger, "git", "reset", "--hard", "FETCH_HEAD")
 
-	logger.Infof("Successfully cloned %q @ %q", *url, *revision)
+	logger.Infof("Successfully cloned %q @ %q in path", *url, *revision, dir)
 }
