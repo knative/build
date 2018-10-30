@@ -21,6 +21,7 @@ package resources
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -263,9 +264,11 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 
-	initContainers := []corev1.Container{*cred}
 	var sources []v1alpha1.SourceSpec
 	// if source is present convert into sources
+
+	// NOTES(aaron-prindle) adds custom steps outside of user Steps for git, logs, etc
+	podContainers := []corev1.Container{*cred}
 	if source := build.Spec.Source; source != nil {
 		sources = []v1alpha1.SourceSpec{*source}
 	}
@@ -281,13 +284,13 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			if err != nil {
 				return nil, err
 			}
-			initContainers = append(initContainers, *git)
+			podContainers = append(podContainers, *git)
 		case source.GCS != nil:
 			gcs, err := gcsToContainer(source, i)
 			if err != nil {
 				return nil, err
 			}
-			initContainers = append(initContainers, *gcs)
+			podContainers = append(podContainers, *gcs)
 		case source.Custom != nil:
 			cust, err := customToContainer(source.Custom, source.Name)
 			if err != nil {
@@ -300,6 +303,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		workspaceSubPath = source.SubPath
 	}
 
+	// NOTES(aaron-prindle) setup volume mounts for steps
 	for i, step := range build.Spec.Steps {
 		step.Env = append(implicitEnvVars, step.Env...)
 		// TODO(mattmoor): Check that volumeMounts match volumes.
@@ -331,7 +335,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			step.Name = fmt.Sprintf("%v%v", initContainerPrefix, step.Name)
 		}
 
-		initContainers = append(initContainers, step)
+		podContainers = append(podContainers, step)
 	}
 	// Add our implicit volumes and any volumes needed for secrets to the explicitly
 	// declared user volumes.
@@ -347,6 +351,8 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 	gibberish := hex.EncodeToString(b)
+	// entrypoint.RedirectSteps(podContainers)
+	RedirectSteps(podContainers)
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -373,12 +379,8 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		},
 		Spec: corev1.PodSpec{
 			// If the build fails, don't restart it.
-			RestartPolicy:  corev1.RestartPolicyNever,
-			InitContainers: initContainers,
-			Containers: []corev1.Container{{
-				Name:  "nop",
-				Image: *nopImage,
-			}},
+			RestartPolicy:      corev1.RestartPolicyNever,
+			Containers:         podContainers,
 			ServiceAccountName: build.Spec.ServiceAccountName,
 			Volumes:            volumes,
 			NodeSelector:       build.Spec.NodeSelector,
@@ -490,4 +492,66 @@ func getFailureMessage(pod *corev1.Pod) string {
 	}
 	// Lastly fall back on a generic error message.
 	return "build failed for unspecified reasons."
+}
+
+// from build-pipeline
+
+const (
+	// MountName is the name of the pvc being mounted (which
+	// will contain the entrypoint binary and eventually the logs)
+	MountName         = "tools"
+	MountPoint        = "/tools"
+	BinaryLocation    = MountPoint + "/entrypoint"
+	JSONConfigEnvVar  = "ENTRYPOINT_OPTIONS"
+	InitContainerName = "place-tools"
+	ProcessLogFile    = "/tools/process-log.txt"
+	MarkerFile        = "/tools/marker-file.txt"
+)
+
+var toolsMount = corev1.VolumeMount{
+	Name:      MountName,
+	MountPath: MountPoint,
+}
+
+type entrypointArgs struct {
+	Args       []string `json:"args"`
+	ProcessLog string   `json:"process_log"`
+	MarkerFile string   `json:"marker_file"`
+}
+
+// RedirectSteps will modify each of the steps/containers such that
+// the binary being run is no longer the one specified by the Command
+// and the Args, but is instead the entrypoint binary, which will
+// itself invoke the Command and Args, but also capture logs.
+func RedirectSteps(steps []corev1.Container) error {
+	for i := range steps {
+		step := &steps[i]
+		e, err := getEnvVar(step.Command, step.Args)
+		if err != nil {
+			return fmt.Errorf("couldn't get env var for entrypoint: %s", err)
+		}
+		step.Command = []string{BinaryLocation}
+		step.Args = []string{}
+
+		step.Env = append(step.Env, corev1.EnvVar{
+			Name:  JSONConfigEnvVar,
+			Value: e,
+		})
+		step.VolumeMounts = append(step.VolumeMounts, toolsMount)
+	}
+	return nil
+}
+
+func getEnvVar(cmd, args []string) (string, error) {
+	entrypointArgs := entrypointArgs{
+		Args:       append(cmd, args...),
+		ProcessLog: ProcessLogFile,
+		MarkerFile: MarkerFile,
+		// TODO(aaron-prindle) add the new options here
+	}
+	j, err := json.Marshal(entrypointArgs)
+	if err != nil {
+		return "", fmt.Errorf("couldn't marshal arguments %q for entrypoint env var: %s", entrypointArgs, err)
+	}
+	return string(j), nil
 }
