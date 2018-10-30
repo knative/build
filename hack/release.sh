@@ -30,7 +30,7 @@ readonly OUTPUT_YAML=release.yaml
 
 # Script entry point
 
-parse_flags $@
+initialize $@
 
 set -o errexit
 set -o pipefail
@@ -70,6 +70,8 @@ docker push ${BUILD_BASE_GCR}
 
 echo "Publishing ${OUTPUT_YAML}"
 publish_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCS} ${TAG}
+
+branch_release "Knative Build" ${OUTPUT_YAML}
 
 echo "New release published successfully"
 
