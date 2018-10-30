@@ -31,7 +31,7 @@ import (
 )
 
 var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
-
+var ignoreSources = cmpopts.IgnoreTypes([]*v1alpha1.SourceSpec{})
 var nopContainer = corev1.Container{
 	Name:  "nop",
 	Image: *nopImage,
@@ -55,14 +55,18 @@ func TestRoundtrip(t *testing.T) {
 		"testdata/workspace.yaml",
 		"testdata/resources.yaml",
 		"testdata/security-context.yaml",
-		"testdata/volumes.yaml",
 		"testdata/custom-source.yaml",
+		"testdata/volumes.yaml",
+
 		"testdata/nodeselector.yaml",
 
 		"testdata/git-revision.yaml",
 		"testdata/git-subpath.yaml",
 		"testdata/gcs-archive.yaml",
 		"testdata/gcs-manifest.yaml",
+
+		"testdata/custom-git-sources.yaml",
+		"testdata/git-sources.yaml",
 	}
 
 	for _, in := range inputs {
@@ -89,11 +93,16 @@ func TestRoundtrip(t *testing.T) {
 					"password": []byte("BestEver"),
 				},
 			})
+
+			if og.Spec.Source != nil {
+				og.Spec.Sources = append(og.Spec.Sources, og.Spec.Source)
+				og.Spec.Source = nil
+			}
+
 			p, err := FromCRD(og, cs)
 			if err != nil {
 				t.Fatalf("Unable to convert %q from CRD: %v", in, err)
 			}
-
 			// Verify that secrets are loaded correctly.
 			if p.Spec.ServiceAccountName != "" {
 				for _, vol := range p.Spec.Volumes {
@@ -130,12 +139,44 @@ func TestRoundtrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
 			}
+			// compare sources separately as the order can be mingled.
+			if diff := compareSources(og.Spec.Sources, b.Spec.Sources); diff != "" {
+				t.Errorf("Error comparing sources : og %#v build %#v \n diff %s", og.Spec.Sources[0], b.Spec.Sources[0], diff)
+			}
 
-			if d := cmp.Diff(og, b, ignorePrivateResourceFields); d != "" {
-				t.Errorf("Diff:\n%s", d)
+			if d := cmp.Diff(og, b, ignorePrivateResourceFields, ignoreSources); d != "" {
+				t.Errorf("build spec %#v og %#v Diff:\n%s for input %s", b.Spec.Sources[0], og.Spec.Sources[0], d, in)
 			}
 		})
 	}
+}
+
+// compareSources takes into account of source without names checkMap
+// tracks list of sources under a key. Cmp does
+func compareSources(og, b []*v1alpha1.SourceSpec) string {
+	checkMap := make(map[string][]*v1alpha1.SourceSpec)
+
+	for _, source := range og {
+		if val, ok := checkMap[source.Name]; !ok {
+			checkMap[source.Name] = []*v1alpha1.SourceSpec{source}
+		} else {
+			checkMap[source.Name] = append(val, source)
+		}
+	}
+
+	for _, source := range b {
+		valSources, ok := checkMap[source.Name]
+		if ok {
+			for _, s1 := range valSources {
+				if d := cmp.Diff(s1, source); d != "" {
+					return d
+				}
+			}
+		} else {
+			return cmp.Diff(og, b)
+		}
+	}
+	return ""
 }
 
 func TestFromCRD(t *testing.T) {

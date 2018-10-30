@@ -140,10 +140,13 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	if len(git.Args) < 3 {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
-
+	name := ""
+	if len(git.Args) == 6 {
+		name = git.Args[5]
+	}
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
-		Name: "",
+		Name: name,
 		Git: &v1alpha1.GitSourceSpec{
 			Url:      git.Args[1],
 			Revision: git.Args[3],
@@ -181,7 +184,9 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 			location = source.Args[i+1]
 		}
 	}
+	name := strings.Trim(source.Name, initContainerPrefix+gcsSource)
 	return &v1alpha1.SourceSpec{
+		Name: name,
 		GCS: &v1alpha1.GCSSourceSpec{
 			Type:     v1alpha1.GCSSourceType(sourceType),
 			Location: location,
@@ -189,19 +194,36 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 	}, nil
 }
 
-func customToContainer(source *corev1.Container) (*corev1.Container, error) {
+func customToContainer(source *corev1.Container, name string) (*corev1.Container, error) {
 	if source.Name != "" {
 		return nil, validation.NewError("OmitName", "custom source containers are expected to omit Name, got: %v", source.Name)
 	}
 	custom := source.DeepCopy()
-	custom.Name = customSource
+
+	// source name is empty then use `custom-source` name
+	if name == "" {
+		name = customSource
+	} else {
+		name = customSource + "-" + name
+	}
+	custom.Name = name
 	return custom, nil
 }
 
 func containerToCustom(custom corev1.Container) (*v1alpha1.SourceSpec, error) {
 	c := custom.DeepCopy()
+	name := c.Name
 	c.Name = ""
-	return &v1alpha1.SourceSpec{Custom: c}, nil
+
+	if name != customSource {
+		name = strings.TrimPrefix(name, customSource+"-")
+	} else {
+		name = ""
+	}
+	return &v1alpha1.SourceSpec{
+		Name:   name,
+		Custom: c,
+	}, nil
 }
 
 func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Container, []corev1.Volume, error) {
@@ -300,7 +322,7 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			}
 			initContainers = append(initContainers, *gcs)
 		case source.Custom != nil:
-			cust, err := customToContainer(source.Custom)
+			cust, err := customToContainer(source.Custom, source.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -343,7 +365,6 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 
 		initContainers = append(initContainers, step)
 	}
-
 	// Add our implicit volumes and any volumes needed for secrets to the explicitly
 	// declared user volumes.
 	volumes := append(build.Spec.Volumes, implicitVolumes...)
@@ -494,25 +515,29 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		steps = steps[1:]
 	}
 
-	var scm *v1alpha1.SourceSpec
-	if conv, ok := containerToSourceMap[steps[0].Name]; ok {
-		src, err := conv(steps[0])
-		if err != nil {
-			return nil, err
+	var scm []*v1alpha1.SourceSpec
+	for _, step := range steps {
+		conv := stepNameConversionToSource(step.Name)
+		if conv != nil {
+			src, err := conv(step)
+
+			if err != nil {
+				return nil, err
+			}
+			// The first init container is actually a source step.  Convert
+			// it to our source spec and pop it off the list of steps.
+			if subPath != "" {
+				src.SubPath = subPath
+			}
+			scm = append(scm, src)
+			steps = steps[1:]
 		}
-		// The first init container is actually a source step.  Convert
-		// it to our source spec and pop it off the list of steps.
-		scm = src
-		if subPath != "" {
-			scm.SubPath = subPath
-		}
-		steps = steps[1:]
 	}
 
 	return &v1alpha1.Build{
 		// TODO(mattmoor): What should we do for ObjectMeta stuff?
 		Spec: v1alpha1.BuildSpec{
-			Source:             scm,
+			Sources:            scm,
 			Steps:              steps,
 			ServiceAccountName: podSpec.ServiceAccountName,
 			Volumes:            volumes,
@@ -520,4 +545,14 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 			Affinity:           podSpec.Affinity,
 		},
 	}, nil
+}
+
+// check stepname matches prefix in containerToSourceMap key
+func stepNameConversionToSource(stepName string) func(corev1.Container) (*v1alpha1.SourceSpec, error) {
+	for key, conv := range containerToSourceMap {
+		if strings.HasPrefix(stepName, key) {
+			return conv
+		}
+	}
+	return nil
 }

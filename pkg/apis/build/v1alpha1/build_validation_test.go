@@ -39,6 +39,91 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
+		desc: "source without name",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []*SourceSpec{{
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+		reason: "source without name",
+	}, {
+		desc: "source with duplicate names",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []*SourceSpec{{
+					Name: "sname",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}, {
+					Name: "sname",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+		reason: "sources with duplicate names",
+	}, {
+		desc: "a source with subpath",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []*SourceSpec{{
+					Name: "sname",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+					SubPath: "go",
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		desc: "sources with subpath",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []*SourceSpec{{
+					Name: "sname",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+					SubPath: "go",
+				}, {
+					Name: "anothername",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+					SubPath: "ruby",
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+		reason: "sources without subpaths",
+	}, {
 		reason: "negative build timeout",
 		build: &Build{
 			Spec: BuildSpec{

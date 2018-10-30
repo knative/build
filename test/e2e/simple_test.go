@@ -504,13 +504,9 @@ func TestSimpleBuildWithSources(t *testing.T) {
 				},
 			}},
 			Steps: []corev1.Container{{
-				Image: "ubuntu",
-				//	Command: []string{"bash"},
-				// cd into Name of source
-				Args: []string{"cd", "bazel"},
-			}, {
-				Image: "ubuntu",
-				Args:  []string{"cat", "WORKSPACE"},
+				Name:  "read",
+				Image: "busybox",
+				Args:  []string{"cat", "bazel/WORKSPACE"},
 			}},
 		},
 	}); err != nil {
