@@ -476,8 +476,10 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	logger.Infof("Second build finished successfully")
 }
 
-func TestSimpleBuildWithSources(t *testing.T) {
-	logger := logging.GetContextLogger("TestSimpleBuildWithSources")
+// TestBuildWithSources tests that a build can have multiple similar sources
+// under different names
+func TestBuildWithSources(t *testing.T) {
+	logger := logging.GetContextLogger("TestBuildWithSources")
 	clients := buildClients(logger)
 
 	// Emit a metric for null-build latency (i.e., time to schedule and execute
@@ -487,8 +489,8 @@ func TestSimpleBuildWithSources(t *testing.T) {
 
 	buildName := "build-sources"
 
-	// test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
-	// defer teardownBuild(clients, logger, buildName)
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -502,11 +504,96 @@ func TestSimpleBuildWithSources(t *testing.T) {
 					Url:      "https://github.com/bazelbuild/rules_docker",
 					Revision: "master",
 				},
+			}, {
+				Name: "rocks",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "https://github.com/bazelbuild/rules_docker",
+					Revision: "master",
+				},
 			}},
 			Steps: []corev1.Container{{
-				Name:  "read",
-				Image: "busybox",
-				Args:  []string{"cat", "bazel/WORKSPACE"},
+				Name:    "compare",
+				Image:   "ubuntu",
+				Command: []string{"bash"},
+				// compare contents between
+				Args: []string{
+					"-c",
+					"cmp --silent bazel/WORKSPACE rocks/WORKSPACE && echo '### SUCCESS: Files Are Identical! ###'",
+				},
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
+		t.Fatalf("Error watching build: %v", err)
+	}
+}
+
+// TestSimpleBuildWithHybridSources tests hybrid input sources can be accessed in all steps
+
+func TestSimpleBuildWithHybridSources(t *testing.T) {
+	logger := logging.GetContextLogger("TestSimpleBuildWithHybridSources")
+	clients := buildClients(logger)
+
+	// Emit a metric for null-build latency (i.e., time to schedule and execute
+	// and finish watching a build).
+	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
+	defer span.End()
+
+	buildName := "hybrid-sources"
+
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
+
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Sources: []*v1alpha1.SourceSpec{{
+				Name: "bazel",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "https://github.com/bazelbuild/rules_docker",
+					Revision: "master",
+				},
+			}, {
+				Name: "rocks",
+				Custom: &corev1.Container{
+					Image: "gcr.io/cloud-builders/git:latest",
+					Args: []string{
+						"clone",
+						"https://github.com/bazelbuild/rules_docker.git",
+						"somewhere",
+					},
+				},
+			}, {
+				Name: "gcs",
+				GCS: &v1alpha1.GCSSourceSpec{
+					Type:     "Archive",
+					Location: "gs://build-crd-tests/rules_docker-master.zip",
+				},
+			}},
+			Steps: []corev1.Container{{
+				Name:    "check-git-custom",
+				Image:   "ubuntu",
+				Command: []string{"bash"},
+				// compare contents between custom and git
+				Args: []string{
+					"-c",
+					"cmp --silent bazel/WORKSPACE /workspace/somewhere/WORKSPACE && echo '### SUCCESS: Files Are Identical! ###'",
+				},
+			}, {
+				Name:    "checkgitgcs",
+				Image:   "ubuntu",
+				Command: []string{"bash"},
+				// compare contents between gcs and git
+				Args: []string{
+					"-c",
+					"cmp --silent bazel/WORKSPACE rules_docker-master/WORKSPACE || echo '### SUCCESS: Files Are Not Identical! ###'",
+				},
 			}},
 		},
 	}); err != nil {

@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
@@ -74,16 +75,16 @@ func main() {
 
 	if *name != "" {
 		// create dir name
-		// check error
-		path := dir + *name
+		path := filepath.Join(dir, *name)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			os.Mkdir(path, os.ModePerm)
+			if err := os.Mkdir(path, os.ModePerm); err != nil {
+				logger.Fatalf("Failed to create directory with path %s; err %v", path, err)
+			}
 		}
 
 		if err := os.Chdir(path); err != nil {
 			logger.Fatalf("Failed to change directory with path %s; err %v", path, err)
 		}
-		logger.Infof("Cloning under directory %q ", path)
 		dir = path
 	}
 
@@ -92,5 +93,5 @@ func main() {
 	runOrFail(logger, "git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *revision)
 	runOrFail(logger, "git", "reset", "--hard", "FETCH_HEAD")
 
-	logger.Infof("Successfully cloned %q @ %q in path", *url, *revision, dir)
+	logger.Infof("Successfully cloned %q @ %q in path %q", *url, *revision, dir)
 }

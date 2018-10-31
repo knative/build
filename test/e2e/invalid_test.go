@@ -81,7 +81,7 @@ func TestInvalidBuild(t *testing.T) {
 	}, {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
-			Name:      "source without name",
+			Name:      "source-without-name",
 		},
 		Spec: v1alpha1.BuildSpec{
 			Sources: []*v1alpha1.SourceSpec{{
@@ -92,32 +92,32 @@ func TestInvalidBuild(t *testing.T) {
 			}},
 			Steps: []corev1.Container{{Image: "busybox"}},
 		},
+	}, {
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      "source-with-multiple-subpath",
+		},
+		Spec: v1alpha1.BuildSpec{
+			Sources: []*v1alpha1.SourceSpec{{
+				Name: "source1",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "some-url",
+					Revision: "master",
+				},
+				SubPath: "go",
+			}, {
+				Name: "source2",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "some-url",
+					Revision: "master",
+				},
+				SubPath: "go2",
+			}},
+			Steps: []corev1.Container{{Image: "busybox"}},
+		},
 	}} {
 		if _, err := clients.buildClient.builds.Create(b); err == nil {
 			t.Errorf("Expected error creating invalid build %q, got nil", b.ObjectMeta.Name)
 		}
 	}
-}
-
-if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: buildTestNamespace,
-		Name:      buildName,
-	},
-	Spec: v1alpha1.BuildSpec{
-		Sources: []*v1alpha1.SourceSpec{{
-			Name: "bazel",
-			Git: &v1alpha1.GitSourceSpec{
-				Url:      "https://github.com/bazelbuild/rules_docker",
-				Revision: "master",
-			},
-		}},
-		Steps: []corev1.Container{{
-			Name:  "read",
-			Image: "busybox",
-			Args:  []string{"cat", "bazel/WORKSPACE"},
-		}},
-	},
-}); err != nil {
-	t.Fatalf("Error creating build: %v", err)
 }
