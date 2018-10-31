@@ -14,7 +14,7 @@
 apiVersion: build.knative.dev/v1alpha1
 kind: Build
 metadata:
-  name: test-sources2
+  name: test-multiple-git-sources
   labels:
     expect: succeeded
 spec:

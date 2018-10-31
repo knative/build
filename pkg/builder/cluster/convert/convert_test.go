@@ -67,6 +67,7 @@ func TestRoundtrip(t *testing.T) {
 
 		"testdata/custom-git-sources.yaml",
 		"testdata/git-sources.yaml",
+		"testdata/custom-sources.yaml",
 	}
 
 	for _, in := range inputs {
@@ -141,18 +142,19 @@ func TestRoundtrip(t *testing.T) {
 			}
 			// compare sources separately as the order can be mingled.
 			if diff := compareSources(og.Spec.Sources, b.Spec.Sources); diff != "" {
-				t.Errorf("Error comparing sources : og %#v build %#v \n diff %s", og.Spec.Sources[0], b.Spec.Sources[0], diff)
+				t.Errorf("Error comparing sources : og %#v build %#v \n diff %s", og.Spec.Sources, b.Spec.Sources, diff)
 			}
 
 			if d := cmp.Diff(og, b, ignorePrivateResourceFields, ignoreSources); d != "" {
-				t.Errorf("build spec %#v og %#v Diff:\n%s for input %s", b.Spec.Sources[0], og.Spec.Sources[0], d, in)
+				t.Errorf("build spec %#v og %#v Diff:\n%s for input %s", b.Spec.Sources, og.Spec.Sources, d, in)
 			}
 		})
 	}
 }
 
 // compareSources takes into account of source without names checkMap
-// tracks list of sources under a key. Cmp does
+// tracks list of sources under a key. If matching key is not present then
+// Cmp diff is returned to diagnoze the test error better
 func compareSources(og, b []*v1alpha1.SourceSpec) string {
 	checkMap := make(map[string][]*v1alpha1.SourceSpec)
 

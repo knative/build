@@ -11,22 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: build.knative.dev/v1alpha1
-kind: Build
-metadata:
-  name: test-git-sources
-  labels:
-    expect: succeeded
-spec:
-  sources:
-  - name: basel
-    git:
-      url: https://github.com/bazelbuild/rules_docker      
-      revision: master
-  steps:
-  - name: check
-    image: ubuntu
-    args: ['ls', '-la', 'basel']
-  - name: read
-    image: busybox
-    args: ['cat', 'basel/WORKSPACE']
+sources:
+- name: "source1"
+  custom:
+    image: gcr.io/google-containers/hg:latest
+    args: ["clone", "https://my.source.io/foo-bar/baz"]
+- name: "source2"
+  custom:
+    image: gcr.io/google-containers/hg:latest
+    args: ["clone", "https://my.source.io/foo-bar/baz"]
+steps:
+- name: helloworld
+  image: gcr.io/google-containers/busybox
+  args: ["echo Hello World!"]

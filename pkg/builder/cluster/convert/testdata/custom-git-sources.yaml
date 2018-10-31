@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 sources:
-- name: "source1"
+- name: "source-custom-source"
   custom:
     image: gcr.io/google-containers/hg:latest
     args: ["clone", "https://my.source.io/foo-bar/baz"]
-- name: "source2"
-  custom:
-    image: gcr.io/google-containers/hg:latest
-    args: ["clone", "https://my.source.io/foo-bar/baz"]
+- name: "some-git-source"
+  git:
+    url: https://source.developers.google.com/p/a-project/r/secret-stuff
+    revision: master
 steps:
 - name: helloworld
   image: gcr.io/google-containers/busybox
