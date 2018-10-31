@@ -39,6 +39,30 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
+		desc: "source and sources presence",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []*SourceSpec{{
+					Name: "sources",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}},
+				Source: &SourceSpec{
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+		reason: "source and sources cannot be declared in same build",
+	}, {
 		desc: "source without name",
 		build: &Build{
 			Spec: BuildSpec{

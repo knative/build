@@ -101,7 +101,14 @@ func (bt *BuildSpec) validateTimeout() *apis.FieldError {
 func (bs BuildSpec) validateSources() *apis.FieldError {
 	var subPathExists bool
 	names := map[string]string{}
+	var sourceExists bool
 
+	if bs.Source != nil {
+		sourceExists = true
+	}
+	if bs.Sources != nil && sourceExists {
+		return apis.ErrMultipleOneOf("b.spec.source", "b.spec.sources")
+	}
 	for _, source := range bs.Sources {
 		// check all source have names
 		if source.Name == "" {

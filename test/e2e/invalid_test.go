@@ -115,6 +115,28 @@ func TestInvalidBuild(t *testing.T) {
 			}},
 			Steps: []corev1.Container{{Image: "busybox"}},
 		},
+	}, {
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      "source-and-sources-declared",
+		},
+		Spec: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				Name: "source1",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "some-url",
+					Revision: "master",
+				},
+			},
+			Sources: []*v1alpha1.SourceSpec{{
+				Name: "sources1",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "some-url",
+					Revision: "master",
+				},
+			}},
+			Steps: []corev1.Container{{Image: "busybox"}},
+		},
 	}} {
 		if _, err := clients.buildClient.builds.Create(b); err == nil {
 			t.Errorf("Expected error creating invalid build %q, got nil", b.ObjectMeta.Name)
