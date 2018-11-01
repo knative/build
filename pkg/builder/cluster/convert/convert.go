@@ -119,6 +119,7 @@ func gitToContainer(git *v1alpha1.GitSourceSpec, name string) (*corev1.Container
 	containerName := initContainerPrefix + gitSource
 
 	if name != "" {
+		// update container name to suffix source name
 		args = append(args, []string{"-name", name}...)
 		containerName = containerName + "-" + name
 	}
@@ -134,16 +135,22 @@ func gitToContainer(git *v1alpha1.GitSourceSpec, name string) (*corev1.Container
 }
 
 func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
+	// git args are expected to be in this order "--url url --revision revision (optional)--name name ""
+
 	if git.Image != *gitImage {
 		return nil, fmt.Errorf("Unrecognized git source image: %v", git.Image)
 	}
 	if len(git.Args) < 3 {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
+
 	name := ""
+
+	// if `--name name` is set in args extract $name variable
 	if len(git.Args) == 6 {
 		name = git.Args[5]
 	}
+
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
 		Name: name,
@@ -158,9 +165,11 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec, name string) (*corev1.Container
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
+	// source name is empty then use `build-step-gcs-source` name
 	containerName := initContainerPrefix + gcsSource
 
 	if name != "" {
+		// update container name to include source name as suffix
 		containerName = containerName + "-" + name
 	}
 
@@ -184,6 +193,8 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 			location = source.Args[i+1]
 		}
 	}
+
+	// Undo the suffixing to extract source name
 	name := strings.Trim(source.Name, initContainerPrefix+gcsSource)
 	return &v1alpha1.SourceSpec{
 		Name: name,
@@ -215,6 +226,7 @@ func containerToCustom(custom corev1.Container) (*v1alpha1.SourceSpec, error) {
 	name := c.Name
 	c.Name = ""
 
+	// Undo the suffixing to extract source name
 	if name != customSource {
 		name = strings.TrimPrefix(name, customSource+"-")
 	} else {

@@ -58,25 +58,31 @@ type BuildSpec struct {
 	Generation int64 `json:"generation,omitempty"`
 
 	// Source specifies the input to the build.
+	// +optional
 	Source *SourceSpec `json:"source,omitempty"`
 
 	// Sources specifies the inputs to the build.
+	// +optional
 	Sources []*SourceSpec `json:"sources,omitempty"`
 
 	// Steps are the steps of the build; each step is run sequentially with the
 	// source mounted into /workspace.
+	// +optional
 	Steps []corev1.Container `json:"steps,omitempty"`
 
 	// Volumes is a collection of volumes that are available to mount into the
 	// steps of the build.
+	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// The name of the service account as which to run this build.
+	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// Template, if specified, references a BuildTemplate resource to use to
 	// populate fields in the build, and optional Arguments to pass to the
 	// template. The default Kind of template is BuildTemplate
+	// +optional
 	Template *TemplateInstantiationSpec `json:"template,omitempty"`
 
 	// NodeSelector is a selector which must be true for the pod to fit on a node.
@@ -116,14 +122,17 @@ type TemplateInstantiationSpec struct {
 
 	// The Kind of the template to be used, possible values are BuildTemplate
 	// or ClusterBuildTemplate. If nothing is specified, the default if is BuildTemplate
+	// +optional
 	Kind TemplateKind `json:"kind,omitempty"`
 
 	// Arguments, if specified, lists values that should be applied to the
 	// parameters specified by the template.
+	// +optional
 	Arguments []ArgumentSpec `json:"arguments,omitempty"`
 
 	// Env, if specified will provide variables to all build template steps.
 	// This will override any of the template's steps environment variables.
+	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
@@ -140,23 +149,28 @@ type ArgumentSpec struct {
 // SourceSpec defines the input to the Build
 type SourceSpec struct {
 	// Git represents source in a Git repository.
+	// +optional
 	Git *GitSourceSpec `json:"git,omitempty"`
 
 	// GCS represents source in Google Cloud Storage.
+	// +optional
 	GCS *GCSSourceSpec `json:"gcs,omitempty"`
 
 	// Custom indicates that source should be retrieved using a custom
 	// process defined in a container invocation.
+	// +optional
 	Custom *corev1.Container `json:"custom,omitempty"`
 
 	// SubPath specifies a path within the fetched source which should be
 	// built. This option makes parent directories *inaccessible* to the
 	// build steps. (The specific source type may, in fact, not even fetch
 	// files not in the SubPath.)
+	// +optional
 	SubPath string `json:"subPath,omitempty"`
 
 	// Name is the path under which source will be mounted.
-	Name string `json:"name"`
+	// +optional
+	Name string `json:"name,omitempty"`
 }
 
 // GitSourceSpec describes a Git repo source input to the Build.
