@@ -63,6 +63,7 @@ func TestRoundtrip(t *testing.T) {
 		"testdata/git-subpath.yaml",
 		"testdata/gcs-archive.yaml",
 		"testdata/gcs-manifest.yaml",
+		"testdata/git-envvars.yaml",
 	}
 
 	for _, in := range inputs {
@@ -341,6 +342,43 @@ func TestFromCRD(t *testing.T) {
 				Image:        "image",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMountsWithSubPath,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}, {
+		desc: "git-source-with-envvars",
+		b: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "github.com/my/repo",
+					Revision: "master",
+					EnvVars: []corev1.EnvVar{{
+						Name:  "HTTP_PROXY",
+						Value: "https://proxy_site.com",
+					}},
+				},
+			},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:  initContainerPrefix + gitSource,
+				Image: *gitImage,
+				Args:  []string{"-url", "github.com/my/repo", "-revision", "master"},
+				Env: append(implicitEnvVars, corev1.EnvVar{
+					Name:  "HTTP_PROXY",
+					Value: "https://proxy_site.com",
+				}),
+				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}},
 			Containers: []corev1.Container{nopContainer},

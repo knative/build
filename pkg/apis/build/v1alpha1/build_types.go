@@ -162,6 +162,11 @@ type GitSourceSpec struct {
 	// https://git-scm.com/docs/gitrevisions#_specifying_revisions for more
 	// information.
 	Revision string `json:"revision"`
+
+	// EnvVars includes set of environment variables that are set when git source
+	// init container is initialized
+	// +optional
+	EnvVars []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // GCSSourceSpec describes source input to the Build in the form of an archive,

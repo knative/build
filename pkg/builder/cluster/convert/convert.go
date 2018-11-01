@@ -121,7 +121,7 @@ func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 		},
 		VolumeMounts: implicitVolumeMounts,
 		WorkingDir:   workspaceDir,
-		Env:          implicitEnvVars,
+		Env:          append(implicitEnvVars, git.EnvVars...),
 	}, nil
 }
 
@@ -132,11 +132,13 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	if len(git.Args) < 3 {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
+
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
 		Git: &v1alpha1.GitSourceSpec{
 			Url:      git.Args[1],
 			Revision: git.Args[3],
+			EnvVars:  git.Env,
 		},
 	}, nil
 }
