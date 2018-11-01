@@ -165,18 +165,21 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec, name string) (*corev1.Container
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
+	args := []string{"--type", string(gcs.Type), "--location", gcs.Location}
 	// source name is empty then use `build-step-gcs-source` name
 	containerName := initContainerPrefix + gcsSource
 
+	// update container name to include `name` as suffix
 	if name != "" {
-		// update container name to include source name as suffix
 		containerName = containerName + "-" + name
+		// dest_dir is root where to write the files"
+		args = append(args, "--dest_dir", name)
 	}
 
 	return &corev1.Container{
 		Name:         containerName,
 		Image:        *gcsFetcherImage,
-		Args:         []string{"--type", string(gcs.Type), "--location", gcs.Location},
+		Args:         args,
 		VolumeMounts: implicitVolumeMounts,
 		WorkingDir:   workspaceDir,
 		Env:          implicitEnvVars,
@@ -184,7 +187,7 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec, name string) (*corev1.Container
 }
 
 func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
-	var sourceType, location string
+	var sourceType, location, name string
 	for i, a := range source.Args {
 		if a == "--type" && i < len(source.Args) {
 			sourceType = source.Args[i+1]
@@ -195,7 +198,7 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 	}
 
 	// Undo the suffixing to extract source name
-	name := strings.Trim(source.Name, initContainerPrefix+gcsSource)
+	name = strings.Trim(source.Name, initContainerPrefix+gcsSource)
 	return &v1alpha1.SourceSpec{
 		Name: name,
 		GCS: &v1alpha1.GCSSourceSpec{
@@ -307,15 +310,13 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 
 	initContainers := []corev1.Container{*cred}
-	var sources []*v1alpha1.SourceSpec
+	var sources []v1alpha1.SourceSpec
 	// if source is present convert into sources
 	if source := build.Spec.Source; source != nil {
-		sources = convertIntoSources(source)
+		sources = []v1alpha1.SourceSpec{*source}
 	}
 	for _, source := range build.Spec.Sources {
-		if source != nil {
-			sources = append(sources, source)
-		}
+		sources = append(sources, source)
 	}
 	workspaceSubPath := ""
 
@@ -341,6 +342,7 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			// Prepend the custom container to the steps, to be augmented later with env, volume mounts, etc.
 			build.Spec.Steps = append([]corev1.Container{*cust}, build.Spec.Steps...)
 		}
+		// webhook validation checks that only one source has subPath defined
 		workspaceSubPath = source.SubPath
 	}
 
@@ -443,10 +445,6 @@ func filterImplicitEnvVars(evs []corev1.EnvVar) []corev1.EnvVar {
 	return envs
 }
 
-func convertIntoSources(source *v1alpha1.SourceSpec) []*v1alpha1.SourceSpec {
-	return []*v1alpha1.SourceSpec{source}
-}
-
 func isImplicitVolumeMount(vm corev1.VolumeMount) bool {
 	for _, ivm := range implicitVolumeMounts {
 		if vm.Name == ivm.Name {
@@ -527,10 +525,9 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		steps = steps[1:]
 	}
 
-	var scm []*v1alpha1.SourceSpec
+	var scm []v1alpha1.SourceSpec
 	for _, step := range steps {
-		conv := stepNameConversionToSource(step.Name)
-		if conv != nil {
+		if conv := stepNameConversionToSource(step.Name); conv != nil {
 			src, err := conv(step)
 
 			if err != nil {
@@ -541,7 +538,7 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 			if subPath != "" {
 				src.SubPath = subPath
 			}
-			scm = append(scm, src)
+			scm = append(scm, *src)
 			steps = steps[1:]
 		}
 	}

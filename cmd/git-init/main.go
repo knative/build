@@ -74,21 +74,17 @@ func main() {
 	}
 
 	if *name != "" {
-		// create dir name
+		run(logger, "git", "init", *name)
 		path := filepath.Join(dir, *name)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if err := os.Mkdir(path, os.ModePerm); err != nil {
-				logger.Fatalf("Failed to create directory with path %s; err %v", path, err)
-			}
-		}
-
 		if err := os.Chdir(path); err != nil {
 			logger.Fatalf("Failed to change directory with path %s; err %v", path, err)
 		}
+		// update dir variable with new path
 		dir = path
+	} else {
+		run(logger, "git", "init")
 	}
 
-	run(logger, "git", "init")
 	run(logger, "git", "remote", "add", "origin", *url)
 	runOrFail(logger, "git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *revision)
 	runOrFail(logger, "git", "reset", "--hard", "FETCH_HEAD")

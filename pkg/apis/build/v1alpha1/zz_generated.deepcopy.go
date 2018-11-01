@@ -118,14 +118,9 @@ func (in *BuildSpec) DeepCopyInto(out *BuildSpec) {
 	}
 	if in.Sources != nil {
 		in, out := &in.Sources, &out.Sources
-		*out = make([]*SourceSpec, len(*in))
+		*out = make([]SourceSpec, len(*in))
 		for i := range *in {
-			if (*in)[i] == nil {
-				(*out)[i] = nil
-			} else {
-				(*out)[i] = new(SourceSpec)
-				(*in)[i].DeepCopyInto((*out)[i])
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Steps != nil {

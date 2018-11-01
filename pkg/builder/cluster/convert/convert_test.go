@@ -31,7 +31,7 @@ import (
 )
 
 var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
-var ignoreSources = cmpopts.IgnoreTypes([]*v1alpha1.SourceSpec{})
+var ignoreSources = cmpopts.IgnoreTypes([]v1alpha1.SourceSpec{})
 var nopContainer = corev1.Container{
 	Name:  "nop",
 	Image: *nopImage,
@@ -63,6 +63,7 @@ func TestRoundtrip(t *testing.T) {
 		"testdata/git-revision.yaml",
 		"testdata/git-subpath.yaml",
 		"testdata/gcs-archive.yaml",
+		"testdata/gcs-archive-sources.yaml",
 		"testdata/gcs-manifest.yaml",
 
 		"testdata/custom-git-sources.yaml",
@@ -96,7 +97,7 @@ func TestRoundtrip(t *testing.T) {
 			})
 
 			if og.Spec.Source != nil {
-				og.Spec.Sources = append(og.Spec.Sources, og.Spec.Source)
+				og.Spec.Sources = append(og.Spec.Sources, *og.Spec.Source)
 				og.Spec.Source = nil
 			}
 
@@ -155,12 +156,12 @@ func TestRoundtrip(t *testing.T) {
 // compareSources takes into account of source without names checkMap
 // tracks list of sources under a key. If matching key is not present then
 // Cmp diff is returned to diagnoze the test error better
-func compareSources(og, b []*v1alpha1.SourceSpec) string {
-	checkMap := make(map[string][]*v1alpha1.SourceSpec)
+func compareSources(og, b []v1alpha1.SourceSpec) string {
+	checkMap := make(map[string][]v1alpha1.SourceSpec)
 
 	for _, source := range og {
 		if val, ok := checkMap[source.Name]; !ok {
-			checkMap[source.Name] = []*v1alpha1.SourceSpec{source}
+			checkMap[source.Name] = []v1alpha1.SourceSpec{source}
 		} else {
 			checkMap[source.Name] = append(val, source)
 		}
@@ -271,7 +272,7 @@ func TestFromCRD(t *testing.T) {
 	}, {
 		desc: "sources",
 		b: v1alpha1.BuildSpec{
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "github.com/my/repo",
 					Revision: "master",
@@ -366,7 +367,7 @@ func TestFromCRD(t *testing.T) {
 	}, {
 		desc: "git-sources-with-subpath",
 		b: v1alpha1.BuildSpec{
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Name: "myrepo",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "github.com/my/repo",

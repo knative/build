@@ -42,7 +42,7 @@ func TestValidateBuild(t *testing.T) {
 		desc: "source and sources presence",
 		build: &Build{
 			Spec: BuildSpec{
-				Sources: []*SourceSpec{{
+				Sources: []SourceSpec{{
 					Name: "sources",
 					Git: &GitSourceSpec{
 						Url:      "someurl",
@@ -66,7 +66,7 @@ func TestValidateBuild(t *testing.T) {
 		desc: "source without name",
 		build: &Build{
 			Spec: BuildSpec{
-				Sources: []*SourceSpec{{
+				Sources: []SourceSpec{{
 					Git: &GitSourceSpec{
 						Url:      "someurl",
 						Revision: "revision",
@@ -83,7 +83,7 @@ func TestValidateBuild(t *testing.T) {
 		desc: "source with duplicate names",
 		build: &Build{
 			Spec: BuildSpec{
-				Sources: []*SourceSpec{{
+				Sources: []SourceSpec{{
 					Name: "sname",
 					Git: &GitSourceSpec{
 						Url:      "someurl",
@@ -107,7 +107,7 @@ func TestValidateBuild(t *testing.T) {
 		desc: "a source with subpath",
 		build: &Build{
 			Spec: BuildSpec{
-				Sources: []*SourceSpec{{
+				Sources: []SourceSpec{{
 					Name: "sname",
 					Git: &GitSourceSpec{
 						Url:      "someurl",
@@ -125,7 +125,7 @@ func TestValidateBuild(t *testing.T) {
 		desc: "sources with subpath",
 		build: &Build{
 			Spec: BuildSpec{
-				Sources: []*SourceSpec{{
+				Sources: []SourceSpec{{
 					Name: "sname",
 					Git: &GitSourceSpec{
 						Url:      "someurl",

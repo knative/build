@@ -106,28 +106,26 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	if bs.Source != nil {
 		sourceExists = true
 	}
-	if bs.Sources != nil && sourceExists {
+	if len(bs.Sources) > 0 && sourceExists {
 		return apis.ErrMultipleOneOf("b.spec.source", "b.spec.sources")
 	}
 	for _, source := range bs.Sources {
 		// check all source have names
-		if source != nil {
-			if source.Name == "" {
-				return apis.ErrMissingField("b.spec.sources.name")
-			}
-			// check all source have unique names
-			if _, ok := names[source.Name]; ok {
-				return apis.ErrMultipleOneOf("b.spec.sources.names")
-			}
-			// multiple sources cannot have subpath defined
-			if source.SubPath != "" {
-				if subPathExists {
-					return apis.ErrInvalidValue("b.spec.sources.subpath", source.SubPath)
-				}
-				subPathExists = true
-			}
-			names[source.Name] = ""
+		if source.Name == "" {
+			return apis.ErrMissingField("b.spec.sources.name")
 		}
+		// check all source have unique names
+		if _, ok := names[source.Name]; ok {
+			return apis.ErrMultipleOneOf("b.spec.sources.names")
+		}
+		// multiple sources cannot have subpath defined
+		if source.SubPath != "" {
+			if subPathExists {
+				return apis.ErrInvalidValue("b.spec.sources.subpath", source.SubPath)
+			}
+			subPathExists = true
+		}
+		names[source.Name] = ""
 	}
 	return nil
 }

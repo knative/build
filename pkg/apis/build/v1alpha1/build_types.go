@@ -63,7 +63,7 @@ type BuildSpec struct {
 
 	// Sources specifies the inputs to the build.
 	// +optional
-	Sources []*SourceSpec `json:"sources,omitempty"`
+	Sources []SourceSpec `json:"sources,omitempty"`
 
 	// Steps are the steps of the build; each step is run sequentially with the
 	// source mounted into /workspace.
@@ -168,7 +168,13 @@ type SourceSpec struct {
 	// +optional
 	SubPath string `json:"subPath,omitempty"`
 
-	// Name is the path under which source will be mounted.
+	// Name is the subpath in workspace where the source will be copied.
+	// Name is optional when specified `source` is defined but it is required field
+	// when defining `sources`.
+	// Restrictions on the allowed charatcers
+	// Must be a basename (no /)
+	// Must be a valid DNS name (only alphanumeric characters, no _ or -)
+	// https://tools.ietf.org/html/rfc1123#section-2
 	// +optional
 	Name string `json:"name,omitempty"`
 }

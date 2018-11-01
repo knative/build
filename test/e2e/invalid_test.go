@@ -84,7 +84,7 @@ func TestInvalidBuild(t *testing.T) {
 			Name:      "source-without-name",
 		},
 		Spec: v1alpha1.BuildSpec{
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "some-url",
 					Revision: "master",
@@ -98,7 +98,7 @@ func TestInvalidBuild(t *testing.T) {
 			Name:      "source-with-multiple-subpath",
 		},
 		Spec: v1alpha1.BuildSpec{
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Name: "source1",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "some-url",
@@ -128,7 +128,7 @@ func TestInvalidBuild(t *testing.T) {
 					Revision: "master",
 				},
 			},
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Name: "sources1",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "some-url",

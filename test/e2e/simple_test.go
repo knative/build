@@ -498,7 +498,7 @@ func TestBuildWithSources(t *testing.T) {
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Name: "bazel",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "https://github.com/bazelbuild/rules_docker",
@@ -553,7 +553,7 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 			Name:      buildName,
 		},
 		Spec: v1alpha1.BuildSpec{
-			Sources: []*v1alpha1.SourceSpec{{
+			Sources: []v1alpha1.SourceSpec{{
 				Name: "bazel",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "https://github.com/bazelbuild/rules_docker",
@@ -592,7 +592,7 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 				// compare contents between gcs and git
 				Args: []string{
 					"-c",
-					"cmp --silent bazel/WORKSPACE rules_docker-master/WORKSPACE || echo '### SUCCESS: Files Are Not Identical! ###'",
+					"cmp --silent bazel/WORKSPACE gcs/WORKSPACE || echo '### SUCCESS: Files Are Not Identical! ###'",
 				},
 			}},
 		},
