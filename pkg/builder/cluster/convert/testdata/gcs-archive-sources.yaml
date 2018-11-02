@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 sources:
-- name:
+- name: sname
+  targetPath: "workspace/foo"
   gcs:
-    targetPath: "workspace/foo"
     type: Archive
     location: gs://bucket/my/stuff.tar.gz
+- gcs:
+    type: Archive
+    location: gs://bucket/my/stuff.tar.gz
+  targetPath: "workspace/foo"
 steps:
 - name: helloworld
   image: gcr.io/google-containers/busybox

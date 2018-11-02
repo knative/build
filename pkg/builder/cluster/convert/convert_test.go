@@ -160,15 +160,17 @@ func compareSources(og, b []v1alpha1.SourceSpec) string {
 	checkMap := make(map[string][]v1alpha1.SourceSpec)
 
 	for _, source := range og {
-		if val, ok := checkMap[source.Name]; !ok {
-			checkMap[source.Name] = []v1alpha1.SourceSpec{source}
+		key := source.Name + source.TargetPath
+		if val, ok := checkMap[key]; !ok {
+			checkMap[key] = []v1alpha1.SourceSpec{source}
 		} else {
-			checkMap[source.Name] = append(val, source)
+			checkMap[key] = append(val, source)
 		}
 	}
 
 	for _, source := range b {
-		valSources, ok := checkMap[source.Name]
+		key := source.Name + source.TargetPath
+		valSources, ok := checkMap[key]
 		if ok {
 			for _, s1 := range valSources {
 				if d := cmp.Diff(s1, source); d != "" {
@@ -253,7 +255,7 @@ func TestFromCRD(t *testing.T) {
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}, {
-				Name:         initContainerPrefix + gitSource,
+				Name:         initContainerPrefix + gitSource + "-0",
 				Image:        *gitImage,
 				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
 				Env:          implicitEnvVars,
@@ -348,7 +350,7 @@ func TestFromCRD(t *testing.T) {
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
 			}, {
-				Name:         initContainerPrefix + gitSource,
+				Name:         initContainerPrefix + gitSource + "-0",
 				Image:        *gitImage,
 				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
 				Env:          implicitEnvVars,
@@ -445,7 +447,7 @@ func TestFromCRD(t *testing.T) {
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
 			}, {
-				Name:         initContainerPrefix + gcsSource,
+				Name:         initContainerPrefix + gcsSource + "-0",
 				Image:        *gcsFetcherImage,
 				Args:         []string{"--type", "Manifest", "--location", "gs://foo/bar"},
 				Env:          implicitEnvVars,
@@ -482,7 +484,7 @@ func TestFromCRD(t *testing.T) {
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
 			}, {
-				Name:         initContainerPrefix + gcsSource,
+				Name:         initContainerPrefix + gcsSource + "-0",
 				Image:        *gcsFetcherImage,
 				Args:         []string{"--type", "Manifest", "--location", "gs://foo/bar", "--dest_dir", "/workspace/path/foo"},
 				Env:          implicitEnvVars,

@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -105,7 +106,7 @@ var (
 )
 
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
-func gitToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
+func gitToContainer(source v1alpha1.SourceSpec, index int) (*corev1.Container, error) {
 	git := source.Git
 	if git.Url == "" {
 		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
@@ -125,6 +126,8 @@ func gitToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
 	// update container name to suffix source name
 	if source.Name != "" {
 		containerName = containerName + "-" + source.Name
+	} else {
+		containerName = containerName + "-" + strconv.Itoa(index)
 	}
 
 	return &corev1.Container{
@@ -147,7 +150,12 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
 
-	name := strings.TrimPrefix(git.Name, gitSource)
+	name := strings.TrimPrefix(git.Name, gitSource+"-")
+
+	// undo the suffix of index if name is empty
+	if _, err := strconv.Atoi(name); err == nil {
+		name = ""
+	}
 
 	var path string
 	// if `--path ` is set in args extract targetpath variable
@@ -157,7 +165,7 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
-		Name: strings.Trim(name, "-"),
+		Name: name,
 		Git: &v1alpha1.GitSourceSpec{
 			Url:      git.Args[1],
 			Revision: git.Args[3],
@@ -166,7 +174,7 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 	}, nil
 }
 
-func gcsToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
+func gcsToContainer(source v1alpha1.SourceSpec, index int) (*corev1.Container, error) {
 	gcs := source.GCS
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
@@ -178,6 +186,8 @@ func gcsToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
 	// update container name to include `name` as suffix
 	if source.Name != "" {
 		containerName = containerName + "-" + source.Name
+	} else {
+		containerName = containerName + "-" + strconv.Itoa(index)
 	}
 
 	// dest_dir is the destination directory for GCS files to be copies"
@@ -195,7 +205,7 @@ func gcsToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
 }
 
 func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
-	var sourceType, location, name string
+	var sourceType, location, name, path string
 	for i, a := range source.Args {
 		if a == "--type" && i < len(source.Args) {
 			sourceType = source.Args[i+1]
@@ -203,16 +213,25 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 		if a == "--location" && i < len(source.Args) {
 			location = source.Args[i+1]
 		}
+		if a == "--dest_dir" && i < len(source.Args) {
+			path = strings.TrimPrefix(source.Args[i+1], workspaceDir+"/")
+		}
+	}
+	// Undo the suffixing to extract source name
+	name = strings.TrimPrefix(source.Name, gcsSource+"-")
+
+	// undo the suffix of index if name is integer
+	if _, err := strconv.Atoi(name); err == nil {
+		name = ""
 	}
 
-	// Undo the suffixing to extract source name
-	name = strings.Trim(source.Name, initContainerPrefix+gcsSource)
 	return &v1alpha1.SourceSpec{
 		Name: name,
 		GCS: &v1alpha1.GCSSourceSpec{
 			Type:     v1alpha1.GCSSourceType(sourceType),
 			Location: location,
 		},
+		TargetPath: path,
 	}, nil
 }
 
@@ -328,16 +347,16 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 	workspaceSubPath := ""
 
-	for _, source := range sources {
+	for i, source := range sources {
 		switch {
 		case source.Git != nil:
-			git, err := gitToContainer(source)
+			git, err := gitToContainer(source, i)
 			if err != nil {
 				return nil, err
 			}
 			initContainers = append(initContainers, *git)
 		case source.GCS != nil:
-			gcs, err := gcsToContainer(source)
+			gcs, err := gcsToContainer(source, i)
 			if err != nil {
 				return nil, err
 			}
