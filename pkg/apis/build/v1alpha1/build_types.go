@@ -168,15 +168,18 @@ type SourceSpec struct {
 	// +optional
 	SubPath string `json:"subPath,omitempty"`
 
-	// Name is the subpath in workspace where the source will be copied.
-	// Name is optional when specified `source` is defined but it is required field
-	// when defining `sources`.
+	// Name is the name of source. This field is used to uniquely identify the
+	// source init containers
 	// Restrictions on the allowed charatcers
 	// Must be a basename (no /)
-	// Must be a valid DNS name (only alphanumeric characters, no _ or -)
+	// Must be a valid DNS name (only alphanumeric characters, no _)
 	// https://tools.ietf.org/html/rfc1123#section-2
 	// +optional
 	Name string `json:"name,omitempty"`
+
+	// TargetPath is the path in workspace directory where the source will be copied.
+	// TargetPath is optional and if its not set source will be copied under workspace
+	TargetPath string `json:"targetPath,omitempty"`
 }
 
 // GitSourceSpec describes a Git repo source input to the Build.

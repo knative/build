@@ -65,7 +65,7 @@ spec:
     args:
     - -url=https://github.com/bazelbuild/rules_docker
     - -revision=master
-    - -name=rulez
+    - -path=rulez
   - name: cat-rulez-repo
     image: busybox
     args: ['cat', 'rulez/WORKSPACE']

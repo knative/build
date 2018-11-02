@@ -499,13 +499,15 @@ func TestBuildWithSources(t *testing.T) {
 		},
 		Spec: v1alpha1.BuildSpec{
 			Sources: []v1alpha1.SourceSpec{{
-				Name: "bazel",
+				Name:       "bazel",
+				TargetPath: "bazel",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "https://github.com/bazelbuild/rules_docker",
 					Revision: "master",
 				},
 			}, {
-				Name: "rocks",
+				Name:       "rocks",
+				TargetPath: "rocks",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "https://github.com/bazelbuild/rules_docker",
 					Revision: "master",
@@ -554,7 +556,8 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 		},
 		Spec: v1alpha1.BuildSpec{
 			Sources: []v1alpha1.SourceSpec{{
-				Name: "bazel",
+				Name:       "git-bazel",
+				TargetPath: "bazel",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "https://github.com/bazelbuild/rules_docker",
 					Revision: "master",
@@ -570,7 +573,8 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 					},
 				},
 			}, {
-				Name: "gcs",
+				Name:       "gcs-rules",
+				TargetPath: "gcs",
 				GCS: &v1alpha1.GCSSourceSpec{
 					Type:     "Archive",
 					Location: "gs://build-crd-tests/rules_docker-master.zip",

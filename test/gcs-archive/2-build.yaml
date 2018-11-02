@@ -20,10 +20,11 @@ metadata:
 spec:
   sources:
   - name: rules
+    targetPath: rules
     gcs:
       type: Archive
       location: gs://build-crd-tests/rules_docker-master.zip
   steps: 
    - name: list-files
      image: ubuntu:latest
-     args: ["ls", "-la", "rules"]
+     args: ["ls", "-la", "rules/rules_docker-master"]

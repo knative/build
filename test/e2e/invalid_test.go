@@ -81,10 +81,17 @@ func TestInvalidBuild(t *testing.T) {
 	}, {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
-			Name:      "source-without-name",
+			Name:      "source-with-duplicate-subpath",
 		},
 		Spec: v1alpha1.BuildSpec{
 			Sources: []v1alpha1.SourceSpec{{
+				TargetPath: "paht/foo",
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "some-url",
+					Revision: "master",
+				},
+			}, {
+				TargetPath: "path/foo",
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "some-url",
 					Revision: "master",

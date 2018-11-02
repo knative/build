@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 sources:
-- name: "some-git-source"
+- name: "source1"
   git:
     url: https://source.developers.google.com/p/a-project/r/secret-stuff
     revision: master
-- name: "some-other-git-source"
+- name: "some-git-source"
+  targetPath: "newdir"
   git:
     url: https://source.developers.google.com/p/a-project/r/secret-stuff
     revision: master

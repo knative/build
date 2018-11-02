@@ -20,6 +20,7 @@ metadata:
 spec:
   sources:
   - name: basel
+    targetPath: basel
     git:
       url: https://github.com/bazelbuild/rules_docker      
       revision: master
@@ -33,4 +34,4 @@ spec:
     args: ['cat', 'basel/WORKSPACE']
   - name: readgcs
     image: busybox
-    args: ['cat', 'gcs-source/WORKSPACE']
+    args: ['cat', 'rules_docker-master/WORKSPACE']

@@ -105,7 +105,8 @@ var (
 )
 
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
-func gitToContainer(git *v1alpha1.GitSourceSpec, name string) (*corev1.Container, error) {
+func gitToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
+	git := source.Git
 	if git.Url == "" {
 		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
 	}
@@ -118,10 +119,12 @@ func gitToContainer(git *v1alpha1.GitSourceSpec, name string) (*corev1.Container
 	}
 	containerName := initContainerPrefix + gitSource
 
-	if name != "" {
-		// update container name to suffix source name
-		args = append(args, []string{"-name", name}...)
-		containerName = containerName + "-" + name
+	if source.TargetPath != "" {
+		args = append(args, []string{"-path", source.TargetPath}...)
+	}
+	// update container name to suffix source name
+	if source.Name != "" {
+		containerName = containerName + "-" + source.Name
 	}
 
 	return &corev1.Container{
@@ -135,7 +138,7 @@ func gitToContainer(git *v1alpha1.GitSourceSpec, name string) (*corev1.Container
 }
 
 func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
-	// git args are expected to be in this order "--url url --revision revision (optional)--name name ""
+	// git args are expected to be in this order "--url url --revision revision (optional)--path targetPath ""
 
 	if git.Image != *gitImage {
 		return nil, fmt.Errorf("Unrecognized git source image: %v", git.Image)
@@ -144,24 +147,27 @@ func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
 
-	name := ""
+	name := strings.TrimPrefix(git.Name, gitSource)
 
-	// if `--name name` is set in args extract $name variable
+	var path string
+	// if `--path ` is set in args extract targetpath variable
 	if len(git.Args) == 6 {
-		name = git.Args[5]
+		path = git.Args[5]
 	}
 
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
-		Name: name,
+		Name: strings.Trim(name, "-"),
 		Git: &v1alpha1.GitSourceSpec{
 			Url:      git.Args[1],
 			Revision: git.Args[3],
 		},
+		TargetPath: path,
 	}, nil
 }
 
-func gcsToContainer(gcs *v1alpha1.GCSSourceSpec, name string) (*corev1.Container, error) {
+func gcsToContainer(source v1alpha1.SourceSpec) (*corev1.Container, error) {
+	gcs := source.GCS
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
@@ -170,12 +176,14 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec, name string) (*corev1.Container
 	containerName := initContainerPrefix + gcsSource
 
 	// update container name to include `name` as suffix
-	if name != "" {
-		containerName = containerName + "-" + name
-		// dest_dir is root where to write the files"
-		args = append(args, "--dest_dir", name)
+	if source.Name != "" {
+		containerName = containerName + "-" + source.Name
 	}
 
+	// dest_dir is the destination directory for GCS files to be copies"
+	if source.TargetPath != "" {
+		args = append(args, "--dest_dir", filepath.Join(workspaceDir, source.TargetPath))
+	}
 	return &corev1.Container{
 		Name:         containerName,
 		Image:        *gcsFetcherImage,
@@ -323,13 +331,13 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	for _, source := range sources {
 		switch {
 		case source.Git != nil:
-			git, err := gitToContainer(source.Git, source.Name)
+			git, err := gitToContainer(source)
 			if err != nil {
 				return nil, err
 			}
 			initContainers = append(initContainers, *git)
 		case source.GCS != nil:
-			gcs, err := gcsToContainer(source.GCS, source.Name)
+			gcs, err := gcsToContainer(source)
 			if err != nil {
 				return nil, err
 			}

@@ -19,7 +19,8 @@ metadata:
     expect: succeeded
 spec:
   sources:
-  - name: basel
+  - name: basel-git
+    targetPath: basel
     git:
       url: https://github.com/bazelbuild/rules_docker      
       revision: master

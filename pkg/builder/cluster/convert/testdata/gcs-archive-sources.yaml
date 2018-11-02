@@ -14,6 +14,7 @@
 sources:
 - name:
   gcs:
+    targetPath: "workspace/foo"
     type: Archive
     location: gs://bucket/my/stuff.tar.gz
 steps:

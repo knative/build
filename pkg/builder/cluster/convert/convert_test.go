@@ -302,14 +302,14 @@ func TestFromCRD(t *testing.T) {
 			}, {
 				Name:         initContainerPrefix + gitSource + "-" + "repo1",
 				Image:        *gitImage,
-				Args:         []string{"-url", "github.com/my/repo", "-revision", "master", "-name", "repo1"},
+				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}, {
 				Name:         initContainerPrefix + gitSource + "-" + "repo2",
 				Image:        *gitImage,
-				Args:         []string{"-url", "github.com/my/repo", "-revision", "master", "-name", "repo2"},
+				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
@@ -399,14 +399,14 @@ func TestFromCRD(t *testing.T) {
 			}, {
 				Name:         initContainerPrefix + gitSource + "-" + "myrepo",
 				Image:        *gitImage,
-				Args:         []string{"-url", "github.com/my/repo", "-revision", "master", "-name", "myrepo"},
+				Args:         []string{"-url", "github.com/my/repo", "-revision", "master"},
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
 			}, {
 				Name:         initContainerPrefix + gitSource + "-" + "ownrepo",
 				Image:        *gitImage,
-				Args:         []string{"-url", "github.com/own/repo", "-revision", "master", "-name", "ownrepo"},
+				Args:         []string{"-url", "github.com/own/repo", "-revision", "master"},
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
@@ -456,6 +456,37 @@ func TestFromCRD(t *testing.T) {
 				Image:        "image",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMountsWithSubPath,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumes,
+		},
+	}, {
+		desc: "gcs-source-with-targetPath",
+		b: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				GCS: &v1alpha1.GCSSourceSpec{
+					Type:     v1alpha1.GCSManifest,
+					Location: "gs://foo/bar",
+				},
+				TargetPath: "path/foo",
+			},
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit,
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         initContainerPrefix + gcsSource,
+				Image:        *gcsFetcherImage,
+				Args:         []string{"--type", "Manifest", "--location", "gs://foo/bar", "--dest_dir", "/workspace/path/foo"},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
 			}},
 			Containers: []corev1.Container{nopContainer},

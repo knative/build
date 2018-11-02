@@ -29,7 +29,7 @@ import (
 var (
 	url      = flag.String("url", "", "The url of the Git repository to initialize.")
 	revision = flag.String("revision", "", "The Git revision to make the repository HEAD")
-	name     = flag.String("name", "", "Name of directory under which git repository will be mounted")
+	path     = flag.String("path", "", "Path of directory under which git repository will be copied")
 )
 
 func run(logger *zap.SugaredLogger, cmd string, args ...string) {
@@ -73,9 +73,9 @@ func main() {
 		logger.Errorf("Failed to get current dir", err)
 	}
 
-	if *name != "" {
-		run(logger, "git", "init", *name)
-		path := filepath.Join(dir, *name)
+	if *path != "" {
+		runOrFail(logger, "git", "init", *path)
+		path := filepath.Join(dir, *path)
 		if err := os.Chdir(path); err != nil {
 			logger.Fatalf("Failed to change directory with path %s; err %v", path, err)
 		}

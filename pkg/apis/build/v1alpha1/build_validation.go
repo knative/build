@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/knative/pkg/apis"
@@ -102,18 +103,17 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	var subPathExists bool
 	names := map[string]string{}
 	var sourceExists bool
+	sourcePath := map[string]string{}
 
 	if bs.Source != nil {
 		sourceExists = true
 	}
+	// both source and sources cannot be defined in build
 	if len(bs.Sources) > 0 && sourceExists {
 		return apis.ErrMultipleOneOf("b.spec.source", "b.spec.sources")
 	}
+
 	for _, source := range bs.Sources {
-		// check all source have names
-		if source.Name == "" {
-			return apis.ErrMissingField("b.spec.sources.name")
-		}
 		// check all source have unique names
 		if _, ok := names[source.Name]; ok {
 			return apis.ErrMultipleOneOf("b.spec.sources.names")
@@ -126,6 +126,28 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 			subPathExists = true
 		}
 		names[source.Name] = ""
+
+		if err := validatePath(source.TargetPath, sourcePath); err != nil {
+			return err
+		}
+		sourcePath[source.TargetPath] = ""
+
+	}
+	return nil
+}
+
+// validatePath checks that source path is unique
+// or subpath is unique
+func validatePath(path string, pathMap map[string]string) *apis.FieldError {
+	err := apis.ErrMultipleOneOf("b.spec.sources.targetPath")
+
+	if _, ok := pathMap[path]; ok {
+		return err
+	}
+	for key := range pathMap {
+		if path != "" && strings.HasPrefix(key, path) {
+			return err
+		}
 	}
 	return nil
 }
