@@ -482,11 +482,6 @@ func TestBuildWithSources(t *testing.T) {
 	logger := logging.GetContextLogger("TestBuildWithSources")
 	clients := buildClients(logger)
 
-	// Emit a metric for null-build latency (i.e., time to schedule and execute
-	// and finish watching a build).
-	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
-	defer span.End()
-
 	buildName := "build-sources"
 
 	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
@@ -538,11 +533,6 @@ func TestBuildWithSources(t *testing.T) {
 func TestSimpleBuildWithHybridSources(t *testing.T) {
 	logger := logging.GetContextLogger("TestSimpleBuildWithHybridSources")
 	clients := buildClients(logger)
-
-	// Emit a metric for null-build latency (i.e., time to schedule and execute
-	// and finish watching a build).
-	_, span := trace.StartSpan(context.Background(), "NullBuildLatency")
-	defer span.End()
 
 	buildName := "hybrid-sources"
 

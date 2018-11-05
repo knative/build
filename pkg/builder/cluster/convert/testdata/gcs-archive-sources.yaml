@@ -23,5 +23,5 @@ sources:
   targetPath: "workspace/foo"
 steps:
 - name: helloworld
-  image: gcr.io/google-containers/busybox
+  image: hello
   args: ["echo Hello World!"]
