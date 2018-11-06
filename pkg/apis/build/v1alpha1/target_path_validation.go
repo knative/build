@@ -23,15 +23,15 @@ import (
 
 // Node is constructed to track targetPath structure in source
 // Value tracks the value of node. Parent holds the address of parent nodes
-type Node struct {
-	Parent *Node
-	Value  string
+type node struct {
+	parent *node
+	value  string
 }
 
 // insert function breaks the path and inserts every element into nodeMap
 // insert function throws error if the path is already traversed by any
 // previous targetPaths
-func insertNode(path string, nodeMap map[string]*Node) *apis.FieldError {
+func insertNode(path string, nodeMap map[string]*node) *apis.FieldError {
 	parts := strings.Split(path, "/")
 	visitedNodes := 0
 
@@ -47,13 +47,13 @@ func insertNode(path string, nodeMap map[string]*Node) *apis.FieldError {
 		}
 
 		// build and add node since it does not exist in map
-		var parent *Node
+		var parent *node
 		if i-1 >= 0 {
 			parent = nodeMap[parts[i-1]]
 		}
-		n := &Node{
-			Value:  part,
-			Parent: parent,
+		n := &node{
+			value:  part,
+			parent: parent,
 		}
 		nodeMap[part] = n
 	}

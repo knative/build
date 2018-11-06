@@ -102,7 +102,7 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	var subPathExists bool
 	var emptyTargetPath bool
 	names := map[string]string{}
-	nodeMap := map[string]*Node{}
+	nodeMap := map[string]*node{}
 
 	// both source and sources cannot be defined in build
 	if len(bs.Sources) > 0 && bs.Source != nil {
