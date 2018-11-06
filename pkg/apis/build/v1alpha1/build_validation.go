@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/knative/pkg/apis"
@@ -101,8 +100,9 @@ func (bt *BuildSpec) validateTimeout() *apis.FieldError {
 // Validate source
 func (bs BuildSpec) validateSources() *apis.FieldError {
 	var subPathExists bool
+	var emptyTargetPath bool
 	names := map[string]string{}
-	sourcePath := map[string]string{}
+	nodeMap := map[string]*Node{}
 
 	// both source and sources cannot be defined in build
 	if len(bs.Sources) > 0 && bs.Source != nil {
@@ -123,26 +123,15 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 		}
 		names[source.Name] = ""
 
-		if err := validatePath(source.TargetPath, sourcePath); err != nil {
-			return err
-		}
-		sourcePath[source.TargetPath] = ""
-
-	}
-	return nil
-}
-
-// validatePath checks that source path is unique
-// or subpath is unique
-func validatePath(path string, pathMap map[string]string) *apis.FieldError {
-	err := apis.ErrMultipleOneOf("b.spec.sources.targetPath")
-
-	if _, ok := pathMap[path]; ok {
-		return err
-	}
-	for key := range pathMap {
-		if path != "" && strings.HasPrefix(key, path) {
-			return err
+		if source.TargetPath == "" {
+			if emptyTargetPath {
+				return apis.ErrMultipleOneOf("b.spec.sources.targetPath")
+			}
+			emptyTargetPath = true
+		} else {
+			if err := insertNode(source.TargetPath, nodeMap); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -118,16 +118,18 @@ func gitToContainer(source v1alpha1.SourceSpec, index int) (*corev1.Container, e
 	args := []string{"-url", git.Url,
 		"-revision", git.Revision,
 	}
-	containerName := initContainerPrefix + gitSource
 
 	if source.TargetPath != "" {
 		args = append(args, []string{"-path", source.TargetPath}...)
 	}
+
+	containerName := initContainerPrefix + gitSource + "-"
+
 	// update container name to suffix source name
 	if source.Name != "" {
-		containerName = containerName + "-" + source.Name
+		containerName = containerName + source.Name
 	} else {
-		containerName = containerName + "-" + strconv.Itoa(index)
+		containerName = containerName + strconv.Itoa(index)
 	}
 
 	return &corev1.Container{
@@ -180,20 +182,21 @@ func gcsToContainer(source v1alpha1.SourceSpec, index int) (*corev1.Container, e
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
 	args := []string{"--type", string(gcs.Type), "--location", gcs.Location}
-	// source name is empty then use `build-step-gcs-source` name
-	containerName := initContainerPrefix + gcsSource
-
-	// update container name to include `name` as suffix
-	if source.Name != "" {
-		containerName = containerName + "-" + source.Name
-	} else {
-		containerName = containerName + "-" + strconv.Itoa(index)
-	}
-
 	// dest_dir is the destination directory for GCS files to be copies"
 	if source.TargetPath != "" {
 		args = append(args, "--dest_dir", filepath.Join(workspaceDir, source.TargetPath))
 	}
+
+	// source name is empty then use `build-step-gcs-source` name
+	containerName := initContainerPrefix + gcsSource + "-"
+
+	// update container name to include `name` as suffix
+	if source.Name != "" {
+		containerName = containerName + source.Name
+	} else {
+		containerName = containerName + strconv.Itoa(index)
+	}
+
 	return &corev1.Container{
 		Name:         containerName,
 		Image:        *gcsFetcherImage,

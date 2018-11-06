@@ -120,16 +120,18 @@ func TestValidateBuild(t *testing.T) {
 		},
 		reason: "sources with prefixed targetPath",
 	}, {
-		desc: "sources with same subpath for targetPath",
+		desc: "sources with overlap of targetPath",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
+					Name:       "testab",
 					TargetPath: "/path/a/b",
 					Git: &GitSourceSpec{
 						Url:      "someurl",
 						Revision: "revision",
 					},
 				}, {
+					Name:       "testa",
 					TargetPath: "/path/a",
 					Git: &GitSourceSpec{
 						Url:      "someurl",
@@ -144,7 +146,33 @@ func TestValidateBuild(t *testing.T) {
 		},
 		reason: "sources with similar subpath for targetPath",
 	}, {
-		desc: "sources with different targetPath",
+		desc: "sources with overlap of targetPath in different order",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []SourceSpec{{
+					Name:       "testab",
+					TargetPath: "/path/a",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}, {
+					Name:       "testa",
+					TargetPath: "/path/a/b",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+		reason: "sources with nested paths for targetPath",
+	}, {
+		desc: "sources with combination of empty and non empty targetPath",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -168,7 +196,7 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
-		desc: "sources with combination of same and different targetPath",
+		desc: "sources with empty targetPaths",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -198,6 +226,113 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 		reason: "multiple sources with empty target paths",
+	}, {
+		desc: "sources with combination of different targetPath with common parent dir",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []SourceSpec{{
+					Name:       "gitpathab",
+					TargetPath: "/a/b/d",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}, {
+					Name:       "gcsnonestedpath",
+					TargetPath: "a/e",
+					GCS: &GCSSourceSpec{
+						Type:     GCSArchive,
+						Location: "blah",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		desc: "sources with combination of different targetPath with common parent dir",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []SourceSpec{{
+					Name:       "gitpathab",
+					TargetPath: "/a/b",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}, {
+					Name:       "gcsnonestedpath",
+					TargetPath: "/a/b/c",
+					GCS: &GCSSourceSpec{
+						Type:     GCSArchive,
+						Location: "blah",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+		reason: "multiple sources with overlap of target paths",
+	}, {
+		desc: "sources with combination of individual targetpath",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []SourceSpec{{
+					Name:       "gitpathab",
+					TargetPath: "basel",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}, {
+					Name:       "gcsnonestedpath",
+					TargetPath: "baselrocks",
+					GCS: &GCSSourceSpec{
+						Type:     GCSArchive,
+						Location: "blah",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
+	}, {
+		desc: "Mix of sources with and without target path",
+		build: &Build{
+			Spec: BuildSpec{
+				Sources: []SourceSpec{{
+					Name:       "gitpathab",
+					TargetPath: "gitpath",
+					Git: &GitSourceSpec{
+						Url:      "someurl",
+						Revision: "revision",
+					},
+				}, {
+					Name: "gcsnopath1",
+					GCS: &GCSSourceSpec{
+						Type:     GCSArchive,
+						Location: "blah",
+					},
+				}, {
+					Name:       "gcswithpath",
+					TargetPath: "gcs",
+					GCS: &GCSSourceSpec{
+						Type:     GCSArchive,
+						Location: "blah",
+					},
+				}},
+				Steps: []corev1.Container{{
+					Name:  "foo",
+					Image: "gcr.io/foo-bar/baz:latest",
+				}},
+			},
+		},
 	}, {
 		desc: "source with duplicate names",
 		build: &Build{
