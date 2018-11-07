@@ -50,22 +50,17 @@ func insertNode(path string, pathtree pathTree) *apis.FieldError {
 			}
 		}
 	}
+	// path is trimmed with "/"
 	addNode(path, pathtree)
 	return nil
 }
 
 func addNode(path string, tree pathTree) {
 	parts := strings.Split(path, "/")
-	nodeMap := map[string]string{}
-	oldMap := tree.nodeMap
+	nm := map[string]string{}
 
 	for _, part := range parts {
-		_, ok := nodeMap[part]
-		if ok {
-			continue
-		}
-		nodeMap[part] = part
+		nm[part] = part
 	}
-	oldMap[path] = nodeMap
-	tree.nodeMap = oldMap
+	tree.nodeMap[path] = nm
 }

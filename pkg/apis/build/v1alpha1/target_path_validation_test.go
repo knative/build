@@ -32,6 +32,19 @@ func TestValidateTargetPaths(t *testing.T) {
 		},
 		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
 	}, {
+		desc: "paths with leaf node overlap",
+		paths: []string{
+			"a/d",
+			"a/b/c/d",
+		},
+	}, {
+		desc: "paths with no overlap",
+		paths: []string{
+			"e/f",
+			"l/k",
+			"a/b/c/d",
+		},
+	}, {
 		desc: "paths with same length and different leaf node",
 		paths: []string{
 			"a/b/d",
@@ -72,6 +85,13 @@ func TestValidateTargetPaths(t *testing.T) {
 			"github.com/bar",
 		},
 	}, {
+		desc: "longer paths with different leaf node",
+		paths: []string{
+			"/go/src/github.com/knative/build",
+			"/go/src/github.com/knative/serving",
+			"/go/src/github.com/knative/build-pipeline",
+		},
+	}, {
 		desc: "paths that start with /",
 		paths: []string{
 			"/dir/a",
@@ -98,6 +118,19 @@ func TestValidateTargetPaths(t *testing.T) {
 		paths: []string{
 			"/a/b/d",
 			"a/e",
+		},
+	}, {
+		desc: "paths with repeating nodes",
+		paths: []string{
+			"/a/a/b/d",
+			"a/a",
+		},
+		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+	}, {
+		desc: "paths with repeating nodes",
+		paths: []string{
+			"/a/a/b/d",
+			"a/d",
 		},
 	}} {
 		t.Run(c.desc, func(t *testing.T) {

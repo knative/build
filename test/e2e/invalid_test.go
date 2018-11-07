@@ -81,7 +81,7 @@ func TestInvalidBuild(t *testing.T) {
 	}, {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: buildTestNamespace,
-			Name:      "source-with-duplicate-subpath",
+			Name:      "source-with-duplicate-targetpath",
 		},
 		Spec: v1alpha1.BuildSpec{
 			Sources: []v1alpha1.SourceSpec{{
@@ -140,6 +140,40 @@ func TestInvalidBuild(t *testing.T) {
 				Git: &v1alpha1.GitSourceSpec{
 					Url:      "some-url",
 					Revision: "master",
+				},
+			}},
+			Steps: []corev1.Container{{Image: "busybox"}},
+		},
+	}, {
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      "custom-source-with-targetPath",
+		},
+		Spec: v1alpha1.BuildSpec{
+			Sources: []v1alpha1.SourceSpec{{
+				Name:       "sources1",
+				TargetPath: "a/b",
+				Custom: &corev1.Container{
+					Image: "ubuntu",
+				},
+			}},
+			Steps: []corev1.Container{{Image: "busybox"}},
+		},
+	}, {
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      "sources-with-duplicate-names",
+		},
+		Spec: v1alpha1.BuildSpec{
+			Sources: []v1alpha1.SourceSpec{{
+				Name: "sources1",
+				Custom: &corev1.Container{
+					Image: "ubuntu",
+				},
+			}, {
+				Name: "sources1",
+				Custom: &corev1.Container{
+					Image: "ubuntu",
 				},
 			}},
 			Steps: []corev1.Container{{Image: "busybox"}},
