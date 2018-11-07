@@ -102,7 +102,9 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	var subPathExists bool
 	var emptyTargetPath bool
 	names := map[string]string{}
-	nodeMap := map[string]*node{}
+	pathtree := pathTree{
+		nodeMap: map[string]map[string]string{},
+	}
 
 	// both source and sources cannot be defined in build
 	if len(bs.Sources) > 0 && bs.Source != nil {
@@ -124,12 +126,18 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 		names[source.Name] = ""
 
 		if source.TargetPath == "" {
+			if source.Custom != nil {
+				continue
+			}
 			if emptyTargetPath {
-				return apis.ErrMultipleOneOf("b.spec.sources.targetPath")
+				return apis.ErrInvalidValue("empty target path", "b.spec.sources.targetPath")
 			}
 			emptyTargetPath = true
 		} else {
-			if err := insertNode(source.TargetPath, nodeMap); err != nil {
+			if source.Custom != nil {
+				return apis.ErrInvalidValue(source.TargetPath, "b.spec.sources.targetPath")
+			}
+			if err := insertNode(source.TargetPath, pathtree); err != nil {
 				return err
 			}
 		}

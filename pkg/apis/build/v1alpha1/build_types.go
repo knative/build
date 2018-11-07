@@ -166,7 +166,8 @@ type SourceSpec struct {
 	Name string `json:"name,omitempty"`
 
 	// TargetPath is the path in workspace directory where the source will be copied.
-	// TargetPath is optional and if its not set source will be copied under workspace
+	// TargetPath is optional and if its not set source will be copied under workspace.
+	// TargetPath should not be set for custom source.
 	TargetPath string `json:"targetPath,omitempty"`
 }
 
