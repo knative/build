@@ -27,10 +27,6 @@ readonly OUTPUT_YAML=release.yaml
 
 # Set the repository
 export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
-# Build should not try to deploy anything, use a bogus value for cluster.
-export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
-export K8S_USER_OVERRIDE=USER_NOT_SET
-export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
 # Script entry point
 
@@ -39,12 +35,17 @@ initialize $@
 set -o errexit
 set -o pipefail
 
-# Location of the base image for creds-init and git images
-readonly BUILD_BASE_GCR="${KO_DOCKER_REPO}/github.com/knative/build/build-base"
-
 run_validation_tests ./test/presubmit-tests.sh
 
 banner "Building the release"
+
+# Location of the base image for creds-init and git images
+readonly BUILD_BASE_GCR="${KO_DOCKER_REPO}/github.com/knative/build/build-base"
+
+# Build should not try to deploy anything, use a bogus value for cluster.
+export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
+export K8S_USER_OVERRIDE=USER_NOT_SET
+export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
 echo "- Destination GCR: ${KO_DOCKER_REPO}"
 if (( PUBLISH_RELEASE )); then
