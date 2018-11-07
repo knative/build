@@ -198,8 +198,24 @@ func (in *BuildStatus) DeepCopyInto(out *BuildStatus) {
 			**out = **in
 		}
 	}
-	in.StartTime.DeepCopyInto(&out.StartTime)
-	in.CompletionTime.DeepCopyInto(&out.CompletionTime)
+	if in.StartTime != nil {
+		in, out := &in.StartTime, &out.StartTime
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(meta_v1.Time)
+			(*in).DeepCopyInto(*out)
+		}
+	}
+	if in.CompletionTime != nil {
+		in, out := &in.CompletionTime, &out.CompletionTime
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(meta_v1.Time)
+			(*in).DeepCopyInto(*out)
+		}
+	}
 	if in.StepStates != nil {
 		in, out := &in.StepStates, &out.StepStates
 		*out = make([]v1.ContainerState, len(*in))
