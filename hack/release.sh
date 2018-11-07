@@ -22,25 +22,8 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 readonly BUILD_RELEASE_GCS
 readonly BUILD_RELEASE_GCR
 
-# Location of the base image for creds-init and git images
-readonly BUILD_BASE_GCR="${BUILD_RELEASE_GCR}/github.com/knative/build/build-base"
-
 # Local generated yaml file
 readonly OUTPUT_YAML=release.yaml
-
-# Script entry point
-
-initialize $@
-
-set -o errexit
-set -o pipefail
-
-run_validation_tests ./test/presubmit-tests.sh
-
-banner "Building the release"
-
-# Build the base image for creds-init and git images.
-docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
 
 # Set the repository
 export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
@@ -49,14 +32,31 @@ export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 export K8S_USER_OVERRIDE=USER_NOT_SET
 export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
+# Script entry point
+
+initialize $@
+
+set -o errexit
+set -o pipefail
+
+# Location of the base image for creds-init and git images
+readonly BUILD_BASE_GCR="${KO_DOCKER_REPO}/github.com/knative/build/build-base"
+
+run_validation_tests ./test/presubmit-tests.sh
+
+banner "Building the release"
+
+echo "- Destination GCR: ${KO_DOCKER_REPO}"
 if (( PUBLISH_RELEASE )); then
-  echo "- Destination GCR: ${BUILD_RELEASE_GCR}"
   echo "- Destination GCS: ${BUILD_RELEASE_GCS}"
 fi
 
+# Build the base image for creds-init and git images.
+docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
+
 echo "Building build-crd"
 ko resolve ${KO_FLAGS} -f config/ > ${OUTPUT_YAML}
-tag_images_in_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCR} ${TAG}
+tag_images_in_yaml ${OUTPUT_YAML} ${KO_DOCKER_REPO} ${TAG}
 
 echo "New release built successfully"
 
@@ -71,7 +71,7 @@ docker push ${BUILD_BASE_GCR}
 echo "Publishing ${OUTPUT_YAML}"
 publish_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCS} ${TAG}
 
-branch_release "Knative Build" ${OUTPUT_YAML}
+branch_release "Knative Build" "${OUTPUT_YAML}"
 
 echo "New release published successfully"
 
