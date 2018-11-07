@@ -317,7 +317,7 @@ func TestBasicFlows(t *testing.T) {
 			t.Errorf("error fetching build: %v", err)
 		}
 		// Update status to current time
-		first.Status.StartTime = metav1.Now()
+		first.Status.StartTime = &metav1.Time{time.Now()}
 
 		if builder.IsDone(&first.Status) {
 			t.Errorf("First IsDone(%d); wanted not done, got done.", idx)
@@ -550,10 +550,7 @@ func TestRunController(t *testing.T) {
 		t.Errorf("error creating build: %v", err)
 	}
 
-	// Ignore build start time when comparing
-	var ignoreTime = cmpopts.IgnoreFields(v1alpha1.Build{}.Status.StartTime.Time)
-
-	if d := cmp.Diff(b, build, ignoreTime); d != "" {
+	if d := cmp.Diff(b, build); d != "" {
 		t.Errorf("Build mismatch; diff: %s; got %v; wanted: %v", d, b, build)
 	}
 

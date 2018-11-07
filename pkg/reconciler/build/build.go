@@ -19,6 +19,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/builder"
@@ -172,7 +173,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 				Message: timeoutMsg,
 			})
 			// update build completed time
-			build.Status.CompletionTime = metav1.Now()
+			build.Status.CompletionTime = &metav1.Time{time.Now()}
 
 			if _, err := c.updateStatus(build); err != nil {
 				c.Logger.Errorf("Failed to update status for pod: %v", err)
