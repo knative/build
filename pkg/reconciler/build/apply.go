@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package builder provides common methods for Builder implementations.
-package builder
+package build
 
 import (
 	"fmt"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // ApplyTemplate applies the values in the template to the build, and replaces

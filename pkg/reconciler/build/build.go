@@ -215,7 +215,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			}
 		}
 	}
-	build, err = builder.ApplyTemplate(build, tmpl)
+	build, err = ApplyTemplate(build, tmpl)
 	if err != nil {
 		return err
 	}
