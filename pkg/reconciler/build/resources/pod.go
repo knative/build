@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
@@ -361,67 +360,4 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			Affinity:           build.Spec.Affinity,
 		},
 	}, nil
-}
-
-func isImplicitEnvVar(ev corev1.EnvVar) bool {
-	for _, iev := range implicitEnvVars {
-		if ev.Name == iev.Name {
-			return true
-		}
-	}
-	return false
-}
-
-func filterImplicitEnvVars(evs []corev1.EnvVar) []corev1.EnvVar {
-	var envs []corev1.EnvVar
-	for _, ev := range evs {
-		if isImplicitEnvVar(ev) {
-			continue
-		}
-		envs = append(envs, ev)
-	}
-	return envs
-}
-
-func isImplicitVolumeMount(vm corev1.VolumeMount) bool {
-	for _, ivm := range implicitVolumeMounts {
-		if vm.Name == ivm.Name {
-			return true
-		}
-	}
-	return false
-}
-
-func filterImplicitVolumeMounts(vms []corev1.VolumeMount) []corev1.VolumeMount {
-	var volumes []corev1.VolumeMount
-	for _, vm := range vms {
-		if isImplicitVolumeMount(vm) {
-			continue
-		}
-		volumes = append(volumes, vm)
-	}
-	return volumes
-}
-
-func isImplicitVolume(v corev1.Volume) bool {
-	for _, iv := range implicitVolumes {
-		if v.Name == iv.Name {
-			return true
-		}
-	}
-	if strings.HasPrefix(v.Name, "secret-volume-") {
-		return true
-	}
-	return false
-}
-
-func filterImplicitVolumes(vs []corev1.Volume) []corev1.Volume {
-	var volumes []corev1.Volume
-	for _, v := range vs {
-		if isImplicitVolume(v) {
-			continue
-		}
-		volumes = append(volumes, v)
-	}
-	return volumes
 }
