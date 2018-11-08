@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -105,20 +106,36 @@ var (
 )
 
 // TODO(mattmoor): Should we move this somewhere common, because of the flag?
-func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
+func gitToContainer(source v1alpha1.SourceSpec, index int) (*corev1.Container, error) {
+	git := source.Git
 	if git.Url == "" {
 		return nil, validation.NewError("MissingUrl", "git sources are expected to specify a Url, got: %v", git)
 	}
 	if git.Revision == "" {
 		return nil, validation.NewError("MissingRevision", "git sources are expected to specify a Revision, got: %v", git)
 	}
+
+	args := []string{"-url", git.Url,
+		"-revision", git.Revision,
+	}
+
+	if source.TargetPath != "" {
+		args = append(args, []string{"-path", source.TargetPath}...)
+	}
+
+	containerName := initContainerPrefix + gitSource + "-"
+
+	// update container name to suffix source name
+	if source.Name != "" {
+		containerName = containerName + source.Name
+	} else {
+		containerName = containerName + strconv.Itoa(index)
+	}
+
 	return &corev1.Container{
-		Name:  initContainerPrefix + gitSource,
-		Image: *gitImage,
-		Args: []string{
-			"-url", git.Url,
-			"-revision", git.Revision,
-		},
+		Name:         containerName,
+		Image:        *gitImage,
+		Args:         args,
 		VolumeMounts: implicitVolumeMounts,
 		WorkingDir:   workspaceDir,
 		Env:          implicitEnvVars,
@@ -126,29 +143,64 @@ func gitToContainer(git *v1alpha1.GitSourceSpec) (*corev1.Container, error) {
 }
 
 func containerToGit(git corev1.Container) (*v1alpha1.SourceSpec, error) {
+	// git args are expected to be in this order "--url url --revision revision (optional)--path targetPath ""
+
 	if git.Image != *gitImage {
 		return nil, fmt.Errorf("Unrecognized git source image: %v", git.Image)
 	}
 	if len(git.Args) < 3 {
 		return nil, fmt.Errorf("Unexpectedly few arguments to git source container: %v", git.Args)
 	}
+
+	name := strings.TrimPrefix(git.Name, gitSource+"-")
+
+	// undo the suffix of index if name is empty
+	if _, err := strconv.Atoi(name); err == nil {
+		name = ""
+	}
+
+	var path string
+	// if `--path ` is set in args extract targetpath variable
+	if len(git.Args) == 6 {
+		path = git.Args[5]
+	}
+
 	// Now undo what we did above
 	return &v1alpha1.SourceSpec{
+		Name: name,
 		Git: &v1alpha1.GitSourceSpec{
 			Url:      git.Args[1],
 			Revision: git.Args[3],
 		},
+		TargetPath: path,
 	}, nil
 }
 
-func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
+func gcsToContainer(source v1alpha1.SourceSpec, index int) (*corev1.Container, error) {
+	gcs := source.GCS
 	if gcs.Location == "" {
 		return nil, validation.NewError("MissingLocation", "gcs sources are expected to specify a Location, got: %v", gcs)
 	}
+	args := []string{"--type", string(gcs.Type), "--location", gcs.Location}
+	// dest_dir is the destination directory for GCS files to be copies"
+	if source.TargetPath != "" {
+		args = append(args, "--dest_dir", filepath.Join(workspaceDir, source.TargetPath))
+	}
+
+	// source name is empty then use `build-step-gcs-source` name
+	containerName := initContainerPrefix + gcsSource + "-"
+
+	// update container name to include `name` as suffix
+	if source.Name != "" {
+		containerName = containerName + source.Name
+	} else {
+		containerName = containerName + strconv.Itoa(index)
+	}
+
 	return &corev1.Container{
-		Name:         initContainerPrefix + gcsSource,
+		Name:         containerName,
 		Image:        *gcsFetcherImage,
-		Args:         []string{"--type", string(gcs.Type), "--location", gcs.Location},
+		Args:         args,
 		VolumeMounts: implicitVolumeMounts,
 		WorkingDir:   workspaceDir,
 		Env:          implicitEnvVars,
@@ -156,7 +208,7 @@ func gcsToContainer(gcs *v1alpha1.GCSSourceSpec) (*corev1.Container, error) {
 }
 
 func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
-	var sourceType, location string
+	var sourceType, location, name, path string
 	for i, a := range source.Args {
 		if a == "--type" && i < len(source.Args) {
 			sourceType = source.Args[i+1]
@@ -164,28 +216,59 @@ func containerToGCS(source corev1.Container) (*v1alpha1.SourceSpec, error) {
 		if a == "--location" && i < len(source.Args) {
 			location = source.Args[i+1]
 		}
+		if a == "--dest_dir" && i < len(source.Args) {
+			path = strings.TrimPrefix(source.Args[i+1], workspaceDir+"/")
+		}
 	}
+	// Undo the suffixing to extract source name
+	name = strings.TrimPrefix(source.Name, gcsSource+"-")
+
+	// undo the suffix of index if name is integer
+	if _, err := strconv.Atoi(name); err == nil {
+		name = ""
+	}
+
 	return &v1alpha1.SourceSpec{
+		Name: name,
 		GCS: &v1alpha1.GCSSourceSpec{
 			Type:     v1alpha1.GCSSourceType(sourceType),
 			Location: location,
 		},
+		TargetPath: path,
 	}, nil
 }
 
-func customToContainer(source *corev1.Container) (*corev1.Container, error) {
+func customToContainer(source *corev1.Container, name string) (*corev1.Container, error) {
 	if source.Name != "" {
 		return nil, validation.NewError("OmitName", "custom source containers are expected to omit Name, got: %v", source.Name)
 	}
 	custom := source.DeepCopy()
-	custom.Name = customSource
+
+	// source name is empty then use `custom-source` name
+	if name == "" {
+		name = customSource
+	} else {
+		name = customSource + "-" + name
+	}
+	custom.Name = name
 	return custom, nil
 }
 
 func containerToCustom(custom corev1.Container) (*v1alpha1.SourceSpec, error) {
 	c := custom.DeepCopy()
+	name := c.Name
 	c.Name = ""
-	return &v1alpha1.SourceSpec{Custom: c}, nil
+
+	// Undo the suffixing to extract source name
+	if name != customSource {
+		name = strings.TrimPrefix(name, customSource+"-")
+	} else {
+		name = ""
+	}
+	return &v1alpha1.SourceSpec{
+		Name:   name,
+		Custom: c,
+	}, nil
 }
 
 func makeCredentialInitializer(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Container, []corev1.Volume, error) {
@@ -257,31 +340,40 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 
 	initContainers := []corev1.Container{*cred}
-	workspaceSubPath := ""
+	var sources []v1alpha1.SourceSpec
+	// if source is present convert into sources
 	if source := build.Spec.Source; source != nil {
+		sources = []v1alpha1.SourceSpec{*source}
+	}
+	for _, source := range build.Spec.Sources {
+		sources = append(sources, source)
+	}
+	workspaceSubPath := ""
+
+	for i, source := range sources {
 		switch {
 		case source.Git != nil:
-			git, err := gitToContainer(source.Git)
+			git, err := gitToContainer(source, i)
 			if err != nil {
 				return nil, err
 			}
 			initContainers = append(initContainers, *git)
 		case source.GCS != nil:
-			gcs, err := gcsToContainer(source.GCS)
+			gcs, err := gcsToContainer(source, i)
 			if err != nil {
 				return nil, err
 			}
 			initContainers = append(initContainers, *gcs)
 		case source.Custom != nil:
-			cust, err := customToContainer(source.Custom)
+			cust, err := customToContainer(source.Custom, source.Name)
 			if err != nil {
 				return nil, err
 			}
 			// Prepend the custom container to the steps, to be augmented later with env, volume mounts, etc.
 			build.Spec.Steps = append([]corev1.Container{*cust}, build.Spec.Steps...)
 		}
-
-		workspaceSubPath = build.Spec.Source.SubPath
+		// webhook validation checks that only one source has subPath defined
+		workspaceSubPath = source.SubPath
 	}
 
 	for i, step := range build.Spec.Steps {
@@ -317,7 +409,6 @@ func FromCRD(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 
 		initContainers = append(initContainers, step)
 	}
-
 	// Add our implicit volumes and any volumes needed for secrets to the explicitly
 	// declared user volumes.
 	volumes := append(build.Spec.Volumes, implicitVolumes...)
@@ -464,25 +555,28 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 		steps = steps[1:]
 	}
 
-	var scm *v1alpha1.SourceSpec
-	if conv, ok := containerToSourceMap[steps[0].Name]; ok {
-		src, err := conv(steps[0])
-		if err != nil {
-			return nil, err
+	var scm []v1alpha1.SourceSpec
+	for _, step := range steps {
+		if conv := stepNameConversionToSource(step.Name); conv != nil {
+			src, err := conv(step)
+
+			if err != nil {
+				return nil, err
+			}
+			// The first init container is actually a source step.  Convert
+			// it to our source spec and pop it off the list of steps.
+			if subPath != "" {
+				src.SubPath = subPath
+			}
+			scm = append(scm, *src)
+			steps = steps[1:]
 		}
-		// The first init container is actually a source step.  Convert
-		// it to our source spec and pop it off the list of steps.
-		scm = src
-		if subPath != "" {
-			scm.SubPath = subPath
-		}
-		steps = steps[1:]
 	}
 
 	return &v1alpha1.Build{
 		// TODO(mattmoor): What should we do for ObjectMeta stuff?
 		Spec: v1alpha1.BuildSpec{
-			Source:             scm,
+			Sources:            scm,
 			Steps:              steps,
 			ServiceAccountName: podSpec.ServiceAccountName,
 			Volumes:            volumes,
@@ -490,4 +584,14 @@ func ToCRD(pod *corev1.Pod) (*v1alpha1.Build, error) {
 			Affinity:           podSpec.Affinity,
 		},
 	}, nil
+}
+
+// check stepname matches prefix in containerToSourceMap key
+func stepNameConversionToSource(stepName string) func(corev1.Container) (*v1alpha1.SourceSpec, error) {
+	for key, conv := range containerToSourceMap {
+		if strings.HasPrefix(stepName, key) {
+			return conv
+		}
+	}
+	return nil
 }

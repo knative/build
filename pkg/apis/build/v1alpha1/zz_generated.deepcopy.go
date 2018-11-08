@@ -116,6 +116,13 @@ func (in *BuildSpec) DeepCopyInto(out *BuildSpec) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
+	if in.Sources != nil {
+		in, out := &in.Sources, &out.Sources
+		*out = make([]SourceSpec, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Steps != nil {
 		in, out := &in.Steps, &out.Steps
 		*out = make([]v1.Container, len(*in))

@@ -61,6 +61,10 @@ type BuildSpec struct {
 	// +optional
 	Source *SourceSpec `json:"source,omitempty"`
 
+	// Sources specifies the inputs to the build.
+	// +optional
+	Sources []SourceSpec `json:"sources,omitempty"`
+
 	// Steps are the steps of the build; each step is run sequentially with the
 	// source mounted into /workspace.
 	// +optional
@@ -162,6 +166,20 @@ type SourceSpec struct {
 	// files not in the SubPath.)
 	// +optional
 	SubPath string `json:"subPath,omitempty"`
+
+	// Name is the name of source. This field is used to uniquely identify the
+	// source init containers
+	// Restrictions on the allowed charatcers
+	// Must be a basename (no /)
+	// Must be a valid DNS name (only alphanumeric characters, no _)
+	// https://tools.ietf.org/html/rfc1123#section-2
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// TargetPath is the path in workspace directory where the source will be copied.
+	// TargetPath is optional and if its not set source will be copied under workspace.
+	// TargetPath should not be set for custom source.
+	TargetPath string `json:"targetPath,omitempty"`
 }
 
 // GitSourceSpec describes a Git repo source input to the Build.
