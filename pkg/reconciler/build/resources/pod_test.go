@@ -27,115 +27,12 @@ import (
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/buildtest"
 )
 
 var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
 var nopContainer = corev1.Container{
 	Name:  "nop",
 	Image: *nopImage,
-}
-
-func read2CRD(f string) (*v1alpha1.Build, error) {
-	var bs v1alpha1.Build
-	if err := buildtest.DataAs(f, &bs.Spec); err != nil {
-		return nil, err
-	}
-	return &bs, nil
-}
-
-func TestRoundtrip(t *testing.T) {
-	inputs := []string{
-		"testdata/helloworld.yaml",
-		"testdata/two-step.yaml",
-		"testdata/env.yaml",
-		"testdata/env-valuefrom.yaml",
-		"testdata/workingdir.yaml",
-		"testdata/workspace.yaml",
-		"testdata/resources.yaml",
-		"testdata/security-context.yaml",
-		"testdata/custom-source.yaml",
-		"testdata/volumes.yaml",
-
-		"testdata/nodeselector.yaml",
-
-		"testdata/git-revision.yaml",
-		"testdata/git-subpath.yaml",
-		"testdata/gcs-archive.yaml",
-		"testdata/gcs-archive-sources.yaml",
-		"testdata/gcs-manifest.yaml",
-
-		"testdata/custom-git-sources.yaml",
-		"testdata/git-sources.yaml",
-		"testdata/custom-sources.yaml",
-	}
-
-	for _, in := range inputs {
-		t.Run(in, func(t *testing.T) {
-			og, err := read2CRD(in)
-			if err != nil {
-				t.Fatalf("Unexpected error in read2CRD(%q): %v", in, err)
-			}
-			cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Name: "default"},
-				Secrets: []corev1.ObjectReference{{
-					Name: "multi-creds",
-				}},
-			}, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "multi-creds",
-					Annotations: map[string]string{"build.knative.dev/docker-0": "https://us.gcr.io",
-						"build.knative.dev/docker-1": "https://docker.io",
-						"build.knative.dev/git-0":    "github.com",
-						"build.knative.dev/git-1":    "gitlab.com",
-					}},
-				Type: "kubernetes.io/basic-auth",
-				Data: map[string][]byte{
-					"username": []byte("foo"),
-					"password": []byte("BestEver"),
-				},
-			})
-
-			if og.Spec.Source != nil {
-				og.Spec.Sources = append(og.Spec.Sources, *og.Spec.Source)
-				og.Spec.Source = nil
-			}
-
-			p, err := MakePod(og, cs)
-			if err != nil {
-				t.Fatalf("Unable to convert %q from CRD: %v", in, err)
-			}
-			// Verify that secrets are loaded correctly.
-			if p.Spec.ServiceAccountName != "" {
-				for _, vol := range p.Spec.Volumes {
-					if vol.Name == "secret-volume-multi-creds" {
-						if vol.Secret.SecretName != "multi-creds" {
-							t.Errorf("Expected multi-creds to be mounted in Pod %v", p.Spec)
-						}
-					}
-				}
-				expected := map[string]int{"https://us.gcr.io": 1, "https://docker.io": 1, "github.com": 1, "gitlab.com": 1}
-				for _, a := range p.Spec.InitContainers[0].Args {
-					expected[a] -= 1
-				}
-				for k, c := range expected {
-					if c > 0 {
-						t.Errorf("Expected arg related to %s in args, got %v", k, p.Spec.InitContainers[0].Args)
-					}
-				}
-			}
-
-			// Verify that volumeMounts are mounted at a unique path.
-			for i, s := range p.Spec.InitContainers {
-				seen := map[string]struct{}{}
-				for _, vm := range s.VolumeMounts {
-					if _, found := seen[vm.MountPath]; found {
-						t.Errorf("Step %d had duplicate volumeMount path %q", i, vm.MountPath)
-					}
-					seen[vm.MountPath] = struct{}{}
-				}
-			}
-		})
-	}
 }
 
 func TestMakePod(t *testing.T) {
@@ -152,6 +49,15 @@ func TestMakePod(t *testing.T) {
 			implicitVolumeMountsWithSubPath = append(implicitVolumeMountsWithSubPath, vm)
 		}
 	}
+
+	implicitVolumeMountsWithSecrets := append(implicitVolumeMounts, corev1.VolumeMount{
+		Name:      "secret-volume-multi-creds",
+		MountPath: "/var/build-secrets/multi-creds",
+	})
+	implicitVolumesWithSecrets := append(implicitVolumes, corev1.Volume{
+		Name:         "secret-volume-multi-creds",
+		VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "multi-creds"}},
+	})
 
 	for _, c := range []struct {
 		desc    string
@@ -487,11 +393,64 @@ func TestMakePod(t *testing.T) {
 			Containers: []corev1.Container{nopContainer},
 			Volumes:    implicitVolumes,
 		},
+	}, {
+		desc: "with-service-account",
+		b: v1alpha1.BuildSpec{
+			ServiceAccountName: "service-account",
+			Steps: []corev1.Container{{
+				Name:  "name",
+				Image: "image",
+			}},
+		},
+		want: &corev1.PodSpec{
+			ServiceAccountName: "service-account",
+			RestartPolicy:      corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:  initContainerPrefix + credsInit,
+				Image: *credsImage,
+				Args: []string{
+					"-basic-docker=multi-creds=https://docker.io",
+					"-basic-docker=multi-creds=https://us.gcr.io",
+					"-basic-git=multi-creds=github.com",
+					"-basic-git=multi-creds=gitlab.com",
+				},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMountsWithSecrets,
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-name",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes:    implicitVolumesWithSecrets,
+		},
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
-			cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{Name: "default"},
-			})
+			cs := fakek8s.NewSimpleClientset(
+				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "service-account"},
+					Secrets: []corev1.ObjectReference{{
+						Name: "multi-creds",
+					}},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "multi-creds",
+						Annotations: map[string]string{
+							"build.knative.dev/docker-0": "https://us.gcr.io",
+							"build.knative.dev/docker-1": "https://docker.io",
+							"build.knative.dev/git-0":    "github.com",
+							"build.knative.dev/git-1":    "gitlab.com",
+						}},
+					Type: "kubernetes.io/basic-auth",
+					Data: map[string][]byte{
+						"username": []byte("foo"),
+						"password": []byte("BestEver"),
+					},
+				},
+			)
 			got, err := MakePod(&v1alpha1.Build{Spec: c.b}, cs)
 			if err != c.wantErr {
 				t.Fatalf("MakePod: %v", err)
