@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/knative/build/pkg/builder/cluster/convert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +32,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildercommon "github.com/knative/build/pkg/builder"
+	"github.com/knative/build/pkg/reconciler/build/resources"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
@@ -204,12 +204,12 @@ func (b *builder) Builder() v1alpha1.BuildProvider {
 }
 
 func (b *builder) Validate(u *v1alpha1.Build) error {
-	_, err := convert.FromCRD(u, b.kubeclient)
+	_, err := resources.MakePod(u, b.kubeclient)
 	return err
 }
 
 func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) {
-	bld, err := convert.FromCRD(u, b.kubeclient)
+	bld, err := resources.MakePod(u, b.kubeclient)
 	if err != nil {
 		return nil, err
 	}
