@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package convert
+package resources
 
 import (
 	"testing"
@@ -31,7 +31,6 @@ import (
 )
 
 var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
-var ignoreSources = cmpopts.IgnoreTypes([]v1alpha1.SourceSpec{})
 var nopContainer = corev1.Container{
 	Name:  "nop",
 	Image: *nopImage,
@@ -101,7 +100,7 @@ func TestRoundtrip(t *testing.T) {
 				og.Spec.Source = nil
 			}
 
-			p, err := FromCRD(og, cs)
+			p, err := MakePod(og, cs)
 			if err != nil {
 				t.Fatalf("Unable to convert %q from CRD: %v", in, err)
 			}
@@ -135,56 +134,11 @@ func TestRoundtrip(t *testing.T) {
 					seen[vm.MountPath] = struct{}{}
 				}
 			}
-
-			// Verify that reverse transformation works.
-			b, err := ToCRD(p)
-			if err != nil {
-				t.Fatalf("Unable to convert %q to CRD: %v", in, err)
-			}
-			// compare sources separately as the order can be mingled.
-			if diff := compareSources(og.Spec.Sources, b.Spec.Sources); diff != "" {
-				t.Errorf("Error comparing sources : og %#v build %#v \n diff %s", og.Spec.Sources, b.Spec.Sources, diff)
-			}
-
-			if d := cmp.Diff(og, b, ignorePrivateResourceFields, ignoreSources); d != "" {
-				t.Errorf("build spec %#v og %#v Diff:\n%s for input %s", b.Spec.Sources, og.Spec.Sources, d, in)
-			}
 		})
 	}
 }
 
-// compareSources takes into account of source without names checkMap
-// tracks list of sources under a key. If matching key is not present then
-// Cmp diff is returned to diagnoze the test error better
-func compareSources(og, b []v1alpha1.SourceSpec) string {
-	checkMap := make(map[string][]v1alpha1.SourceSpec)
-
-	for _, source := range og {
-		key := source.Name + source.TargetPath
-		if val, ok := checkMap[key]; !ok {
-			checkMap[key] = []v1alpha1.SourceSpec{source}
-		} else {
-			checkMap[key] = append(val, source)
-		}
-	}
-
-	for _, source := range b {
-		key := source.Name + source.TargetPath
-		valSources, ok := checkMap[key]
-		if ok {
-			for _, s1 := range valSources {
-				if d := cmp.Diff(s1, source); d != "" {
-					return d
-				}
-			}
-		} else {
-			return cmp.Diff(og, b)
-		}
-	}
-	return ""
-}
-
-func TestFromCRD(t *testing.T) {
+func TestMakePod(t *testing.T) {
 	subPath := "subpath"
 	implicitVolumeMountsWithSubPath := []corev1.VolumeMount{}
 	for _, vm := range implicitVolumeMounts {
@@ -538,9 +492,9 @@ func TestFromCRD(t *testing.T) {
 			cs := fakek8s.NewSimpleClientset(&corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{Name: "default"},
 			})
-			got, err := FromCRD(&v1alpha1.Build{Spec: c.b}, cs)
+			got, err := MakePod(&v1alpha1.Build{Spec: c.b}, cs)
 			if err != c.wantErr {
-				t.Fatalf("FromCRD: %v", err)
+				t.Fatalf("MakePod: %v", err)
 			}
 
 			if d := cmp.Diff(&got.Spec, c.want, ignorePrivateResourceFields); d != "" {
