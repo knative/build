@@ -17,16 +17,9 @@ limitations under the License.
 package controller
 
 import (
-	"go.uber.org/zap"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/knative/build/pkg/builder"
-
-	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
-	informers "github.com/knative/build/pkg/client/informers/externalversions"
 )
 
 func init() {
@@ -39,13 +32,3 @@ func init() {
 type Interface interface {
 	Run(threadiness int, stopCh <-chan struct{}) error
 }
-
-// Constructor defines the method signature for a controller constructor.
-type Constructor func(
-	builder.Interface,
-	kubernetes.Interface,
-	clientset.Interface,
-	kubeinformers.SharedInformerFactory,
-	informers.SharedInformerFactory,
-	*zap.SugaredLogger,
-) Interface

@@ -22,12 +22,12 @@ import (
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/builder"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
 	"github.com/knative/build/pkg/reconciler"
+	"github.com/knative/build/pkg/reconciler/build/resources"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
@@ -54,8 +55,6 @@ type Reconciler struct {
 	buildsLister                listers.BuildLister
 	buildTemplatesLister        listers.BuildTemplateLister
 	clusterBuildTemplatesLister listers.ClusterBuildTemplateLister
-
-	builder builder.Interface
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -78,11 +77,11 @@ func init() {
 func NewController(
 	logger *zap.SugaredLogger,
 	kubeclientset kubernetes.Interface,
+	kubeinformers kubeinformers.SharedInformerFactory,
 	buildclientset clientset.Interface,
 	buildInformer informers.BuildInformer,
 	buildTemplateInformer informers.BuildTemplateInformer,
 	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
-	builder builder.Interface,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
@@ -94,7 +93,6 @@ func NewController(
 		buildsLister:                buildInformer.Lister(),
 		buildTemplatesLister:        buildTemplateInformer.Lister(),
 		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
-		builder:                     builder,
 		Logger:                      logger,
 	}
 	impl := controller.NewImpl(r, logger, "Builds",
@@ -107,8 +105,13 @@ func NewController(
 		UpdateFunc: controller.PassNew(impl.Enqueue),
 	})
 
-	// TODO(mattmoor): Set up a Pod informer, so that Pod updates
-	// trigger Build reconciliations.
+	// Set up a Pod informer, so that Pod updates trigger Build
+	// reconciliations.
+	kubeinformers.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    r.addPodEvent,
+		UpdateFunc: r.updatePodEvent,
+		DeleteFunc: r.deletePodEvent,
+	})
 
 	return impl
 }
@@ -144,56 +147,103 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// If the build's done, then ignore it.
-	if builder.IsDone(&build.Status) {
+	if isDone(&build.Status) {
 		return nil
 	}
 
-	// If the build is not done, but is in progress (has an operation), then asynchronously wait for it.
-	// TODO(mattmoor): Check whether the Builder matches the kind of our c.builder.
-	if build.Status.Builder != "" {
-		op, err := c.builder.OperationFromStatus(&build.Status)
-		if err != nil {
+	// If the build is ongoing, check if it's timed out.
+	if build.Status.Cluster != nil && build.Status.Cluster.PodName != "" {
+		// Check if build has timed out
+		return c.checkTimeout(build)
+	}
+
+	// If the build hasn't started yet, create a Pod for it and record that
+	// pod's name in the build status.
+	p, err := c.startPodForBuild(build)
+	if err != nil {
+		build.Status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Reason:  "BuildExecuteFailed",
+			Message: err.Error(),
+		})
+		if err := c.updateStatus(build); err != nil {
 			return err
 		}
-
-		// Check if build has timed out
-		if builder.IsTimeout(&build.Status, build.Spec.Timeout) {
-			//cleanup operation and update status
-			timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout.Duration.String())
-
-			if err := op.Terminate(); err != nil {
-				c.Logger.Errorf("Failed to terminate pod: %v", err)
-				return err
-			}
-
-			build.Status.SetCondition(&duckv1alpha1.Condition{
-				Type:    v1alpha1.BuildSucceeded,
-				Status:  corev1.ConditionFalse,
-				Reason:  "BuildTimeout",
-				Message: timeoutMsg,
-			})
-			// update build completed time
-			build.Status.CompletionTime = &metav1.Time{time.Now()}
-
-			if _, err := c.updateStatus(build); err != nil {
-				c.Logger.Errorf("Failed to update status for pod: %v", err)
-				return err
-			}
-
-			c.Logger.Errorf("Timeout: %v", timeoutMsg)
-			return nil
-		}
-
-		// if not timed out then wait async
-		go c.waitForOperation(build, op)
-		return nil
+		return err
 	}
 
-	// If the build hasn't even started, then start it and record the operation in our status.
-	// Note that by recording our status, we will trigger a reconciliation, so the wait above
-	// will kick in.
-	build.Status.Builder = c.builder.Builder()
+	// If Pod creation was successful, update the Build's status.
+	bs := buildStatusFromPod(p, build)
+	bs.StartTime = &metav1.Time{time.Now()}
+	build.Status = bs
+	return c.updateStatus(build)
+}
+
+func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
+	newb, err := c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Get(u.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	newb.Status = u.Status
+
+	// Until #38113 is merged, we must use Update instead of UpdateStatus to
+	// update the Status block of the Build resource. UpdateStatus will not
+	// allow changes to the Spec of the resource, which is ideal for ensuring
+	// nothing other than resource status has been updated.
+	_, err = c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Update(newb)
+	return err
+}
+
+// addPodEvent handles the informer's AddFunc event for Pods.
+func (c *Reconciler) addPodEvent(obj interface{}) {
+	p, ok := obj.(*corev1.Pod)
+	if !ok {
+		return
+	}
+	ownerRef := metav1.GetControllerOf(p)
+
+	// If this object is not owned by a Build, we should not do anything
+	// more with it.
+	if ownerRef == nil || ownerRef.Kind != "Build" {
+		return
+	}
+
+	// Get the build for this pod.
+	buildName := ownerRef.Name
+	build, err := c.buildsLister.Builds(p.Namespace).Get(buildName)
+	if err != nil {
+		c.Logger.Errorf("Error getting build %q for pod %q in namespace %q", buildName, p.Name, p.Namespace)
+		return
+	}
+
+	// Update the build's status from the pod's status.
+	build = build.DeepCopy()
+	build.Status = buildStatusFromPod(p, build)
+	if err := c.updateStatus(build); err != nil {
+		c.Logger.Errorf("Error updating build %q in response to pod event: %v", buildName, err)
+	}
+}
+
+// updatePodEvent handles the informer's UpdateFunc event for Pods.
+func (c *Reconciler) updatePodEvent(old, new interface{}) {
+	c.addPodEvent(new)
+}
+
+// deletePodEvent handles the informer's DeleteFunc event for Pods.
+func (c *Reconciler) deletePodEvent(obj interface{}) {
+	// TODO(mattmoor): If a pod gets deleted and someone's watching, we should propagate our
+	// own error message so that we don't leak a go routine waiting forever.
+	c.Logger.Errorf("NYI: delete event for: %v", obj)
+}
+
+// startPodForBuild starts a new Pod to execute the build.
+//
+// This applies any build template that's specified, and creates the pod.
+func (c *Reconciler) startPodForBuild(build *v1alpha1.Build) (*corev1.Pod, error) {
+	namespace := build.Namespace
 	var tmpl v1alpha1.BuildTemplateInterface
+	var err error
 	if build.Spec.Template != nil {
 		if build.Spec.Template.Kind == v1alpha1.ClusterBuildTemplateKind {
 			tmpl, err = c.clusterBuildTemplatesLister.Get(build.Spec.Template.Name)
@@ -202,7 +252,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 				if errors.IsNotFound(err) {
 					runtime.HandleError(fmt.Errorf("cluster build template %q does not exist", build.Spec.Template.Name))
 				}
-				return err
+				return nil, err
 			}
 		} else {
 			tmpl, err = c.buildTemplatesLister.BuildTemplates(namespace).Get(build.Spec.Template.Name)
@@ -211,68 +261,193 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 				if errors.IsNotFound(err) {
 					runtime.HandleError(fmt.Errorf("build template %q in namespace %q does not exist", build.Spec.Template.Name, namespace))
 				}
-				return err
+				return nil, err
 			}
 		}
 	}
 	build, err = ApplyTemplate(build, tmpl)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// TODO: Validate build except steps+template
-	b, err := c.builder.BuildFromSpec(build)
-	if err != nil {
-		return err
-	}
-	op, err := b.Execute()
-	if err != nil {
-		build.Status.SetCondition(&duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionFalse,
-			Reason:  "BuildExecuteFailed",
-			Message: err.Error(),
-		})
 
-		if _, err := c.updateStatus(build); err != nil {
-			return err
-		}
-		return err
-	}
-	if err := op.Checkpoint(build, &build.Status); err != nil {
-		return err
-	}
-	build, err = c.updateStatus(build)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Reconciler) waitForOperation(build *v1alpha1.Build, op builder.Operation) error {
-	status, err := op.Wait()
-	if err != nil {
-		c.Logger.Errorf("Error while waiting for operation: %v", err)
-		return err
-	}
-	build.Status = *status
-	if _, err := c.updateStatus(build); err != nil {
-		c.Logger.Errorf("Error updating build status: %v", err)
-		return err
-	}
-	return nil
-}
-
-func (c *Reconciler) updateStatus(u *v1alpha1.Build) (*v1alpha1.Build, error) {
-	buildClient := c.buildclientset.BuildV1alpha1().Builds(u.Namespace)
-	newu, err := buildClient.Get(u.Name, metav1.GetOptions{})
+	p, err := resources.MakePod(build, c.kubeclientset)
 	if err != nil {
 		return nil, err
 	}
-	newu.Status = u.Status
+	return c.kubeclientset.CoreV1().Pods(p.Namespace).Create(p)
+}
 
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Build resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	return buildClient.Update(newu)
+func (c *Reconciler) terminatePod(namespace, name string) error {
+	if err := c.kubeclientset.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+// TODO: move to pod.go
+func buildStatusFromPod(p *corev1.Pod, build *v1alpha1.Build) v1alpha1.BuildStatus {
+	status := build.Status.DeepCopy()
+	status.Builder = v1alpha1.ClusterBuildProvider
+	status.Cluster = &v1alpha1.ClusterSpec{
+		Namespace: p.Namespace,
+		PodName:   p.Name,
+	}
+	status.StepStates = nil
+	status.StepsCompleted = nil
+
+	status.SetCondition(&duckv1alpha1.Condition{
+		Type:   v1alpha1.BuildSucceeded,
+		Status: corev1.ConditionUnknown,
+		Reason: "Building",
+	})
+
+	// Always ignore the first pod status, which is creds-init.
+	skip := 1
+	if build.Spec.Source != nil {
+		// If the build specifies source, skip another container status, which
+		// is the source-fetching container.
+		skip++
+	}
+	// TODO: Handle multiple sources here.
+	if skip <= len(p.Status.InitContainerStatuses) {
+		for _, s := range p.Status.InitContainerStatuses[skip:] {
+			if s.State.Terminated != nil {
+				status.StepsCompleted = append(status.StepsCompleted, s.Name)
+			}
+			status.StepStates = append(status.StepStates, s.State)
+		}
+	}
+
+	switch p.Status.Phase {
+	case corev1.PodRunning:
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:   v1alpha1.BuildSucceeded,
+			Status: corev1.ConditionUnknown,
+			Reason: "Building",
+		})
+	case corev1.PodFailed:
+		msg := getFailureMessage(p)
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Message: msg,
+		})
+	case corev1.PodPending:
+		msg := getWaitingMessage(p)
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionUnknown,
+			Reason:  "Pending",
+			Message: msg,
+		})
+	case corev1.PodSucceeded:
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:   v1alpha1.BuildSucceeded,
+			Status: corev1.ConditionTrue,
+		})
+	}
+	return *status
+}
+
+func getWaitingMessage(pod *corev1.Pod) string {
+	// First, try to surface reason for pending/unknown about the actual build step.
+	for _, status := range pod.Status.InitContainerStatuses {
+		wait := status.State.Waiting
+		if wait != nil && wait.Message != "" {
+			return fmt.Sprintf("build step %q is pending with reason %q",
+				status.Name, wait.Message)
+		}
+	}
+	// Try to surface underlying reason by inspecting pod's recent status if condition is not true
+	for i, podStatus := range pod.Status.Conditions {
+		if podStatus.Status != corev1.ConditionTrue {
+			return fmt.Sprintf("pod status %q:%q; message: %q",
+				pod.Status.Conditions[i].Type,
+				pod.Status.Conditions[i].Status,
+				pod.Status.Conditions[i].Message)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	// Lastly fall back on a generic pending message.
+	return "Pending"
+}
+
+func getFailureMessage(pod *corev1.Pod) string {
+	// First, try to surface an error about the actual build step that failed.
+	for _, status := range pod.Status.InitContainerStatuses {
+		term := status.State.Terminated
+		if term != nil && term.ExitCode != 0 {
+			return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
+				status.Name, term.ExitCode, status.ImageID,
+				pod.Namespace, pod.Name, status.Name)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+	// Lastly fall back on a generic error message.
+	return "build failed for unspecified reasons."
+}
+
+// IsDone returns true if the build's status indicates the build is done.
+func isDone(status *v1alpha1.BuildStatus) bool {
+	cond := status.GetCondition(v1alpha1.BuildSucceeded)
+	return cond != nil && cond.Status != corev1.ConditionUnknown
+}
+
+func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
+	namespace := build.Namespace
+	if isTimeout(&build.Status, build.Spec.Timeout) {
+		if err := c.kubeclientset.CoreV1().Pods(namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			c.Logger.Errorf("Failed to terminate pod: %v", err)
+			return err
+		}
+
+		timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout.Duration.String())
+		build.Status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Reason:  "BuildTimeout",
+			Message: timeoutMsg,
+		})
+		// update build completed time
+		build.Status.CompletionTime = &metav1.Time{time.Now()}
+
+		if err := c.updateStatus(build); err != nil {
+			c.Logger.Errorf("Failed to update status for pod: %v", err)
+			return err
+		}
+
+		c.Logger.Errorf("Timeout: %v", timeoutMsg)
+	}
+	return nil
+}
+
+// IsTimeout returns true if the build's execution time is greater than
+// specified build spec timeout.
+func isTimeout(status *v1alpha1.BuildStatus, buildTimeout *metav1.Duration) bool {
+	var timeout time.Duration
+	var defaultTimeout = 10 * time.Minute
+
+	if status == nil {
+		return false
+	}
+
+	if buildTimeout == nil {
+		// Set default timeout to 10 minute if build timeout is not set
+		timeout = defaultTimeout
+	} else {
+		timeout = buildTimeout.Duration
+	}
+
+	// If build has not started timeout, startTime should be zero.
+	if status.StartTime == nil {
+		return false
+	}
+	return time.Since(status.StartTime.Time).Seconds() > timeout.Seconds()
 }

@@ -37,7 +37,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/build/pkg/controller"
@@ -104,11 +103,9 @@ func main() {
 	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 
-	bldr := onclusterbuilder.NewBuilder(kubeClient, kubeInformerFactory, logger)
-
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []controller.Interface{
-		build.NewController(logger, kubeClient, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, bldr),
+		build.NewController(logger, kubeClient, kubeInformerFactory, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
 			cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient,
