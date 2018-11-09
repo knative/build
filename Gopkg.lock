@@ -38,6 +38,14 @@
   version = "v3.2.0"
 
 [[projects]]
+  digest = "1:32598368f409bbee79deb9d43569fcd92b9fb27f39155f5e166b3371217f051f"
+  name = "github.com/evanphx/json-patch"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "72bf35d0ff611848c1dc9df0f976c81192392fa5"
+  version = "v4.1.0"
+
+[[projects]]
   digest = "1:abfe129dc92b16fbf0cc9d6336096a2823151756f62072a700eb10754141b38e"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -210,12 +218,13 @@
   revision = "f0d7bb60956f88d4743f5fea66b5607b96d262c9"
 
 [[projects]]
-  digest = "1:ca2204a7fe0215b921ca315bc24b7449b2c4776b5998152f1ae9b0eae0ca7b76"
+  digest = "1:30457e774f9117d31aac140bed69fa62594f5c99af9932fb4f9fb1c427ffc1df"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
     "apis/duck/v1alpha1",
+    "changeset",
     "configmap",
     "controller",
     "kmeta",
@@ -225,10 +234,11 @@
     "test",
     "test/logging",
     "test/spoof",
+    "test/zipkin",
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "5c809f170b42301a276080f4fd884a30188ca1a5"
+  revision = "088e3f7faf9d7ed0122937f66289cc050d0a78b0"
 
 [[projects]]
   branch = "master"
@@ -295,18 +305,21 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:0a068b4ef25fbfb5988a1dcad677a91bbd469eb6d169d0d86fdfc3810876948b"
+  digest = "1:20725baccf55d49241ea9449e6f46ae0f85c291f76f0b27416a996b345b5f0a6"
   name = "go.opencensus.io"
   packages = [
     ".",
     "internal",
     "internal/tagencoding",
+    "plugin/ochttp",
+    "plugin/ochttp/propagation/b3",
     "stats",
     "stats/internal",
     "stats/view",
     "tag",
     "trace",
     "trace/internal",
+    "trace/propagation",
   ]
   pruneopts = "NUT"
   revision = "7b558058b7cc960667590e5413ef55157b06652e"
