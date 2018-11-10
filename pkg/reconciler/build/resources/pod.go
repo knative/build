@@ -378,7 +378,8 @@ func BuildStatusFromPod(p *corev1.Pod, buildSpec v1alpha1.BuildSpec) v1alpha1.Bu
 		// is the source-fetching container.
 		skip++
 	}
-	// TODO: Handle multiple sources here.
+	// Also skip multiple sourcees specified by the build.
+	skip += len(buildSpec.Sources)
 	if skip <= len(p.Status.InitContainerStatuses) {
 		for _, s := range p.Status.InitContainerStatuses[skip:] {
 			if s.State.Terminated != nil {

@@ -21,12 +21,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
-
-	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 )
 
 var ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
@@ -457,6 +457,138 @@ func TestMakePod(t *testing.T) {
 			}
 
 			if d := cmp.Diff(&got.Spec, c.want, ignorePrivateResourceFields); d != "" {
+				t.Errorf("Diff:\n%s", d)
+			}
+		})
+	}
+}
+
+func TestBuildStatusFromPod(t *testing.T) {
+	for _, c := range []struct {
+		desc      string
+		podStatus corev1.PodStatus
+		buildSpec v1alpha1.BuildSpec
+		want      v1alpha1.BuildStatus
+	}{{
+		desc:      "empty",
+		podStatus: corev1.PodStatus{},
+		buildSpec: v1alpha1.BuildSpec{},
+		want:      v1alpha1.BuildStatus{},
+	}, {
+		desc: "ignore-creds-init",
+		podStatus: corev1.PodStatus{
+			InitContainerStatuses: []corev1.ContainerStatus{{
+				// creds-init; ignored
+			}, {
+				Name: "state-name",
+				State: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{
+						ExitCode: 123,
+					},
+				},
+			}},
+		},
+		buildSpec: v1alpha1.BuildSpec{
+			// no sources.
+		},
+		want: v1alpha1.BuildStatus{
+			StepsCompleted: []string{"state-name"},
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					ExitCode: 123,
+				},
+			}},
+		},
+	}, {
+		desc: "ignore-creds-init-and-source",
+		podStatus: corev1.PodStatus{
+			InitContainerStatuses: []corev1.ContainerStatus{{
+				// creds-init; ignored.
+			}, {
+				// git-init; ignored.
+			}, {
+				Name: "state-name",
+				State: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{
+						ExitCode: 123,
+					},
+				},
+			}},
+		},
+		buildSpec: v1alpha1.BuildSpec{
+			Source: &v1alpha1.SourceSpec{
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "example.com",
+					Revision: "master",
+				},
+			},
+		},
+		want: v1alpha1.BuildStatus{
+			StepsCompleted: []string{"state-name"},
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					ExitCode: 123,
+				},
+			}},
+		},
+	}, {
+		desc: "ignore-creds-init-and-multiple-sources",
+		podStatus: corev1.PodStatus{
+			InitContainerStatuses: []corev1.ContainerStatus{{
+				// creds-init; ignored.
+			}, {
+				// first git-init; ignored.
+			}, {
+				// second git-init; ignored.
+			}, {
+				Name: "state-name",
+				State: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{
+						ExitCode: 123,
+					},
+				},
+			}},
+		},
+		buildSpec: v1alpha1.BuildSpec{
+			Sources: []v1alpha1.SourceSpec{{
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "example.com",
+					Revision: "master",
+				},
+			}, {
+				Git: &v1alpha1.GitSourceSpec{
+					Url:      "yahoo.com",
+					Revision: "so cool",
+				},
+			}},
+		},
+		want: v1alpha1.BuildStatus{
+			StepsCompleted: []string{"state-name"},
+			StepStates: []corev1.ContainerState{{
+				Terminated: &corev1.ContainerStateTerminated{
+					ExitCode: 123,
+				},
+			}},
+		},
+	}} {
+		t.Run(c.desc, func(t *testing.T) {
+			p := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: system.Namespace,
+				},
+				Status: c.podStatus,
+			}
+			got := BuildStatusFromPod(p, c.buildSpec)
+
+			// Common traits, set for test case brevity.
+			c.want.Cluster = &v1alpha1.ClusterSpec{
+				PodName:   "pod",
+				Namespace: system.Namespace,
+			}
+			c.want.Builder = v1alpha1.ClusterBuildProvider
+
+			if d := cmp.Diff(got, c.want); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}
 		})
