@@ -24,6 +24,7 @@ import (
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
@@ -39,7 +40,6 @@ import (
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
-	"github.com/knative/build/pkg/controller"
 	"github.com/knative/build/pkg/reconciler/build"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
@@ -104,7 +104,7 @@ func main() {
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 
 	// Build all of our controllers, with the clients constructed above.
-	controllers := []controller.Interface{
+	controllers := []*controller.Impl{
 		build.NewController(logger, kubeClient, kubeInformerFactory, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
 			cachingClient, clusterBuildTemplateInformer, imageInformer),
