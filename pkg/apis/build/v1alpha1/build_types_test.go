@@ -17,41 +17,20 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
-
-	"github.com/knative/build/pkg/buildtest"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	yaml "gopkg.in/yaml.v2"
 )
-
-const bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"
 
 func TestBuildImplementsConditions(t *testing.T) {
 	if err := duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{}); err != nil {
 		t.Errorf("Expect Build to implement duck verify type: err %#v", err)
-	}
-}
-
-func TestParsing(t *testing.T) {
-	var bs BuildSpec
-	if err := buildtest.DataAs(bazelYAML, &bs); err != nil {
-		t.Fatalf("Unexpected error in buildtest.DataAs(%q, BuildSpec): %v", bazelYAML, err)
-	}
-
-	// Some basic checks on the body.
-	if bs.Source != nil {
-		t.Errorf("want no Source; got %v", bs.Source)
-	}
-	if len(bs.Steps) != 5 {
-		t.Errorf("Wrong len(bs.Steps); wanted 5, got %d", len(bs.Steps))
-	}
-	for _, step := range bs.Steps {
-		if len(step.Args) == 0 {
-			t.Error("want len(args) != 0, got 0")
-		}
 	}
 }
 
@@ -112,4 +91,47 @@ func TestBuildGroupVersionKind(t *testing.T) {
 	if b.GetGroupVersionKind().Kind != expectedKind {
 		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", expectedKind, b.GetGroupVersionKind().Kind)
 	}
+}
+
+// dataAs interprets the YAML contents of the file at the given path as the
+// given type.
+func dataAs(relpath string, obj interface{}) error {
+	b, err := ioutil.ReadFile(relpath)
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	jb, err := yamlToJSON(b)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(jb, &obj)
+}
+
+// From: https://stackoverflow.com/questions/40737122/convert-yaml-to-json-without-struct-golang
+func convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = convert(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = convert(v)
+		}
+	}
+	return i
+}
+
+// yamlToJSON converts the given YAML bytes to JSON bytes.
+func yamlToJSON(y []byte) ([]byte, error) {
+	var body interface{}
+	if err := yaml.Unmarshal(y, &body); err != nil {
+		return nil, err
+	}
+	return json.Marshal(convert(body))
 }
