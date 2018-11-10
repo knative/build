@@ -53,14 +53,6 @@
   revision = "73d445a93680fa1a78ae23a5839bad48f32ba1ee"
 
 [[projects]]
-  branch = "v2"
-  digest = "1:13e704c08924325be00f96e47e7efe0bfddf0913cdfc237423c83f9b183ff590"
-  name = "github.com/go-yaml/yaml"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
-
-[[projects]]
   digest = "1:acaf854c7e302a7e13a665d00e6579fb72ead2ecd4932286deeac94ad3070fe7"
   name = "github.com/gobuffalo/envy"
   packages = ["."]
@@ -799,7 +791,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/go-yaml/yaml",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/knative/caching/pkg/apis/caching",
