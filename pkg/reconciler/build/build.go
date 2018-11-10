@@ -174,7 +174,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// If Pod creation was successful, update the Build's status.
-	bs := buildStatusFromPod(p, build)
+	bs := resources.BuildStatusFromPod(p, build.Spec)
 	bs.StartTime = &metav1.Time{time.Now()}
 	build.Status = bs
 	return c.updateStatus(build)
@@ -219,7 +219,7 @@ func (c *Reconciler) addPodEvent(obj interface{}) {
 
 	// Update the build's status from the pod's status.
 	build = build.DeepCopy()
-	build.Status = buildStatusFromPod(p, build)
+	build.Status = resources.BuildStatusFromPod(p, build.Spec)
 	if err := c.updateStatus(build); err != nil {
 		c.Logger.Errorf("Error updating build %q in response to pod event: %v", buildName, err)
 	}
@@ -282,116 +282,6 @@ func (c *Reconciler) terminatePod(namespace, name string) error {
 		return err
 	}
 	return nil
-}
-
-// TODO: move to pod.go
-func buildStatusFromPod(p *corev1.Pod, build *v1alpha1.Build) v1alpha1.BuildStatus {
-	status := build.Status.DeepCopy()
-	status.Builder = v1alpha1.ClusterBuildProvider
-	status.Cluster = &v1alpha1.ClusterSpec{
-		Namespace: p.Namespace,
-		PodName:   p.Name,
-	}
-	status.StepStates = nil
-	status.StepsCompleted = nil
-
-	status.SetCondition(&duckv1alpha1.Condition{
-		Type:   v1alpha1.BuildSucceeded,
-		Status: corev1.ConditionUnknown,
-		Reason: "Building",
-	})
-
-	// Always ignore the first pod status, which is creds-init.
-	skip := 1
-	if build.Spec.Source != nil {
-		// If the build specifies source, skip another container status, which
-		// is the source-fetching container.
-		skip++
-	}
-	// TODO: Handle multiple sources here.
-	if skip <= len(p.Status.InitContainerStatuses) {
-		for _, s := range p.Status.InitContainerStatuses[skip:] {
-			if s.State.Terminated != nil {
-				status.StepsCompleted = append(status.StepsCompleted, s.Name)
-			}
-			status.StepStates = append(status.StepStates, s.State)
-		}
-	}
-
-	switch p.Status.Phase {
-	case corev1.PodRunning:
-		status.SetCondition(&duckv1alpha1.Condition{
-			Type:   v1alpha1.BuildSucceeded,
-			Status: corev1.ConditionUnknown,
-			Reason: "Building",
-		})
-	case corev1.PodFailed:
-		msg := getFailureMessage(p)
-		status.SetCondition(&duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionFalse,
-			Message: msg,
-		})
-	case corev1.PodPending:
-		msg := getWaitingMessage(p)
-		status.SetCondition(&duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionUnknown,
-			Reason:  "Pending",
-			Message: msg,
-		})
-	case corev1.PodSucceeded:
-		status.SetCondition(&duckv1alpha1.Condition{
-			Type:   v1alpha1.BuildSucceeded,
-			Status: corev1.ConditionTrue,
-		})
-	}
-	return *status
-}
-
-func getWaitingMessage(pod *corev1.Pod) string {
-	// First, try to surface reason for pending/unknown about the actual build step.
-	for _, status := range pod.Status.InitContainerStatuses {
-		wait := status.State.Waiting
-		if wait != nil && wait.Message != "" {
-			return fmt.Sprintf("build step %q is pending with reason %q",
-				status.Name, wait.Message)
-		}
-	}
-	// Try to surface underlying reason by inspecting pod's recent status if condition is not true
-	for i, podStatus := range pod.Status.Conditions {
-		if podStatus.Status != corev1.ConditionTrue {
-			return fmt.Sprintf("pod status %q:%q; message: %q",
-				pod.Status.Conditions[i].Type,
-				pod.Status.Conditions[i].Status,
-				pod.Status.Conditions[i].Message)
-		}
-	}
-	// Next, return the Pod's status message if it has one.
-	if pod.Status.Message != "" {
-		return pod.Status.Message
-	}
-
-	// Lastly fall back on a generic pending message.
-	return "Pending"
-}
-
-func getFailureMessage(pod *corev1.Pod) string {
-	// First, try to surface an error about the actual build step that failed.
-	for _, status := range pod.Status.InitContainerStatuses {
-		term := status.State.Terminated
-		if term != nil && term.ExitCode != 0 {
-			return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
-				status.Name, term.ExitCode, status.ImageID,
-				pod.Namespace, pod.Name, status.Name)
-		}
-	}
-	// Next, return the Pod's status message if it has one.
-	if pod.Status.Message != "" {
-		return pod.Status.Message
-	}
-	// Lastly fall back on a generic error message.
-	return "build failed for unspecified reasons."
 }
 
 // IsDone returns true if the build's status indicates the build is done.

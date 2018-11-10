@@ -417,15 +417,6 @@ func TestBasicFlows(t *testing.T) {
 				t.Errorf("error fetching build: %v", err)
 			}
 
-			// Check that build is Building.
-			if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
-				Type:   duckv1alpha1.ConditionSucceeded,
-				Status: corev1.ConditionUnknown,
-				Reason: "Building",
-			}, ignoreVolatileTime); d != "" {
-				t.Errorf("build status was not building: %+v", b.Status)
-			}
-
 			// Update the underlying pod's status.
 			b, err = buildClient.Get(build.Name, metav1.GetOptions{})
 			if err != nil {
