@@ -23,6 +23,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
@@ -35,10 +38,6 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
-
-	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/build/pkg/client/informers/externalversions"
 )
 
 // TODO(jasonhall): Test pod creation fails
@@ -306,7 +305,7 @@ func TestBasicFlows(t *testing.T) {
 		wantCondition: &duckv1alpha1.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
-			Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n default logs pod-for-failure-terminated -c status-name`,
+			Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n default logs failure-terminated-pod -c status-name`,
 		},
 	}, {
 		desc: "failure-message",

@@ -24,16 +24,15 @@ import (
 	"path/filepath"
 	"strconv"
 
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/credentials"
+	"github.com/knative/build/pkg/credentials/dockercreds"
+	"github.com/knative/build/pkg/credentials/gitcreds"
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-
-	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/credentials"
-	"github.com/knative/build/pkg/credentials/dockercreds"
-	"github.com/knative/build/pkg/credentials/gitcreds"
 )
 
 const workspaceDir = "/workspace"
@@ -329,7 +328,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			Name:      fmt.Sprintf("pod-for-%s", build.Name),
+			Name:      fmt.Sprintf("%s-pod", build.Name),
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(build, schema.GroupVersionKind{
