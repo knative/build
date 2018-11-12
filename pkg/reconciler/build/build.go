@@ -43,7 +43,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const controllerAgentName = "build-controller"
+const (
+	controllerAgentName = "build-controller"
+	defaultTimeout      = 10 * time.Minute
+)
 
 // Reconciler is the controller.Reconciler implementation for Builds resources
 type Reconciler struct {
@@ -292,7 +295,7 @@ func isDone(status *v1alpha1.BuildStatus) bool {
 
 func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 	namespace := build.Namespace
-	if c.isTimeout(&build.Status, build.Spec.Timeout) {
+	if c.isTimeout(build) {
 		c.Logger.Infof("Build %q is timeout", build.Name)
 		if err := c.kubeclientset.CoreV1().Pods(namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 			c.Logger.Errorf("Failed to terminate pod: %v", err)
@@ -319,29 +322,27 @@ func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 
 // IsTimeout returns true if the build's execution time is greater than
 // specified build spec timeout.
-func (c *Reconciler) isTimeout(status *v1alpha1.BuildStatus, buildTimeout *metav1.Duration) bool {
-	var timeout time.Duration
-	var defaultTimeout = 10 * time.Minute
+func (c *Reconciler) isTimeout(build *v1alpha1.Build) bool {
 
-	if status == nil {
+	// If build has not started timeout, startTime should be zero.
+	if build.Status.StartTime == nil {
+		c.Logger.Infof("Build has not started")
 		return false
 	}
 
-	if buildTimeout == nil {
+	var timeout time.Duration
+	if build.Spec.Timeout == nil {
 		// Set default timeout to 10 minute if build timeout is not set
 		timeout = defaultTimeout
 	} else {
-		timeout = buildTimeout.Duration
+		timeout = build.Spec.Timeout.Duration
 	}
 
-	// If build has not started timeout, startTime should be zero.
-	if status.StartTime == nil {
-		return false
-	}
-	over := time.Since(status.StartTime.Time) > timeout
+	c.Logger.Infof("Build has not yet timed out (timeout=%s, elapsed=%q)", build.Spec.Timeout, time.Since(build.Status.StartTime.Time))
+	over := time.Since(build.Status.StartTime.Time) > timeout
 	if over {
 		c.Logger.Infof("Build has timed out!")
 	}
-	c.Logger.Infof("Build timeout=%s, runtime=%s", timeout, time.Since(status.StartTime.Time))
+	c.Logger.Infof("Build timeout=%s, runtime=%s", timeout, time.Since(build.Status.StartTime.Time))
 	return over
 }
