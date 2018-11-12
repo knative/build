@@ -292,7 +292,8 @@ func isDone(status *v1alpha1.BuildStatus) bool {
 
 func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 	namespace := build.Namespace
-	if isTimeout(&build.Status, build.Spec.Timeout) {
+	if c.isTimeout(&build.Status, build.Spec.Timeout) {
+		c.Logger.Infof("Build %q is timeout", build.Name)
 		if err := c.kubeclientset.CoreV1().Pods(namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 			c.Logger.Errorf("Failed to terminate pod: %v", err)
 			return err
@@ -312,15 +313,13 @@ func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 			c.Logger.Errorf("Failed to update status for pod: %v", err)
 			return err
 		}
-
-		c.Logger.Errorf("Timeout: %v", timeoutMsg)
 	}
 	return nil
 }
 
 // IsTimeout returns true if the build's execution time is greater than
 // specified build spec timeout.
-func isTimeout(status *v1alpha1.BuildStatus, buildTimeout *metav1.Duration) bool {
+func (c *Reconciler) isTimeout(status *v1alpha1.BuildStatus, buildTimeout *metav1.Duration) bool {
 	var timeout time.Duration
 	var defaultTimeout = 10 * time.Minute
 
@@ -339,5 +338,10 @@ func isTimeout(status *v1alpha1.BuildStatus, buildTimeout *metav1.Duration) bool
 	if status.StartTime == nil {
 		return false
 	}
-	return time.Since(status.StartTime.Time).Seconds() > timeout.Seconds()
+	over := time.Since(status.StartTime.Time) > timeout
+	if over {
+		c.Logger.Infof("Build has timed out!")
+	}
+	c.Logger.Infof("Build timeout=%s, runtime=%s", timeout, time.Since(status.StartTime.Time))
+	return over
 }
