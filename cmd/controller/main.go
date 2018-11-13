@@ -21,6 +21,11 @@ import (
 	"log"
 	"time"
 
+	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
+	"github.com/knative/build/pkg/reconciler/build"
+	"github.com/knative/build/pkg/reconciler/buildtemplate"
+	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/configmap"
@@ -33,16 +38,8 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
-
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	"k8s.io/client-go/tools/clientcmd" // Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
-	informers "github.com/knative/build/pkg/client/informers/externalversions"
-	"github.com/knative/build/pkg/reconciler/build"
-	"github.com/knative/build/pkg/reconciler/buildtemplate"
-	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
 )
 
 const (
@@ -102,10 +99,11 @@ func main() {
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
+	podInformer := kubeInformerFactory.Core().V1().Pods()
 
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []*controller.Impl{
-		build.NewController(logger, kubeClient, kubeInformerFactory, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer),
+		build.NewController(logger, kubeClient, podInformer, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
 			cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient,
@@ -121,6 +119,7 @@ func main() {
 		buildTemplateInformer.Informer().HasSynced,
 		clusterBuildTemplateInformer.Informer().HasSynced,
 		imageInformer.Informer().HasSynced,
+		podInformer.Informer().HasSynced,
 	} {
 		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)

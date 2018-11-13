@@ -37,9 +37,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	kubeinformers "k8s.io/client-go/informers"
+	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -58,6 +59,7 @@ type Reconciler struct {
 	buildsLister                listers.BuildLister
 	buildTemplatesLister        listers.BuildTemplateLister
 	clusterBuildTemplatesLister listers.ClusterBuildTemplateLister
+	podsLister                  corelisters.PodLister
 
 	// Sugared logger is easier to use but is not as performant as the
 	// raw logger. In performance critical paths, call logger.Desugar()
@@ -80,7 +82,7 @@ func init() {
 func NewController(
 	logger *zap.SugaredLogger,
 	kubeclientset kubernetes.Interface,
-	kubeinformers kubeinformers.SharedInformerFactory,
+	podInformer coreinformers.PodInformer,
 	buildclientset clientset.Interface,
 	buildInformer informers.BuildInformer,
 	buildTemplateInformer informers.BuildTemplateInformer,
@@ -96,6 +98,7 @@ func NewController(
 		buildsLister:                buildInformer.Lister(),
 		buildTemplatesLister:        buildTemplateInformer.Lister(),
 		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
+		podsLister:                  podInformer.Lister(),
 		Logger:                      logger,
 	}
 	impl := controller.NewImpl(r, logger, "Builds",
@@ -110,7 +113,7 @@ func NewController(
 
 	// Set up a Pod informer, so that Pod updates trigger Build
 	// reconciliations.
-	kubeinformers.Core().V1().Pods().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    r.addPodEvent,
 		UpdateFunc: r.updatePodEvent,
 		DeleteFunc: r.deletePodEvent,

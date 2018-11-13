@@ -89,7 +89,8 @@ func (f *fixture) newReconciler() (controller.Reconciler, informers.SharedInform
 	buildInformer := i.Build().V1alpha1().Builds()
 	buildTemplateInformer := i.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := i.Build().V1alpha1().ClusterBuildTemplates()
-	c := NewController(logger, f.kubeclient, k8sI, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer)
+	podInformer := k8sI.Core().V1().Pods()
+	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer)
 	return c.Reconciler, i, k8sI
 }
 
