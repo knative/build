@@ -287,27 +287,6 @@ func TestBasicFlows(t *testing.T) {
 			Reason: "Building",
 		},
 	}, {
-		desc: "failure-terminated",
-		podStatus: corev1.PodStatus{
-			Phase: corev1.PodFailed,
-			InitContainerStatuses: []corev1.ContainerStatus{{
-				// creds-init status; ignored
-			}, {
-				Name:    "status-name",
-				ImageID: "image-id",
-				State: corev1.ContainerState{
-					Terminated: &corev1.ContainerStateTerminated{
-						ExitCode: 123,
-					},
-				},
-			}},
-		},
-		wantCondition: &duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionFalse,
-			Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n default logs failure-terminated-pod -c status-name`,
-		},
-	}, {
 		desc: "failure-message",
 		podStatus: corev1.PodStatus{
 			Phase:   corev1.PodFailed,
@@ -317,14 +296,6 @@ func TestBasicFlows(t *testing.T) {
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Message: "boom",
-		},
-	}, {
-		desc:      "failure-unspecified",
-		podStatus: corev1.PodStatus{Phase: corev1.PodFailed},
-		wantCondition: &duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionFalse,
-			Message: "build failed for unspecified reasons.",
 		},
 	}, {
 		desc: "pending-waiting-message",
@@ -346,43 +317,6 @@ func TestBasicFlows(t *testing.T) {
 			Status:  corev1.ConditionUnknown,
 			Reason:  "Pending",
 			Message: `build step "status-name" is pending with reason "i'm pending"`,
-		},
-	}, {
-		desc: "pending-pod-condition",
-		podStatus: corev1.PodStatus{
-			Phase: corev1.PodPending,
-			Conditions: []corev1.PodCondition{{
-				Status:  corev1.ConditionUnknown,
-				Type:    "the type",
-				Message: "the message",
-			}},
-		},
-		wantCondition: &duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionUnknown,
-			Reason:  "Pending",
-			Message: `pod status "the type":"Unknown"; message: "the message"`,
-		},
-	}, {
-		desc: "pending-message",
-		podStatus: corev1.PodStatus{
-			Phase:   corev1.PodPending,
-			Message: "pod status message",
-		},
-		wantCondition: &duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionUnknown,
-			Reason:  "Pending",
-			Message: "pod status message",
-		},
-	}, {
-		desc:      "pending-no-message",
-		podStatus: corev1.PodStatus{Phase: corev1.PodPending},
-		wantCondition: &duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionUnknown,
-			Reason:  "Pending",
-			Message: "Pending",
 		},
 	}}
 

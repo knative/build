@@ -19,8 +19,12 @@ limitations under the License.
 package resources
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"path/filepath"
 	"strconv"
 
@@ -62,6 +66,10 @@ var (
 		Name:         "home",
 		VolumeSource: emptyVolumeSource,
 	}}
+
+	// Random byte reader used for pod name generation.
+	// var for testing.
+	randReader = rand.Reader
 )
 
 const (
@@ -324,12 +332,23 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 
+	// Generate a short random hex string.
+	b, err := ioutil.ReadAll(io.LimitReader(randReader, 3))
+	if err != nil {
+		return nil, err
+	}
+	gibberish := hex.EncodeToString(b)
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			Name:      fmt.Sprintf("%s-pod", build.Name),
+			// Generate a unique name based on the build's name.
+			// Add a unique suffix to avoid confusion when a build
+			// is deleted and re-created with the same name.
+			// We don't use GenerateName here because k8s fakes don't support it.
+			Name: fmt.Sprintf("%s-pod-%s", build.Name, gibberish),
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(build, schema.GroupVersionKind{
