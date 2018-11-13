@@ -7,6 +7,7 @@ set -x
 export USER=$KUBE_SSH_USER #satisfy e2e_flags.go#initializeFlags()
 export OPENSHIFT_REGISTRY=registry.svc.ci.openshift.org
 export TEST_NAMESPACE=build-tests
+export TEST_YAML_NAMESPACE=build-tests-yaml
 export BUILD_NAMESPACE=knative-build
 
 env
@@ -51,6 +52,8 @@ function enable_docker_schema2(){
 }
 
 function create_test_namespace(){
+  oc new-project $TEST_YAML_NAMESPACE
+  oc policy add-role-to-group system:image-puller system:serviceaccounts:$TEST_YAML_NAMESPACE -n $OPENSHIFT_BUILD_NAMESPACE
   oc new-project $TEST_NAMESPACE
   oc policy add-role-to-group system:image-puller system:serviceaccounts:$TEST_NAMESPACE -n $OPENSHIFT_BUILD_NAMESPACE
 }
@@ -62,6 +65,7 @@ function run_go_e2e_tests(){
 
 function run_yaml_e2e_tests() {
   header "Running YAML e2e tests"
+  oc project $TEST_YAML_NAMESPACE
   resolve_resources test/ tests-resolved.yaml
   oc apply -f tests-resolved.yaml
 
@@ -131,6 +135,8 @@ function delete_test_resources_openshift() {
    echo ">> Deleting test namespace $TEST_NAMESPACE"
    oc policy remove-role-from-group system:image-puller system:serviceaccounts:$TEST_NAMESPACE -n $OPENSHIFT_BUILD_NAMESPACE
    oc delete project $TEST_NAMESPACE
+   oc policy remove-role-from-group system:image-puller system:serviceaccounts:$TEST_YAML_NAMESPACE -n $OPENSHIFT_BUILD_NAMESPACE
+   oc delete project $TEST_YAML_NAMESPACE
  }
 
 function teardown() {
