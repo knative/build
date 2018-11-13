@@ -47,46 +47,7 @@ function resolve_resources(){
 }
 
 function enable_docker_schema2(){
-  cat > config.yaml <<EOF
-  version: 0.1
-  log:
-    level: debug
-  http:
-    addr: :5000
-  storage:
-    cache:
-      blobdescriptor: inmemory
-    filesystem:
-      rootdirectory: /registry
-    delete:
-      enabled: true
-  auth:
-    openshift:
-      realm: openshift
-  middleware:
-    registry:
-      - name: openshift
-    repository:
-      - name: openshift
-        options:
-          acceptschema2: true
-          pullthrough: true
-          enforcequota: false
-          projectcachettl: 1m
-          blobrepositorycachettl: 10m
-    storage:
-      - name: openshift
-  openshift:
-    version: 1.0
-    metrics:
-      enabled: false
-      secret: <secret>
-EOF
-  oc project default
-  oc create configmap registry-config --from-file=./config.yaml
-  oc set volume dc/docker-registry --add --type=configmap --configmap-name=registry-config -m /etc/docker/registry/
-  oc set env dc/docker-registry REGISTRY_CONFIGURATION_PATH=/etc/docker/registry/config.yaml
-  oc project $TEST_NAMESPACE
+  oc set env -n default dc/docker-registry REGISTRY_MIDDLEWARE_REPOSITORY_OPENSHIFT_ACCEPTSCHEMA2=true
 }
 
 function create_test_namespace(){
