@@ -96,7 +96,7 @@ function create_test_namespace(){
 
 function run_go_e2e_tests(){
   header "Running Go e2e tests"
-  go_test_e2e ./test/e2e/... --kubeconfig $KUBECONFIG || fail_test
+  go_test_e2e ./test/e2e/... --kubeconfig $KUBECONFIG || return 1
 }
 
 function run_yaml_e2e_tests() {
@@ -186,6 +186,12 @@ enable_docker_schema2
 
 install_build
 
-run_go_e2e_tests
+failed=0
 
-run_yaml_e2e_tests
+run_go_e2e_tests || failed=1
+
+run_yaml_e2e_tests || failed=1
+
+(( failed )) && fail_test
+
+success
