@@ -598,3 +598,63 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 		t.Fatalf("Error watching build: %v", err)
 	}
 }
+
+func TestFailedBuildWithParamsInVolume(t *testing.T) {
+	logger := logging.GetContextLogger("TestFailedBuildWithParamsInVolume")
+	clients := buildClients(logger)
+
+	buildName := "build-cm-not-exist"
+	templateName := "simple-template-with-params-in-volume"
+
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildName)
+
+	if _, err := clients.buildClient.buildTemplates.Create(&v1alpha1.BuildTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      templateName,
+		},
+		Spec: v1alpha1.BuildTemplateSpec{
+			Steps: []corev1.Container{{
+				Image:   "ubuntu:latest",
+				Command: []string{"/bin/bash"},
+				Args:    []string{"-c", "echo hello"},
+			}},
+			Volumes: []corev1.Volume{{
+				Name: "custom",
+				VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "${cmname}"},
+				}},
+			}},
+			Parameters: []v1alpha1.ParameterSpec{{
+				Name: "cmname",
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build template: %v", err)
+	}
+
+	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: buildTestNamespace,
+			Name:      buildName,
+		},
+		Spec: v1alpha1.BuildSpec{
+			Template: &v1alpha1.TemplateInstantiationSpec{
+				Name: templateName,
+				Kind: v1alpha1.BuildTemplateKind,
+				Arguments: []v1alpha1.ArgumentSpec{{
+					Name:  "cmname",
+					Value: "cm-not-exist",
+				}},
+			},
+			Timeout: &metav1.Duration{5 * time.Minute},
+		},
+	}); err != nil {
+		t.Fatalf("Error creating build: %v", err)
+	}
+
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+		t.Fatalf("watchBuild did not return expected error: %v", err)
+	}
+}
