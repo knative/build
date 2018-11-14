@@ -75,14 +75,14 @@ function run_yaml_e2e_tests() {
   # Wait for tests to finish.
   echo ">> Waiting for tests to finish"
   local tests_finished=0
-  for i in {1..60}; do
-    local finished="$(oc get builds.build.knative.dev --output=jsonpath='{.items[*].status.conditions[*].status}')"
-    if [[ ! "$finished" == *"Unknown"* ]]; then
-      tests_finished=1
-      break
-    fi
-    sleep 5
-  done
+    for i in {1..30}; do
+      sleep 10
+      local finished="$(oc get builds.build.knative.dev --output=jsonpath='{.items[*].status.conditions[*].status}')"
+      if [[ ! "$finished" == *"Unknown"* ]]; then
+        tests_finished=1
+        break
+      fi
+    done
   if (( ! tests_finished )); then
     echo "ERROR: tests timed out"
     return 1
