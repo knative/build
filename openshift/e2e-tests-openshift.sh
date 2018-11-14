@@ -9,6 +9,7 @@ export OPENSHIFT_REGISTRY=registry.svc.ci.openshift.org
 export TEST_NAMESPACE=build-tests
 export TEST_YAML_NAMESPACE=build-tests-yaml
 export BUILD_NAMESPACE=knative-build
+export IGNORES="git-volume"
 
 env
 
@@ -34,7 +35,7 @@ function resolve_resources(){
   local dir=$1
   local resolved_file_name=$2
   local registry_prefix="$OPENSHIFT_REGISTRY/$OPENSHIFT_BUILD_NAMESPACE/stable"
-  for yaml in $(find $dir -name "*.yaml"); do
+  for yaml in $(find $dir -name "*.yaml" | grep -v $IGNORES); do
     echo "---" >> $resolved_file_name
     #first prefix all test images with "test-", then replace all image names with proper repository and prefix images with "build-"
     sed -e 's%\(.* image: \)\(github.com\)\(.*\/\)\(test\/\)\(.*\)%\1\2 \3\4test-\5%' $yaml | \
