@@ -1,0 +1,38 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: Backup master-config.yaml to master-config.yaml.prepatch
+      copy:
+        src: /etc/origin/master/master-config.yaml
+        dest: /etc/origin/master/master-config.yaml.prepatch
+        remote_src: yes
+        backup: yes
+    - name: Set master_patch variable
+      set_fact:
+        master_patch: |
+          admissionConfig:
+            pluginConfig:
+              MutatingAdmissionWebhook:
+                configuration:
+                  apiVersion: apiserver.config.k8s.io/v1alpha1
+                  kubeConfigFile: /dev/null
+                  kind: WebhookAdmission
+              ValidatingAdmissionWebhook:
+                configuration:
+                  apiVersion: apiserver.config.k8s.io/v1alpha1
+                  kubeConfigFile: /dev/null
+                  kind: WebhookAdmission
+    - name: Apply patch for admission webhooks
+      shell: oc ex config patch /etc/origin/master/master-config.yaml.prepatch -p "{{ master_patch }}" > /etc/origin/master/master-config.yaml
+    - name: Restart API server and constollers
+      shell: /usr/local/bin/master-restart api && /usr/local/bin/master-restart controllers
+    - name: Wait for API server to be available
+      command: oc login -u system:admin
+      register: login_res
+      until: login_res.rc == 0
+      ignore_errors: yes
+      retries: 30
+      delay: 1
+      
