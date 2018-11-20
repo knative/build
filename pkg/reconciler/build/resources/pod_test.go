@@ -35,13 +35,12 @@ import (
 
 var (
 	ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
+	ignoreVolatileTime          = cmp.Comparer(func(_, _ apis.VolatileTime) bool { return true })
+	ignoreVolatileTimePtr       = cmp.Comparer(func(_, _ *apis.VolatileTime) bool { return true })
 	nopContainer                = corev1.Container{
 		Name:  "nop",
 		Image: *nopImage,
 	}
-	ignoreVolatileTime = cmp.Comparer(func(_, _ apis.VolatileTime) bool {
-		return true
-	})
 )
 
 func TestMakePod(t *testing.T) {
@@ -738,10 +737,12 @@ func TestBuildStatusFromPod(t *testing.T) {
 		},
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
+			now := metav1.Now()
 			p := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod",
-					Namespace: system.Namespace,
+					Name:              "pod",
+					Namespace:         system.Namespace,
+					CreationTimestamp: now,
 				},
 				Status: c.podStatus,
 			}
@@ -753,6 +754,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 				Namespace: system.Namespace,
 			}
 			c.want.Builder = v1alpha1.ClusterBuildProvider
+			c.want.StartTime = &now
 
 			if d := cmp.Diff(got, c.want, ignoreVolatileTime); d != "" {
 				t.Errorf("Diff:\n%s", d)

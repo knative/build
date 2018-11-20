@@ -388,6 +388,7 @@ func BuildStatusFromPod(p *corev1.Pod, buildSpec v1alpha1.BuildSpec) v1alpha1.Bu
 			Namespace: p.Namespace,
 			PodName:   p.Name,
 		},
+		StartTime: &p.CreationTimestamp,
 	}
 
 	// Always ignore the first pod status, which is creds-init.

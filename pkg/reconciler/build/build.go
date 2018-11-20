@@ -113,10 +113,12 @@ func NewController(
 
 	// Set up a Pod informer, so that Pod updates trigger Build
 	// reconciliations.
-	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    r.addPodEvent,
-		UpdateFunc: r.updatePodEvent,
-		DeleteFunc: r.deletePodEvent,
+	podInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Build")),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    impl.EnqueueControllerOf,
+			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
+		},
 	})
 
 	return impl
@@ -146,43 +148,51 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Don't mutate the informer's copy of our object.
 	build = build.DeepCopy()
 
-	// Validate build
-	if err = c.validateBuild(build); err != nil {
-		c.Logger.Errorf("Failed to validate build: %v", err)
-		return err
-	}
-
 	// If the build's done, then ignore it.
 	if isDone(&build.Status) {
 		return nil
 	}
 
-	// If the build is ongoing, check if it's timed out.
-	if build.Status.Cluster != nil && build.Status.Cluster.PodName != "" {
-		// Check if build has timed out
-		return c.checkTimeout(build)
-	}
-
-	// If the build hasn't started yet, create a Pod for it and record that
-	// pod's name in the build status.
-	p, err := c.startPodForBuild(build)
-	if err != nil {
-		build.Status.SetCondition(&duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionFalse,
-			Reason:  "BuildExecuteFailed",
-			Message: err.Error(),
-		})
-		if err := c.updateStatus(build); err != nil {
+	// If the build hasn't started yet, validate it and create a Pod for it
+	// and record that pod's name in the build status.
+	var p *corev1.Pod
+	if build.Status.Cluster == nil || build.Status.Cluster.PodName == "" {
+		if err = c.validateBuild(build); err != nil {
+			logger.Errorf("Failed to validate build: %v", err)
 			return err
 		}
+		p, err = c.startPodForBuild(build)
+		if err != nil {
+			build.Status.SetCondition(&duckv1alpha1.Condition{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "BuildExecuteFailed",
+				Message: err.Error(),
+			})
+			if err := c.updateStatus(build); err != nil {
+				return err
+			}
+			return err
+		}
+	} else {
+		// If the build is ongoing, update its status based on its pod, and
+		// check if it's timed out.
+		p, err = c.podsLister.Pods(build.Namespace).Get(build.Status.Cluster.PodName)
+		if err != nil {
+			// TODO: What if the pod is deleted out from under us?
+			return err
+		}
+	}
+
+	// Update the build's status based on the pod's status.
+	build.Status = resources.BuildStatusFromPod(p, build.Spec)
+
+	// Check if build has timed out; if it is, this will set its status
+	// accordingly.
+	if err := c.checkTimeout(build); err != nil {
 		return err
 	}
 
-	// If Pod creation was successful, update the Build's status.
-	bs := resources.BuildStatusFromPod(p, build.Spec)
-	bs.StartTime = &metav1.Time{time.Now()}
-	build.Status = bs
 	return c.updateStatus(build)
 }
 
@@ -199,48 +209,6 @@ func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
 	// nothing other than resource status has been updated.
 	_, err = c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Update(newb)
 	return err
-}
-
-// addPodEvent handles the informer's AddFunc event for Pods.
-func (c *Reconciler) addPodEvent(obj interface{}) {
-	p, ok := obj.(*corev1.Pod)
-	if !ok {
-		return
-	}
-	ownerRef := metav1.GetControllerOf(p)
-
-	// If this object is not owned by a Build, we should not do anything
-	// more with it.
-	if ownerRef == nil || ownerRef.Kind != "Build" {
-		return
-	}
-
-	// Get the build for this pod.
-	buildName := ownerRef.Name
-	build, err := c.buildsLister.Builds(p.Namespace).Get(buildName)
-	if err != nil {
-		c.Logger.Errorf("Error getting build %q for pod %q in namespace %q", buildName, p.Name, p.Namespace)
-		return
-	}
-
-	// Update the build's status from the pod's status.
-	build = build.DeepCopy()
-	build.Status = resources.BuildStatusFromPod(p, build.Spec)
-	if err := c.updateStatus(build); err != nil {
-		c.Logger.Errorf("Error updating build %q in response to pod event: %v", buildName, err)
-	}
-}
-
-// updatePodEvent handles the informer's UpdateFunc event for Pods.
-func (c *Reconciler) updatePodEvent(old, new interface{}) {
-	c.addPodEvent(new)
-}
-
-// deletePodEvent handles the informer's DeleteFunc event for Pods.
-func (c *Reconciler) deletePodEvent(obj interface{}) {
-	// TODO(mattmoor): If a pod gets deleted and someone's watching, we should propagate our
-	// own error message so that we don't leak a go routine waiting forever.
-	c.Logger.Errorf("NYI: delete event for: %v", obj)
 }
 
 // startPodForBuild starts a new Pod to execute the build.
@@ -280,14 +248,8 @@ func (c *Reconciler) startPodForBuild(build *v1alpha1.Build) (*corev1.Pod, error
 	if err != nil {
 		return nil, err
 	}
+	c.Logger.Infof("Creating pod %q in namespace %q for build %q", p.Name, p.Namespace, build.Name)
 	return c.kubeclientset.CoreV1().Pods(p.Namespace).Create(p)
-}
-
-func (c *Reconciler) terminatePod(namespace, name string) error {
-	if err := c.kubeclientset.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
-	}
-	return nil
 }
 
 // IsDone returns true if the build's status indicates the build is done.
@@ -297,15 +259,25 @@ func isDone(status *v1alpha1.BuildStatus) bool {
 }
 
 func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
-	namespace := build.Namespace
-	if c.isTimeout(build) {
-		c.Logger.Infof("Build %q is timeout", build.Name)
-		if err := c.kubeclientset.CoreV1().Pods(namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+	// If build has not started timeout, startTime should be zero.
+	if build.Status.StartTime.IsZero() {
+		return nil
+	}
+
+	// Use default timeout to 10 minute if build timeout is not set.
+	timeout := defaultTimeout
+	if build.Spec.Timeout != nil {
+		timeout = build.Spec.Timeout.Duration
+	}
+	runtime := time.Since(build.Status.StartTime.Time)
+	if runtime > timeout {
+		c.Logger.Infof("Build %q is timeout (runtime %s over %s), deleting pod", build.Name, runtime, timeout)
+		if err := c.kubeclientset.CoreV1().Pods(build.Namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 			c.Logger.Errorf("Failed to terminate pod: %v", err)
 			return err
 		}
 
-		timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, build.Spec.Timeout.Duration.String())
+		timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, timeout.String())
 		build.Status.SetCondition(&duckv1alpha1.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
@@ -314,38 +286,6 @@ func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 		})
 		// update build completed time
 		build.Status.CompletionTime = &metav1.Time{time.Now()}
-
-		if err := c.updateStatus(build); err != nil {
-			c.Logger.Errorf("Failed to update status for pod: %v", err)
-			return err
-		}
 	}
 	return nil
-}
-
-// IsTimeout returns true if the build's execution time is greater than
-// specified build spec timeout.
-func (c *Reconciler) isTimeout(build *v1alpha1.Build) bool {
-
-	// If build has not started timeout, startTime should be zero.
-	if build.Status.StartTime == nil {
-		c.Logger.Infof("Build has not started")
-		return false
-	}
-
-	var timeout time.Duration
-	if build.Spec.Timeout == nil {
-		// Set default timeout to 10 minute if build timeout is not set
-		timeout = defaultTimeout
-	} else {
-		timeout = build.Spec.Timeout.Duration
-	}
-
-	c.Logger.Infof("Build has not yet timed out (timeout=%s, elapsed=%q)", build.Spec.Timeout, time.Since(build.Status.StartTime.Time))
-	over := time.Since(build.Status.StartTime.Time) > timeout
-	if over {
-		c.Logger.Infof("Build has timed out!")
-	}
-	c.Logger.Infof("Build timeout=%s, runtime=%s", timeout, time.Since(build.Status.StartTime.Time))
-	return over
 }
