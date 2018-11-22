@@ -4,6 +4,7 @@ source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.s
 
 set -x
 
+export API_SERVER=$(oc config view --minify | grep server | awk -F'//' '{print $2}' | awk -F':' '{print $1}')
 export USER=$KUBE_SSH_USER #satisfy e2e_flags.go#initializeFlags()
 export OPENSHIFT_REGISTRY=registry.svc.ci.openshift.org
 export TEST_NAMESPACE=build-tests
@@ -12,6 +13,33 @@ export BUILD_NAMESPACE=knative-build
 export IGNORES="git-volume"
 
 env
+
+function enable_admission_webhooks(){
+  header "Enabling admission webhooks"
+  add_current_user_to_etc_passwd
+  disable_strict_host_checking
+  echo "API_SERVER=$API_SERVER"
+  echo "KUBE_SSH_USER=$KUBE_SSH_USER"
+  chmod 600 ~/.ssh/google_compute_engine
+  echo "$API_SERVER ansible_ssh_private_key_file=~/.ssh/google_compute_engine" > inventory.ini
+  ansible-playbook ${REPO_ROOT_DIR}/openshift/admission-webhooks.yaml -i inventory.ini -u $KUBE_SSH_USER
+  rm inventory.ini
+}
+
+function add_current_user_to_etc_passwd(){
+  if ! whoami &>/dev/null; then
+    echo "${USER:-default}:x:$(id -u):$(id -g):Default User:$HOME:/sbin/nologin" >> /etc/passwd
+  fi
+  cat /etc/passwd
+}
+
+function disable_strict_host_checking(){
+  cat >> ~/.ssh/config <<EOF
+Host *
+   StrictHostKeyChecking no
+   UserKnownHostsFile=/dev/null
+EOF
+}
 
 function install_build(){
   header "Installing Knative Build"
@@ -145,6 +173,8 @@ function teardown() {
   delete_test_resources_openshift
   delete_build_openshift
 }
+
+enable_admission_webhooks
 
 teardown
 
