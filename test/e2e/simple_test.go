@@ -363,16 +363,13 @@ func TestPodAffinity(t *testing.T) {
 					// and whose value is either e2e-az1 or e2e-az2. Test cluster does not have any nodes that meets this constraint so the build
 					// will wait for pod to scheduled until timeout.
 					RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-						NodeSelectorTerms: []corev1.NodeSelectorTerm{
-							{
-								MatchExpressions: []corev1.NodeSelectorRequirement{
-									{
-										Key:      "kubernetes.io/e2e-az-name",
-										Operator: corev1.NodeSelectorOpIn,
-										Values:   []string{"e2e-az1", "e2e-az2"},
-									}},
-							},
-						},
+						NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+							MatchExpressions: []corev1.NodeSelectorRequirement{{
+								Key:      "kubernetes.io/e2e-az-name",
+								Operator: corev1.NodeSelectorOpIn,
+								Values:   []string{"e2e-az1", "e2e-az2"},
+							}},
+						}},
 					},
 				},
 			},
