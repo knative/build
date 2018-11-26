@@ -624,7 +624,7 @@ func TestBasicFlowWithCredentials(t *testing.T) {
 func statusMessage(status *v1alpha1.BuildStatus) string {
 	for _, cond := range status.Conditions {
 		if cond.Type == v1alpha1.BuildSucceeded && cond.Status == corev1.ConditionUnknown {
-			return cond.Reason
+			return cond.Message
 		}
 	}
 	return ""
