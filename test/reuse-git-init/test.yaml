@@ -58,3 +58,14 @@ spec:
   - name: cat-workspace-other-repo
     image: busybox
     args: ['cat', 'WORKSPACE']
+  
+    # Then fetch and checkout branch, and cat WORKSPACE.
+  - name: source-name
+    image: github.com/knative/build/cmd/git-init
+    args:
+    - -url=https://github.com/bazelbuild/rules_docker
+    - -revision=master
+    - -path=rulez
+  - name: cat-rulez-repo
+    image: busybox
+    args: ['cat', 'rulez/WORKSPACE']

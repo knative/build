@@ -26,9 +26,15 @@ spec:
     - knative
   scope: Namespaced
   additionalPrinterColumns:
-  - name: Age
+  - name: Succeeded
+    type: string
+    JSONPath: ".status.conditions[?(@.type==\"Succeeded\")].status"
+  - name: Reason
+    type: string
+    JSONPath: ".status.conditions[?(@.type==\"Succeeded\")].reason"
+  - name: StartTime
     type: date
-    JSONPath: .metadata.creationTimestamp
-  - name: Completed
+    JSONPath: .status.startTime
+  - name: CompletionTime
     type: date
     JSONPath: .status.completionTime

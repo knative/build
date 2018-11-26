@@ -20,8 +20,8 @@ package cluster
 import (
 	"fmt"
 	"sync"
+	"time"
 
-	"github.com/knative/build/pkg/builder/cluster/convert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -32,6 +32,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildercommon "github.com/knative/build/pkg/builder"
+	"github.com/knative/build/pkg/reconciler/build/resources"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
@@ -39,7 +40,7 @@ type operation struct {
 	builder   *builder
 	namespace string
 	name      string
-	startTime metav1.Time
+	startTime *metav1.Time
 	statuses  []corev1.ContainerStatus
 }
 
@@ -119,7 +120,7 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 			PodName:   op.Name(),
 		},
 		StartTime:      op.startTime,
-		CompletionTime: metav1.Now(),
+		CompletionTime: &metav1.Time{time.Now()},
 		StepStates:     states,
 		StepsCompleted: stepsCompleted,
 	}
@@ -162,7 +163,7 @@ func (b *build) Execute() (buildercommon.Operation, error) {
 		builder:   b.builder,
 		namespace: pod.Namespace,
 		name:      pod.Name,
-		startTime: metav1.Now(),
+		startTime: &metav1.Time{time.Now()},
 		statuses:  pod.Status.InitContainerStatuses,
 	}, nil
 }
@@ -203,12 +204,12 @@ func (b *builder) Builder() v1alpha1.BuildProvider {
 }
 
 func (b *builder) Validate(u *v1alpha1.Build) error {
-	_, err := convert.FromCRD(u, b.kubeclient)
+	_, err := resources.MakePod(u, b.kubeclient)
 	return err
 }
 
 func (b *builder) BuildFromSpec(u *v1alpha1.Build) (buildercommon.Build, error) {
-	bld, err := convert.FromCRD(u, b.kubeclient)
+	bld, err := resources.MakePod(u, b.kubeclient)
 	if err != nil {
 		return nil, err
 	}
