@@ -134,7 +134,7 @@ func TestValidateBuild(t *testing.T) {
 					Name:       "customwithpath",
 					TargetPath: "a/b",
 					Custom: &corev1.Container{
-						Image: "soemthing:latest",
+						Image: "something:latest",
 					},
 				}},
 				Steps: []corev1.Container{{
@@ -151,12 +151,12 @@ func TestValidateBuild(t *testing.T) {
 				Sources: []SourceSpec{{
 					Name: "customwithpath",
 					Custom: &corev1.Container{
-						Image: "soemthing:latest",
+						Image: "something:latest",
 					},
 				}, {
 					Name: "customwithpath1",
 					Custom: &corev1.Container{
-						Image: "soemthing:latest",
+						Image: "something:latest",
 					},
 				}},
 				Steps: []corev1.Container{{
