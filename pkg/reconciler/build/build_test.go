@@ -231,7 +231,7 @@ func TestBuildWithTemplate(t *testing.T) {
 	buildTemplateSpec := &v1alpha1.TemplateInstantiationSpec{
 		Kind: v1alpha1.BuildTemplateKind,
 		Name: tmpl.Name,
-		Env:  []corev1.EnvVar{corev1.EnvVar{Value: "testvalue", Name: "testkey"}},
+		Env:  []corev1.EnvVar{{Value: "testvalue", Name: "testkey"}},
 	}
 
 	build := newBuild("test-buildtemplate")
