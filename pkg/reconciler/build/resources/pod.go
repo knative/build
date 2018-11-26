@@ -19,21 +19,25 @@ limitations under the License.
 package resources
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"path/filepath"
 	"strconv"
-
-	"github.com/knative/pkg/apis"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/credentials"
 	"github.com/knative/build/pkg/credentials/dockercreds"
 	"github.com/knative/build/pkg/credentials/gitcreds"
+	"github.com/knative/pkg/apis"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 )
 
 const workspaceDir = "/workspace"
@@ -62,6 +66,10 @@ var (
 		Name:         "home",
 		VolumeSource: emptyVolumeSource,
 	}}
+
+	// Random byte reader used for pod name generation.
+	// var for testing.
+	randReader = rand.Reader
 )
 
 const (
@@ -324,13 +332,23 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 
+	// Generate a short random hex string.
+	b, err := ioutil.ReadAll(io.LimitReader(randReader, 3))
+	if err != nil {
+		return nil, err
+	}
+	gibberish := hex.EncodeToString(b)
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			// Ensure our Pod gets a unique name.
-			GenerateName: fmt.Sprintf("%s-", build.Name),
+			// Generate a unique name based on the build's name.
+			// Add a unique suffix to avoid confusion when a build
+			// is deleted and re-created with the same name.
+			// We don't use GenerateName here because k8s fakes don't support it.
+			Name: fmt.Sprintf("%s-pod-%s", build.Name, gibberish),
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(build, schema.GroupVersionKind{
@@ -360,4 +378,109 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			Affinity:           build.Spec.Affinity,
 		},
 	}, nil
+}
+
+// BuildStatusFromPod returns a BuildStatus based on the Pod and the original BuildSpec.
+func BuildStatusFromPod(p *corev1.Pod, buildSpec v1alpha1.BuildSpec) v1alpha1.BuildStatus {
+	status := v1alpha1.BuildStatus{
+		Builder: v1alpha1.ClusterBuildProvider,
+		Cluster: &v1alpha1.ClusterSpec{
+			Namespace: p.Namespace,
+			PodName:   p.Name,
+		},
+		StartTime: &p.CreationTimestamp,
+	}
+
+	// Always ignore the first pod status, which is creds-init.
+	skip := 1
+	if buildSpec.Source != nil {
+		// If the build specifies source, skip another container status, which
+		// is the source-fetching container.
+		skip++
+	}
+	// Also skip multiple sourcees specified by the build.
+	skip += len(buildSpec.Sources)
+	if skip <= len(p.Status.InitContainerStatuses) {
+		for _, s := range p.Status.InitContainerStatuses[skip:] {
+			if s.State.Terminated != nil {
+				status.StepsCompleted = append(status.StepsCompleted, s.Name)
+			}
+			status.StepStates = append(status.StepStates, s.State)
+		}
+	}
+
+	switch p.Status.Phase {
+	case corev1.PodRunning:
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:   v1alpha1.BuildSucceeded,
+			Status: corev1.ConditionUnknown,
+			Reason: "Building",
+		})
+	case corev1.PodFailed:
+		msg := getFailureMessage(p)
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Message: msg,
+		})
+	case corev1.PodPending:
+		msg := getWaitingMessage(p)
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionUnknown,
+			Reason:  "Pending",
+			Message: msg,
+		})
+	case corev1.PodSucceeded:
+		status.SetCondition(&duckv1alpha1.Condition{
+			Type:   v1alpha1.BuildSucceeded,
+			Status: corev1.ConditionTrue,
+		})
+	}
+	return status
+}
+
+func getWaitingMessage(pod *corev1.Pod) string {
+	// First, try to surface reason for pending/unknown about the actual build step.
+	for _, status := range pod.Status.InitContainerStatuses {
+		wait := status.State.Waiting
+		if wait != nil && wait.Message != "" {
+			return fmt.Sprintf("build step %q is pending with reason %q",
+				status.Name, wait.Message)
+		}
+	}
+	// Try to surface underlying reason by inspecting pod's recent status if condition is not true
+	for i, podStatus := range pod.Status.Conditions {
+		if podStatus.Status != corev1.ConditionTrue {
+			return fmt.Sprintf("pod status %q:%q; message: %q",
+				pod.Status.Conditions[i].Type,
+				pod.Status.Conditions[i].Status,
+				pod.Status.Conditions[i].Message)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	// Lastly fall back on a generic pending message.
+	return "Pending"
+}
+
+func getFailureMessage(pod *corev1.Pod) string {
+	// First, try to surface an error about the actual build step that failed.
+	for _, status := range pod.Status.InitContainerStatuses {
+		term := status.State.Terminated
+		if term != nil && term.ExitCode != 0 {
+			return fmt.Sprintf("build step %q exited with code %d (image: %q); for logs run: kubectl -n %s logs %s -c %s",
+				status.Name, term.ExitCode, status.ImageID,
+				pod.Namespace, pod.Name, status.Name)
+		}
+	}
+	// Next, return the Pod's status message if it has one.
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+	// Lastly fall back on a generic error message.
+	return "build failed for unspecified reasons."
 }

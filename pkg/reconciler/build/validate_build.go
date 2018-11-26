@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/reconciler/build/resources"
 )
 
 func (ac *Reconciler) validateBuild(b *v1alpha1.Build) error {
@@ -63,8 +64,9 @@ func (ac *Reconciler) validateBuild(b *v1alpha1.Build) error {
 		}
 	}
 
-	// Do builder-implementation-specific validation.
-	return ac.builder.Validate(b)
+	// Ensure the build can be translated to a Pod.
+	_, err = resources.MakePod(b, ac.kubeclientset)
+	return err
 }
 
 // validateSecrets checks that if the Build specifies a ServiceAccount, that it

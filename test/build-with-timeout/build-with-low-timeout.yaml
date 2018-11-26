@@ -18,9 +18,9 @@ metadata:
   labels:
     expect: failed
 spec:
-  timeout: 50s
+  timeout: 5s
   steps:
   - name: step1
     image: ubuntu
     command: ["/bin/bash"]
-    args: ["-c", "sleep 2000"]
+    args: ["-c", "sleep 600"]
