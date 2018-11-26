@@ -354,9 +354,9 @@ func TestPodAffinity(t *testing.T) {
 					// will wait for pod to scheduled until timeout.
 					RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
 						NodeSelectorTerms: []corev1.NodeSelectorTerm{
-							corev1.NodeSelectorTerm{
+							{
 								MatchExpressions: []corev1.NodeSelectorRequirement{
-									corev1.NodeSelectorRequirement{
+									{
 										Key:      "kubernetes.io/e2e-az-name",
 										Operator: corev1.NodeSelectorOpIn,
 										Values:   []string{"e2e-az1", "e2e-az2"},
