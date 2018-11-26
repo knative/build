@@ -137,8 +137,8 @@ func (op *operation) Wait() (*v1alpha1.BuildStatus, error) {
 		bs.SetCondition(&duckv1alpha1.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionUnknown,
-			Message: "Pending",
-			Reason:  msg,
+			Reason:  "Pending",
+			Message: msg,
 		})
 	} else {
 		bs.SetCondition(&duckv1alpha1.Condition{
