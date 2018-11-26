@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/builder/nop"
 	fakebuildclientset "github.com/knative/build/pkg/client/clientset/versioned/fake"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -329,7 +328,6 @@ func TestValidateBuild(t *testing.T) {
 			testLogger := zap.NewNop().Sugar()
 
 			ac := &Reconciler{
-				builder:        &nop.Builder{},
 				kubeclientset:  client,
 				buildclientset: buildClient,
 				Logger:         testLogger,

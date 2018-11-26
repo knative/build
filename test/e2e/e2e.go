@@ -22,18 +22,17 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	buildversioned "github.com/knative/build/pkg/client/clientset/versioned"
+	buildtyped "github.com/knative/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
 	"github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	buildversioned "github.com/knative/build/pkg/client/clientset/versioned"
-	buildtyped "github.com/knative/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
-	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type clients struct {
@@ -42,6 +41,14 @@ type clients struct {
 }
 
 const buildTestNamespace = "build-tests"
+
+var (
+	// Sentinel error from watchBuild when the build failed.
+	errBuildFailed = errors.New("build failed")
+
+	// Sentinal error from watchBuild when watch timed out before build finished
+	errWatchTimeout = errors.New("watch ended before build finished")
+)
 
 func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
 	if clients != nil && clients.kubeClient != nil {
@@ -144,7 +151,9 @@ type buildClient struct {
 func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 	ls := metav1.SingleObject(metav1.ObjectMeta{Name: name})
 	// TODO: Update watchBuild function to take this as parameter depending on test requirements
-	// Set build timeout to 120 seconds. This will trigger watch timeout error
+
+	// Any build that takes longer than this timeout will result in
+	// errWatchTimeout.
 	var timeout int64 = 120
 	ls.TimeoutSeconds = &timeout
 
@@ -152,6 +161,7 @@ func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 	if err != nil {
 		return nil, err
 	}
+	var latest *v1alpha1.Build
 	for evt := range w.ResultChan() {
 		switch evt.Type {
 		case watch.Deleted:
@@ -164,6 +174,7 @@ func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 		if !ok {
 			return nil, fmt.Errorf("object was not a Build: %v", err)
 		}
+		latest = b
 
 		for _, cond := range b.Status.Conditions {
 			if cond.Type == v1alpha1.BuildSucceeded {
@@ -171,12 +182,12 @@ func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 				case corev1.ConditionTrue:
 					return b, nil
 				case corev1.ConditionFalse:
-					return b, errors.New("build failed")
+					return b, errBuildFailed
 				case corev1.ConditionUnknown:
 					continue
 				}
 			}
 		}
 	}
-	return nil, errors.New("watch ended before build completion")
+	return latest, errWatchTimeout
 }
