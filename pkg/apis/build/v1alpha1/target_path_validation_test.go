@@ -106,7 +106,7 @@ func TestValidateTargetPaths(t *testing.T) {
 			"b/c",
 		},
 	}, {
-		desc: "mutliple paths",
+		desc: "multiple paths",
 		paths: []string{
 			"a/b/c/d",
 			"a/d",
