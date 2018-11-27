@@ -21,6 +21,12 @@ import (
 	"log"
 	"time"
 
+	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
+	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/logging"
+	"github.com/knative/pkg/logging/logkey"
+	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	kubeinformers "k8s.io/client-go/informers"
@@ -32,20 +38,12 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	onclusterbuilder "github.com/knative/build/pkg/builder/cluster"
+	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
+	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/build/pkg/controller"
-	buildctrl "github.com/knative/build/pkg/controller/build"
 	"github.com/knative/build/pkg/reconciler/build"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
-
-	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
-	informers "github.com/knative/build/pkg/client/informers/externalversions"
-	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
-	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
-	"github.com/knative/pkg/signals"
 )
 
 const (
@@ -110,11 +108,7 @@ func main() {
 
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []controller.Interface{
-		// TODO(mattmoor): Move the Build controller logic into pkg/reconciler/build
-		buildctrl.NewController(bldr, kubeClient, buildClient,
-			kubeInformerFactory, buildInformerFactory, logger),
-
-		build.NewController(logger, kubeClient, buildClient, buildInformer),
+		build.NewController(logger, kubeClient, buildClient, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, bldr),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
 			cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient,

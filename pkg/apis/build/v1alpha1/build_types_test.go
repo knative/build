@@ -21,37 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
-
-	"github.com/knative/build/pkg/buildtest"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
-const bazelYAML = "testdata/cloudbuilders/bazel/cloudbuild.yaml"
-
 func TestBuildImplementsConditions(t *testing.T) {
 	if err := duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{}); err != nil {
 		t.Errorf("Expect Build to implement duck verify type: err %#v", err)
-	}
-}
-
-func TestParsing(t *testing.T) {
-	var bs BuildSpec
-	if err := buildtest.DataAs(bazelYAML, &bs); err != nil {
-		t.Fatalf("Unexpected error in buildtest.DataAs(%q, BuildSpec): %v", bazelYAML, err)
-	}
-
-	// Some basic checks on the body.
-	if bs.Source != nil {
-		t.Errorf("want no Source; got %v", bs.Source)
-	}
-	if len(bs.Steps) != 5 {
-		t.Errorf("Wrong len(bs.Steps); wanted 5, got %d", len(bs.Steps))
-	}
-	for _, step := range bs.Steps {
-		if len(step.Args) == 0 {
-			t.Error("want len(args) != 0, got 0")
-		}
 	}
 }
 
