@@ -234,11 +234,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:74cb96c67ebca1a00240a23e7a6a33b7a9b3336f621e223666eff9550acae1a8"
+  digest = "1:0cabae2c3a124c49ed5e862866e1228f08a1a6e49d0daf971e5a72e5e56095a4"
   name = "github.com/knative/test-infra"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "9303db13a4bcf216af14aa7ab65802c0672e01f6"
+  packages = ["scripts"]
+  pruneopts = "UT"
+  revision = "2a11b760d21b3a969d80d9ccf18323e1d5ed03a6"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -811,7 +811,7 @@
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/webhook",
-    "github.com/knative/test-infra",
+    "github.com/knative/test-infra/scripts",
     "go.opencensus.io/trace",
     "go.uber.org/zap",
     "golang.org/x/sync/errgroup",
