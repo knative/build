@@ -52,6 +52,14 @@ if (( PUBLISH_RELEASE )); then
   echo "- Destination GCS: ${BUILD_RELEASE_GCS}"
 fi
 
+# When building a versioned release, we must use .ko.yaml.release
+if (( BRANCH_RELEASE )); then
+  # KO_CONFIG_PATH expects a path containing a .ko.yaml file
+  export KO_CONFIG_PATH="$(mktemp -d)"
+  cp .ko.yaml.release "${KO_CONFIG_PATH}/.ko.yaml"
+  echo "Using .ko.yaml.release for base image overrides"
+fi
+
 # Build the base image for creds-init and git images.
 docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
 
