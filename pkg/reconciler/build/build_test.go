@@ -19,6 +19,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -204,6 +205,21 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			t.Errorf("Expect error syncing build")
 		} else if !kuberrors.IsNotFound(err) {
 			t.Errorf("Expect error to be not found err: %s", err.Error())
+		}
+		buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+		b, err := buildClient.Get(b.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("error fetching build: %v", err)
+		}
+		// Check that build has the expected status.
+		gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+		if d := cmp.Diff(gotCondition, &duckv1alpha1.Condition{
+			Type:    v1alpha1.BuildSucceeded,
+			Status:  corev1.ConditionFalse,
+			Reason:  "BuildValidationFailed",
+			Message: fmt.Sprintf(`%ss.build.knative.dev "not-existent-template" not found`, strings.ToLower(string(kind))),
+		}, ignoreVolatileTime); d != "" {
+			t.Errorf("Unexpected build status %s", d)
 		}
 	}
 }
