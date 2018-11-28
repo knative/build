@@ -17,8 +17,8 @@
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 
 # Set default GCS/GCR
-: ${BUILD_RELEASE_GCS:="knative-releases/build"}
-: ${BUILD_RELEASE_GCR:="gcr.io/knative-releases"}
+: ${BUILD_RELEASE_GCS:="knative-nightly/build"}
+: ${BUILD_RELEASE_GCR:="gcr.io/knative-nightly"}
 readonly BUILD_RELEASE_GCS
 readonly BUILD_RELEASE_GCR
 
@@ -50,6 +50,14 @@ export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 echo "- Destination GCR: ${KO_DOCKER_REPO}"
 if (( PUBLISH_RELEASE )); then
   echo "- Destination GCS: ${BUILD_RELEASE_GCS}"
+fi
+
+# When building a versioned release, we must use .ko.yaml.release
+if (( BRANCH_RELEASE )); then
+  # KO_CONFIG_PATH expects a path containing a .ko.yaml file
+  export KO_CONFIG_PATH="$(mktemp -d)"
+  cp .ko.yaml.release "${KO_CONFIG_PATH}/.ko.yaml"
+  echo "Using .ko.yaml.release for base image overrides"
 fi
 
 # Build the base image for creds-init and git images.
