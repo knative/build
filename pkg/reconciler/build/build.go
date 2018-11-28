@@ -159,6 +159,15 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	if build.Status.Cluster == nil || build.Status.Cluster.PodName == "" {
 		if err = c.validateBuild(build); err != nil {
 			logger.Errorf("Failed to validate build: %v", err)
+			build.Status.SetCondition(&duckv1alpha1.Condition{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "BuildValidationFailed",
+				Message: err.Error(),
+			})
+			if err := c.updateStatus(build); err != nil {
+				return err
+			}
 			return err
 		}
 		p, err = c.startPodForBuild(build)
