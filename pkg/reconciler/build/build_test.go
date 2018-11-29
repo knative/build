@@ -71,13 +71,18 @@ func newBuild(name string) *v1alpha1.Build {
 
 func (f *fixture) createServceAccount() {
 	f.t.Helper()
+	f.createServiceAccounts(&corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
+	})
+}
 
-	if _, err := f.kubeclient.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(
-		&corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{Name: "default"},
-		},
-	); err != nil {
-		f.t.Fatalf("Failed to create ServiceAccount: %v", err)
+func (f *fixture) createServiceAccounts(serviceAccounts ...*corev1.ServiceAccount) {
+	f.t.Helper()
+
+	for _, sa := range serviceAccounts {
+		if _, err := f.kubeclient.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(sa); err != nil {
+			f.t.Fatalf("Failed to create ServiceAccount: %v", err)
+		}
 	}
 }
 
@@ -173,6 +178,96 @@ func TestBuildNotFoundError(t *testing.T) {
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
+	}
+}
+
+func TestBuildWithMissingServiceAccount(t *testing.T) {
+	b := newBuild("test-missing-serviceaccount")
+
+	b.Spec = v1alpha1.BuildSpec{
+		ServiceAccountName: "missing-sa",
+	}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{b},
+		client:     fake.NewSimpleClientset(b),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+
+	r, i, k8sI := f.newReconciler()
+	f.updateIndex(i, b)
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
+		t.Errorf("Expect error syncing build")
+	} else if !kuberrors.IsNotFound(err) {
+		t.Errorf("Expect error to be not found err: %s", err.Error())
+	}
+	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	// Check that build has the expected status.
+	gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+	if d := cmp.Diff(gotCondition, &duckv1alpha1.Condition{
+		Type:    v1alpha1.BuildSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildValidationFailed",
+		Message: `serviceaccounts "missing-sa" not found`,
+	}, ignoreVolatileTime); d != "" {
+		t.Errorf("Unexpected build status %s", d)
+	}
+}
+
+func TestBuildWithMissingSecret(t *testing.T) {
+	b := newBuild("test-missing-secret")
+
+	b.Spec = v1alpha1.BuildSpec{
+		ServiceAccountName: "banana-sa",
+	}
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{b},
+		client:     fake.NewSimpleClientset(b),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+	f.createServiceAccounts(&corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "banana-sa"},
+		Secrets:    []corev1.ObjectReference{{Name: "missing-secret"}},
+	})
+
+	r, i, k8sI := f.newReconciler()
+	f.updateIndex(i, b)
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
+		t.Errorf("Expect error syncing build")
+	} else if !kuberrors.IsNotFound(err) {
+		t.Errorf("Expect error to be not found err: %s", err.Error())
+	}
+	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	// Check that build has the expected status.
+	gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+	if d := cmp.Diff(gotCondition, &duckv1alpha1.Condition{
+		Type:    v1alpha1.BuildSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildValidationFailed",
+		Message: `secrets "missing-secret" not found`,
+	}, ignoreVolatileTime); d != "" {
+		t.Errorf("Unexpected build status %s", d)
 	}
 }
 
