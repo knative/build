@@ -23,14 +23,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/system"
-	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
+
+	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
+	"github.com/knative/build/pkg/system"
+	"github.com/knative/pkg/apis"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 var (
@@ -71,10 +72,11 @@ func TestMakePod(t *testing.T) {
 	defer func() { randReader = rand.Reader }()
 
 	for _, c := range []struct {
-		desc    string
-		b       v1alpha1.BuildSpec
-		want    *corev1.PodSpec
-		wantErr error
+		desc         string
+		b            v1alpha1.BuildSpec
+		bAnnotations map[string]string
+		want         *corev1.PodSpec
+		wantErr      error
 	}{{
 		desc: "simple",
 		b: v1alpha1.BuildSpec{
@@ -82,6 +84,9 @@ func TestMakePod(t *testing.T) {
 				Name:  "name",
 				Image: "image",
 			}},
+		},
+		bAnnotations: map[string]string{
+			"simple-annotation-key": "simple-annotation-val",
 		},
 		want: &corev1.PodSpec{
 			RestartPolicy: corev1.RestartPolicyNever,
@@ -464,7 +469,8 @@ func TestMakePod(t *testing.T) {
 			)
 			b := &v1alpha1.Build{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "build-name",
+					Name:        "build-name",
+					Annotations: c.bAnnotations,
 				},
 				Spec: c.b,
 			}
@@ -480,7 +486,17 @@ func TestMakePod(t *testing.T) {
 			}
 
 			if d := cmp.Diff(&got.Spec, c.want, ignorePrivateResourceFields); d != "" {
-				t.Errorf("Diff:\n%s", d)
+				t.Errorf("Diff spec:\n%s", d)
+			}
+
+			wantAnnotations := map[string]string{"sidecar.istio.io/inject": "false"}
+			if c.bAnnotations != nil {
+				for key, val := range c.bAnnotations {
+					wantAnnotations[key] = val
+				}
+			}
+			if d := cmp.Diff(got.Annotations, wantAnnotations); d != "" {
+				t.Errorf("Diff annotations:\n%s", d)
 			}
 		})
 	}
