@@ -2,8 +2,9 @@
 
 This directory contains tests and testing docs for `Knative Build`:
 
-* [Unit tests](#running-unit-tests) currently reside in the codebase alongside the code they test
-* [End-to-end tests](#running-end-to-end-tests), of which there are two types:
+- [Unit tests](#running-unit-tests) currently reside in the codebase alongside the code they test
+- [End-to-end tests](#running-end-to-end-tests), of which there are two types:
+
 ## Running unit tests
 
 To run all unit tests:
@@ -13,7 +14,6 @@ go test ./...
 ```
 
 _By default `go test` will not run [the e2e tests](#running-end-to-end-tests), which need [`-tags=e2e`](#running-end-to-end-tests) to be enabled._
-
 
 ## Running end to end tests
 
