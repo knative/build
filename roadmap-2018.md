@@ -4,16 +4,16 @@ This is an incomplete list of work we hope to accomplish in 2018.
 
 ## Themes
 
-  * Support for build **detection** from source
-  * Cultivate a **community** of shareable BuildTemplate configurations, and
-    builder images that enable them
-  * More complex **workflows** and flow control of builds and/or steps
-  * Enable automatic **triggered** builds in response to events, in some common
-    understandable way
-  * **Improve** the featureset of the Build CRD by standardizing support for
-    things like build caching using on-cluster resources
-  * **Integrate** Build CRD into more services, and make it more powerful by
-    integrating Build CRD with other services.
+- Support for build **detection** from source
+- Cultivate a **community** of shareable BuildTemplate configurations, and
+  builder images that enable them
+- More complex **workflows** and flow control of builds and/or steps
+- Enable automatic **triggered** builds in response to events, in some common
+  understandable way
+- **Improve** the featureset of the Build CRD by standardizing support for
+  things like build caching using on-cluster resources
+- **Integrate** Build CRD into more services, and make it more powerful by
+  integrating Build CRD with other services.
 
 In more detail:
 
@@ -30,9 +30,9 @@ seen.
 
 In any case, these are our criteria for detection:
 
-  * Detection heuristics must be open sourced
-  * Users must have visibility into what detection decision was made and why
-  * Detection should be an understandable, repeatable process
+- Detection heuristics must be open sourced
+- Users must have visibility into what detection decision was made and why
+- Detection should be an understandable, repeatable process
 
 ## Community
 
@@ -66,12 +66,12 @@ try to enable that.
 Features we've identified that users might want to include in their build
 workflows:
 
-  * Parallel execution (fan-out/fan-in)
-  * Conditional step execution ("only execute step X if Git branch ==
-    'master'")
-  * Retry steps ("run step X up to three times until it succeeds")
-  * Runtime-conditional step execution ("only execute step Y if step X failed";
-    e.g., recover/cleanup a broken rollout)
+- Parallel execution (fan-out/fan-in)
+- Conditional step execution ("only execute step X if Git branch ==
+  'master'")
+- Retry steps ("run step X up to three times until it succeeds")
+- Runtime-conditional step execution ("only execute step Y if step X failed";
+  e.g., recover/cleanup a broken rollout)
 
 This may expand to cover generating a build from some other format, which
 introduces the possibility of preprocessors to translate that other format into
