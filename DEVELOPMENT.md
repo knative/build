@@ -12,7 +12,7 @@ This doc explains how to setup a development environment so you can get started
 ## Checking out the repository
 
 To set the paths of the imports right, make sure you clone into the directory
-`${GOPATH}/src/github.com/knative/build`.  For example:
+`${GOPATH}/src/github.com/knative/build`. For example:
 
 ```shell
 # Set up GOPATH
@@ -35,6 +35,7 @@ Configure `ko` to point to your registry:
 
 For a gcr.io project (like "myproject"), it will need to have Container
 Registry API enabled first.
+
 ```shell
 # You can put these definitions in .bashrc, so this is one-time setup.
 #
@@ -44,6 +45,7 @@ export KO_DOCKER_REPO=us.gcr.io/<myproject>
 ```
 
 For a local registry (using insecure http://) it needs to be on localhost:
+
 ```shell
 docker run -it -d -p 5000:5000 registry:2
 export KO_DOCKER_REPO=localhost:5000/<myproject>
@@ -59,12 +61,12 @@ go get -u github.com/google/go-containerregistry/cmd/ko
 which ko
 ```
 
-Note that this expects your Docker authorization is [properly configured](
-https://cloud.google.com/container-registry/docs/advanced-authentication#standalone_docker_credential_helper).
+Note that this expects your Docker authorization is [properly configured](https://cloud.google.com/container-registry/docs/advanced-authentication#standalone_docker_credential_helper).
 
 ### Standing it up
 
 You can stand up a version of this controller on-cluster with:
+
 ```shell
 # This will register the CRD and deploy the controller to start acting on them.
 ko apply -f config/
@@ -75,11 +77,13 @@ ko apply -f config/
 ### Iterating
 
 As you make changes to the code, you can redeploy your controller with:
+
 ```shell
 ko apply -f config/controller.yaml
 ```
 
 **Two things of note:**
+
 1. If your (external) dependencies have changed, you should:
    `./hack/update-deps.sh`.
 1. If your type definitions have changed, you should:
@@ -88,6 +92,7 @@ ko apply -f config/controller.yaml
 ### Cleanup
 
 You can clean up everything with:
+
 ```shell
 ko delete -f config/
 ```
