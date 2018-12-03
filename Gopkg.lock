@@ -830,6 +830,7 @@
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra/scripts",
+    "github.com/knative/test-infra/tools/dep-collector",
     "go.opencensus.io/trace",
     "go.uber.org/zap",
     "golang.org/x/sync/errgroup",
