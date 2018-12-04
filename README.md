@@ -8,10 +8,10 @@ address a common need for cloud native development.
 
 A Knative build extends
 [Kubernetes](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
-and utilizes existing Kubernetes primitives to provide you with the
-ability to run on-cluster container builds from source. For example, you can
-write a build that uses Kubernetes-native resources to obtain your source code
-from a repository, build a container image, then run that image.
+and utilizes existing Kubernetes primitives to provide you with the ability to
+run on-cluster container builds from source. For example, you can write a build
+that uses Kubernetes-native resources to obtain your source code from a
+repository, build a container image, then run that image.
 
 While Knative builds are optimized for building, testing, and deploying source
 code, you are still responsible for developing the corresponding components
@@ -24,9 +24,9 @@ that:
 - Build container images.
 - Push container images to an image registry, or deploy them to a cluster.
 
-The goal of a Knative build is to provide a standard, portable, reusable,
-and performance optimized method for defining and running on-cluster container
-image builds. By providing the “boring but difficult” task of running builds on
+The goal of a Knative build is to provide a standard, portable, reusable, and
+performance optimized method for defining and running on-cluster container image
+builds. By providing the “boring but difficult” task of running builds on
 Kubernetes, Knative saves you from having to independently develop and reproduce
 these common Kubernetes-based development processes.
 

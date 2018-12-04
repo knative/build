@@ -33,8 +33,8 @@ $ git remote add ${USER} https://github.com/${USER}/build
 
 Configure `ko` to point to your registry:
 
-For a gcr.io project (like "myproject"), it will need to have Container
-Registry API enabled first.
+For a gcr.io project (like "myproject"), it will need to have Container Registry
+API enabled first.
 
 ```shell
 # You can put these definitions in .bashrc, so this is one-time setup.
@@ -61,7 +61,8 @@ go get -u github.com/google/go-containerregistry/cmd/ko
 which ko
 ```
 
-Note that this expects your Docker authorization is [properly configured](https://cloud.google.com/container-registry/docs/advanced-authentication#standalone_docker_credential_helper).
+Note that this expects your Docker authorization is
+[properly configured](https://cloud.google.com/container-registry/docs/advanced-authentication#standalone_docker_credential_helper).
 
 ### Standing it up
 
