@@ -65,13 +65,13 @@ function resolve_resources(){
   local registry_prefix="$OPENSHIFT_REGISTRY/$OPENSHIFT_BUILD_NAMESPACE/stable"
   for yaml in $(find $dir -name "*.yaml" | grep -v $IGNORES); do
     echo "---" >> $resolved_file_name
-    #first prefix all test images with "test-", then replace all image names with proper repository and prefix images with "build-"
+    #first prefix all test images with "test-", then replace all image names with proper repository and prefix images with "knative-build-"
     sed -e 's%\(.* image: \)\(github.com\)\(.*\/\)\(test\/\)\(.*\)%\1\2 \3\4test-\5%' $yaml | \
-    sed -e 's%\(.* image: \)\(github.com\)\(.*\/\)\(.*\)%\1 '"$registry_prefix"'\:build-\4%' | \
+    sed -e 's%\(.* image: \)\(github.com\)\(.*\/\)\(.*\)%\1 '"$registry_prefix"'\:knative-build-\4%' | \
     # process these images separately as they're passed as arguments to other containers
-    sed -e 's%github.com/knative/build/cmd/creds-init%'"$registry_prefix"'\:build-creds-init%g' | \
-    sed -e 's%github.com/knative/build/cmd/git-init%'"$registry_prefix"'\:build-git-init%g' | \
-    sed -e 's%github.com/knative/build/cmd/nop%'"$registry_prefix"'\:build-nop%g' \
+    sed -e 's%github.com/knative/build/cmd/creds-init%'"$registry_prefix"'\:knative-build-creds-init%g' | \
+    sed -e 's%github.com/knative/build/cmd/git-init%'"$registry_prefix"'\:knative-build-git-init%g' | \
+    sed -e 's%github.com/knative/build/cmd/nop%'"$registry_prefix"'\:knative-build-nop%g' \
     >> $resolved_file_name
   done
 }
