@@ -1,7 +1,7 @@
 # Creating a new Knative Build release
 
-The `release.sh` script automates the creation of Knative Build releases,
-either nightly or versioned ones.
+The `release.sh` script automates the creation of Knative Build releases, either
+nightly or versioned ones.
 
 By default, the script creates a nightly release but does not publish it
 anywhere.
@@ -34,8 +34,8 @@ the release.
 ## Creating nightly releases
 
 Nightly releases are built against the current git tree. The behavior of the
-script is defined by the common flags. You must have write access to the GCR
-and GCS bucket the release will be pushed to, unless `--nopublish` is used.
+script is defined by the common flags. You must have write access to the GCR and
+GCS bucket the release will be pushed to, unless `--nopublish` is used.
 
 Examples:
 
@@ -72,6 +72,6 @@ for your GitHub username, password, and possibly 2-factor authentication
 challenge before the release is published.
 
 The release will be published in the _Releases_ page of the Knative Build
-repository, with the title _Knative Build release vX.Y.Z_ and the given
-release notes. It will also be tagged _vX.Y.Z_ (both on GitHub and as a git
-annotated tag).
+repository, with the title _Knative Build release vX.Y.Z_ and the given release
+notes. It will also be tagged _vX.Y.Z_ (both on GitHub and as a git annotated
+tag).
