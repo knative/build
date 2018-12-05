@@ -16,17 +16,8 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 
-# Set default GCS/GCR
-: ${BUILD_RELEASE_GCS:="knative-nightly/build"}
-: ${BUILD_RELEASE_GCR:="gcr.io/knative-nightly"}
-readonly BUILD_RELEASE_GCS
-readonly BUILD_RELEASE_GCR
-
 # Local generated yaml file
 readonly OUTPUT_YAML=release.yaml
-
-# Set the repository
-export KO_DOCKER_REPO=${BUILD_RELEASE_GCR}
 
 # Script entry point
 
@@ -35,7 +26,17 @@ initialize $@
 set -o errexit
 set -o pipefail
 
+# When building a versioned release, we must use .ko.yaml.release
+if (( BRANCH_RELEASE )); then
+  # KO_CONFIG_PATH expects a path containing a .ko.yaml file
+  export KO_CONFIG_PATH="$(mktemp -d)"
+  cp .ko.yaml.release "${KO_CONFIG_PATH}/.ko.yaml"
+  echo "- Using .ko.yaml.release for base image overrides"
+fi
+
 run_validation_tests ./test/presubmit-tests.sh
+
+# Build the release
 
 banner "Building the release"
 
@@ -47,25 +48,12 @@ export K8S_CLUSTER_OVERRIDE=CLUSTER_NOT_SET
 export K8S_USER_OVERRIDE=USER_NOT_SET
 export DOCKER_REPO_OVERRIDE=DOCKER_NOT_SET
 
-echo "- Destination GCR: ${KO_DOCKER_REPO}"
-if (( PUBLISH_RELEASE )); then
-  echo "- Destination GCS: ${BUILD_RELEASE_GCS}"
-fi
-
-# When building a versioned release, we must use .ko.yaml.release
-if (( BRANCH_RELEASE )); then
-  # KO_CONFIG_PATH expects a path containing a .ko.yaml file
-  export KO_CONFIG_PATH="$(mktemp -d)"
-  cp .ko.yaml.release "${KO_CONFIG_PATH}/.ko.yaml"
-  echo "Using .ko.yaml.release for base image overrides"
-fi
-
 # Build the base image for creds-init and git images.
 docker build -t ${BUILD_BASE_GCR} -f images/Dockerfile images/
 
 echo "Building build-crd"
 ko resolve ${KO_FLAGS} -f config/ > ${OUTPUT_YAML}
-tag_images_in_yaml ${OUTPUT_YAML} ${KO_DOCKER_REPO} ${TAG}
+tag_images_in_yaml ${OUTPUT_YAML}
 
 echo "New release built successfully"
 
@@ -77,8 +65,7 @@ fi
 echo "Pushing base images to ${BUILD_BASE_GCR}"
 docker push ${BUILD_BASE_GCR}
 
-echo "Publishing ${OUTPUT_YAML}"
-publish_yaml ${OUTPUT_YAML} ${BUILD_RELEASE_GCS} ${TAG}
+publish_yaml ${OUTPUT_YAML}
 
 branch_release "Knative Build" "${OUTPUT_YAML}"
 
