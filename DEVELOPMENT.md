@@ -43,6 +43,11 @@ API enabled first.
 # will be pushed, including hostname.
 export KO_DOCKER_REPO=us.gcr.io/<myproject>
 ```
+**Note**: if you are using docker hub to store your images your
+     `KO_DOCKER_REPO` variable should be `docker.io/<username>`.
+
+**Note**: Currently Docker Hub doesn't let you create subdirs under your
+     username.
 
 For a local registry (using insecure http://) it needs to be on localhost:
 
