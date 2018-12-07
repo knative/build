@@ -34,7 +34,7 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 		return apis.ErrMissingField("b.spec.template").Also(apis.ErrMissingField("b.spec.steps"))
 	}
 	if bs.Template != nil && len(bs.Steps) > 0 {
-		return apis.ErrMissingField("b.spec.template").Also(apis.ErrMissingField("b.spec.steps"))
+		return apis.ErrDisallowedFields("b.spec.steps")
 	}
 
 	if bs.Template != nil && bs.Template.Name == "" {
