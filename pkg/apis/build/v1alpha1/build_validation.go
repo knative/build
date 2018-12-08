@@ -36,11 +36,16 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	if bs.Template != nil && len(bs.Steps) > 0 {
 		return apis.ErrMultipleOneOf("template", "steps")
 	}
-
+	//removing below conditional because bs.Template.Name is already being checked in bs.Template.Validate()
+	/*
 	if bs.Template != nil && bs.Template.Name == "" {
-		apis.ErrMissingField("build.spec.template.name")
-	}
+		apis.ErrMissingField("name").ViaField("template")
+	}*/
 
+
+	/*below method potentially has a bug:
+		it does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
+	*/
 	if err := bs.validateSources(); err != nil {
 		return err
 	}
@@ -68,7 +73,7 @@ func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
 		return nil
 	}
 	if b.Name == "" {
-		return apis.ErrMissingField("build.spec.template.name")
+		return apis.ErrMissingField("name").ViaField("template")
 	}
 	if b.Kind != "" {
 		switch b.Kind {
@@ -90,9 +95,9 @@ func (bt *BuildSpec) validateTimeout() *apis.FieldError {
 	maxTimeout := time.Duration(24 * time.Hour)
 
 	if bt.Timeout.Duration > maxTimeout {
-		return apis.ErrInvalidValue(fmt.Sprintf("%s should be < 24h", bt.Timeout), "b.spec.timeout")
+		return apis.ErrInvalidValue(fmt.Sprintf("%s should be < 24h", bt.Timeout), "timeout")
 	} else if bt.Timeout.Duration < 0 {
-		return apis.ErrInvalidValue(fmt.Sprintf("%s should be > 0", bt.Timeout), "b.spec.timeout")
+		return apis.ErrInvalidValue(fmt.Sprintf("%s should be > 0", bt.Timeout), "timeout")
 	}
 	return nil
 }
@@ -110,16 +115,15 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	if len(bs.Sources) > 0 && bs.Source != nil {
 		return apis.ErrMultipleOneOf("source", "sources")
 	}
-
 	for _, source := range bs.Sources {
 		// check all source have unique names
 		if _, ok := names[source.Name]; ok {
-			return apis.ErrMultipleOneOf("b.spec.sources.names")
+			return apis.ErrInvalidKeyName("SourceName", "name", "Duplicate Found").ViaField("source").ViaField("sources")
 		}
 		// multiple sources cannot have subpath defined
 		if source.SubPath != "" {
 			if subPathExists {
-				return apis.ErrInvalidValue("b.spec.sources.subpath", source.SubPath)
+				return apis.ErrInvalidValue(source.SubPath, "subpath").ViaField("source").ViaField("sources")
 			}
 			subPathExists = true
 		}
@@ -130,12 +134,12 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 				continue
 			}
 			if emptyTargetPath {
-				return apis.ErrInvalidValue("empty target path", "b.spec.sources.targetPath")
+				return apis.ErrInvalidValue("Empty Target Path", "targetpath").ViaField("source").ViaField("sources")
 			}
 			emptyTargetPath = true
 		} else {
 			if source.Custom != nil {
-				return apis.ErrInvalidValue(source.TargetPath, "b.spec.sources.targetPath")
+				return apis.ErrInvalidValue(source.TargetPath, "targetpath").ViaField("source").ViaField("sources")
 			}
 			if err := insertNode(source.TargetPath, pathtree); err != nil {
 				return err
