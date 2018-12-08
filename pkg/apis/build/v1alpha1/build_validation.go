@@ -31,7 +31,7 @@ func (b *Build) Validate() *apis.FieldError {
 // Validate for build spec
 func (bs *BuildSpec) Validate() *apis.FieldError {
 	if bs.Template == nil && len(bs.Steps) == 0 {
-		return apis.ErrMissingField("b.spec.template").Also(apis.ErrMissingField("b.spec.steps"))
+		return apis.ErrMissingOneOf("template", "steps")
 	}
 	if bs.Template != nil && len(bs.Steps) > 0 {
 		return apis.ErrMultipleOneOf("template", "steps")
@@ -108,7 +108,7 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 
 	// both source and sources cannot be defined in build
 	if len(bs.Sources) > 0 && bs.Source != nil {
-		return apis.ErrMultipleOneOf("b.spec.source", "b.spec.sources")
+		return apis.ErrMultipleOneOf("source", "sources")
 	}
 
 	for _, source := range bs.Sources {
