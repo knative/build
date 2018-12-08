@@ -81,7 +81,7 @@ func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
 			BuildTemplateKind:
 			return nil
 		default:
-			return apis.ErrInvalidValue(string(b.Kind), apis.CurrentField)
+			return apis.ErrInvalidValue(string(b.Kind), "kind").ViaField("template")
 		}
 	}
 	return nil
