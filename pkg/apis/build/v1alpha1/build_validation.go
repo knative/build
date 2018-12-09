@@ -37,35 +37,23 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 		return apis.ErrMultipleOneOf("template", "steps")
 	}
 	//removing below conditional because bs.Template.Name is already being checked in bs.Template.Validate()
-	/*
-		if bs.Template != nil && bs.Template.Name == "" {
-			apis.ErrMissingField("name").ViaField("template")
-		}*/
+
+	//if bs.Template != nil && bs.Template.Name == "" {
+	//	apis.ErrMissingField("name").ViaField("template")
+	//}
+
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
 	if bs.Template != nil {
 		return bs.Template.Validate().ViaField("template")
 	}
 
-	/*below method potentially has a bug:
-	it does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
-	*/
-	if err := bs.validateSources().Also(ValidateVolumes(bs.Volumes)).Also(bs.validateTimeout()).Also(validateSteps(bs.Steps)); err != nil {
-		return err
-	}
-
-	/*if err := ValidateVolumes(bs.Volumes).; err != nil {
-		return err
-	}*/
-	/*
-		if err := bs.validateTimeout(); err != nil {
-			return err
-		}
-
-		if err := validateSteps(bs.Steps); err != nil {
-			return err
-		}*/
-	return nil
+	//below method potentially has a bug:
+	//it does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
+	return bs.validateSources().
+		Also(ValidateVolumes(bs.Volumes)).
+		Also(bs.validateTimeout()).
+		Also(validateSteps(bs.Steps))
 }
 
 // Validate templateKind
@@ -119,7 +107,7 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	for _, source := range bs.Sources {
 		// check all source have unique names
 		if _, ok := names[source.Name]; ok {
-			return apis.ErrInvalidKeyName("SourceName", "name", "Duplicate Found").ViaField("source").ViaField("sources")
+			return apis.ErrMultipleOneOf("name").ViaField("source").ViaField("sources")
 		}
 		// multiple sources cannot have subpath defined
 		if source.SubPath != "" {
@@ -135,12 +123,12 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 				continue
 			}
 			if emptyTargetPath {
-				return apis.ErrInvalidValue("Empty Target Path", "targetpath").ViaField("source").ViaField("sources")
+				return apis.ErrInvalidValue("Empty Target Path", "targetPath").ViaField("source").ViaField("sources")
 			}
 			emptyTargetPath = true
 		} else {
 			if source.Custom != nil {
-				return apis.ErrInvalidValue(source.TargetPath, "targetpath").ViaField("source").ViaField("sources")
+				return apis.ErrInvalidValue(source.TargetPath, "targetPath").ViaField("source").ViaField("sources")
 			}
 			if err := insertNode(source.TargetPath, pathtree); err != nil {
 				return err
