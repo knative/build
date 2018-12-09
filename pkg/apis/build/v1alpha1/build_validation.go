@@ -38,32 +38,33 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	}
 	//removing below conditional because bs.Template.Name is already being checked in bs.Template.Validate()
 	/*
-	if bs.Template != nil && bs.Template.Name == "" {
-		apis.ErrMissingField("name").ViaField("template")
-	}*/
-
-
-	/*below method potentially has a bug:
-		it does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
-	*/
-	if err := bs.validateSources(); err != nil {
-		return err
-	}
+		if bs.Template != nil && bs.Template.Name == "" {
+			apis.ErrMissingField("name").ViaField("template")
+		}*/
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
 	if bs.Template != nil {
-		return bs.Template.Validate()
+		return bs.Template.Validate().ViaField("template")
 	}
-	if err := ValidateVolumes(bs.Volumes); err != nil {
-		return err
-	}
-	if err := bs.validateTimeout(); err != nil {
+
+	/*below method potentially has a bug:
+	it does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
+	*/
+	if err := bs.validateSources().Also(ValidateVolumes(bs.Volumes)).Also(bs.validateTimeout()).Also(validateSteps(bs.Steps)); err != nil {
 		return err
 	}
 
-	if err := validateSteps(bs.Steps); err != nil {
+	/*if err := ValidateVolumes(bs.Volumes).; err != nil {
 		return err
-	}
+	}*/
+	/*
+		if err := bs.validateTimeout(); err != nil {
+			return err
+		}
+
+		if err := validateSteps(bs.Steps); err != nil {
+			return err
+		}*/
 	return nil
 }
 
@@ -73,7 +74,7 @@ func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
 		return nil
 	}
 	if b.Name == "" {
-		return apis.ErrMissingField("name").ViaField("template")
+		return apis.ErrMissingField("name")
 	}
 	if b.Kind != "" {
 		switch b.Kind {
@@ -81,23 +82,23 @@ func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
 			BuildTemplateKind:
 			return nil
 		default:
-			return apis.ErrInvalidValue(string(b.Kind), "kind").ViaField("template")
+			return apis.ErrInvalidValue(string(b.Kind), "kind")
 		}
 	}
 	return nil
 }
 
 // Validate build timeout
-func (bt *BuildSpec) validateTimeout() *apis.FieldError {
-	if bt.Timeout == nil {
+func (bs *BuildSpec) validateTimeout() *apis.FieldError {
+	if bs.Timeout == nil {
 		return nil
 	}
 	maxTimeout := time.Duration(24 * time.Hour)
 
-	if bt.Timeout.Duration > maxTimeout {
-		return apis.ErrInvalidValue(fmt.Sprintf("%s should be < 24h", bt.Timeout), "timeout")
-	} else if bt.Timeout.Duration < 0 {
-		return apis.ErrInvalidValue(fmt.Sprintf("%s should be > 0", bt.Timeout), "timeout")
+	if bs.Timeout.Duration > maxTimeout {
+		return apis.ErrInvalidValue(fmt.Sprintf("%s should be < 24h", bs.Timeout), "timeout")
+	} else if bs.Timeout.Duration < 0 {
+		return apis.ErrInvalidValue(fmt.Sprintf("%s should be > 0", bs.Timeout), "timeout")
 	}
 	return nil
 }
