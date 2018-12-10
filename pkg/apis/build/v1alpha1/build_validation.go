@@ -107,12 +107,12 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 	for _, source := range bs.Sources {
 		// check all source have unique names
 		if _, ok := names[source.Name]; ok {
-			return apis.ErrMultipleOneOf("name").ViaField("source").ViaField("sources")
+			return apis.ErrMultipleOneOf("name").ViaField("sources")
 		}
 		// multiple sources cannot have subpath defined
 		if source.SubPath != "" {
 			if subPathExists {
-				return apis.ErrInvalidValue(source.SubPath, "subpath").ViaField("source").ViaField("sources")
+				return apis.ErrInvalidValue(source.SubPath, "subpath").ViaField("sources")
 			}
 			subPathExists = true
 		}
@@ -123,12 +123,12 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 				continue
 			}
 			if emptyTargetPath {
-				return apis.ErrInvalidValue("Empty Target Path", "targetPath").ViaField("source").ViaField("sources")
+				return apis.ErrInvalidValue("Empty Target Path", "targetPath").ViaField("sources")
 			}
 			emptyTargetPath = true
 		} else {
 			if source.Custom != nil {
-				return apis.ErrInvalidValue(source.TargetPath, "targetPath").ViaField("source").ViaField("sources")
+				return apis.ErrInvalidValue(source.TargetPath, "targetPath").ViaField("sources")
 			}
 			if err := insertNode(source.TargetPath, pathtree); err != nil {
 				return err
