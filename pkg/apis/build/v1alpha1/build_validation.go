@@ -36,11 +36,6 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	if bs.Template != nil && len(bs.Steps) > 0 {
 		return apis.ErrMultipleOneOf("template", "steps")
 	}
-	//removing below conditional because bs.Template.Name is already being checked in bs.Template.Validate()
-
-	//if bs.Template != nil && bs.Template.Name == "" {
-	//	apis.ErrMissingField("name").ViaField("template")
-	//}
 
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
@@ -48,15 +43,15 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 		return bs.Template.Validate().ViaField("template")
 	}
 
-	//below method potentially has a bug:
-	//it does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
+	// Below method potentially has a bug:
+	// It does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
 	return bs.validateSources().
 		Also(ValidateVolumes(bs.Volumes)).
 		Also(bs.validateTimeout()).
 		Also(validateSteps(bs.Steps))
 }
 
-// Validate templateKind
+// Validate template
 func (b *TemplateInstantiationSpec) Validate() *apis.FieldError {
 	if b == nil {
 		return nil
@@ -100,16 +95,16 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 		nodeMap: map[string]map[string]string{},
 	}
 
-	// both source and sources cannot be defined in build
+	// Both source and sources cannot be defined in build
 	if len(bs.Sources) > 0 && bs.Source != nil {
 		return apis.ErrMultipleOneOf("source", "sources")
 	}
 	for _, source := range bs.Sources {
-		// check all source have unique names
+		// Check all source have unique names
 		if _, ok := names[source.Name]; ok {
 			return apis.ErrMultipleOneOf("name").ViaField("sources")
 		}
-		// multiple sources cannot have subpath defined
+		// Multiple sources cannot have subpath defined
 		if source.SubPath != "" {
 			if subPathExists {
 				return apis.ErrInvalidValue(source.SubPath, "subpath").ViaField("sources")
