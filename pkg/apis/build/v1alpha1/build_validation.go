@@ -125,7 +125,7 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 			if source.Custom != nil {
 				return apis.ErrInvalidValue(source.TargetPath, "targetPath").ViaField("sources")
 			}
-			if err := insertNode(source.TargetPath, pathtree); err != nil {
+			if err := insertNode(source.TargetPath, pathtree).ViaField("sources"); err != nil {
 				return err
 			}
 		}
