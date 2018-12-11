@@ -48,7 +48,7 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	return bs.validateSources().
 		Also(ValidateVolumes(bs.Volumes)).
 		Also(bs.validateTimeout()).
-		Also(validateSteps(bs.Steps))
+		Also(validateSteps(bs.Steps).ViaField("steps"))
 }
 
 // Validate template
@@ -107,7 +107,7 @@ func (bs BuildSpec) validateSources() *apis.FieldError {
 		// Multiple sources cannot have subpath defined
 		if source.SubPath != "" {
 			if subPathExists {
-				return apis.ErrInvalidValue(source.SubPath, "subpath").ViaField("sources")
+				return apis.ErrMultipleOneOf("subpath").ViaField("sources")
 			}
 			subPathExists = true
 		}

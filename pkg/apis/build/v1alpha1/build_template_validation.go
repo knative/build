@@ -66,7 +66,7 @@ func validateSteps(steps []corev1.Container) *apis.FieldError {
 			continue
 		}
 		if _, ok := names[s.Name]; ok {
-			return apis.ErrMultipleOneOf("stepName")
+			return apis.ErrMultipleOneOf("name")
 		}
 		names[s.Name] = struct{}{}
 	}
