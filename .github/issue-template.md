@@ -20,14 +20,19 @@ Classify what kind of issue this is:
 
 -->
 
-## Expected Behavior
+**What happened**:
 
-## Actual Behavior
+**What you expected to happen**:
 
-## Steps to Reproduce the Problem
+**How to reproduce it (as minimally and precisely as possible)**:
 
-1.
-2.
-3.
+**Anything else we need to know?**:
 
-## Additional Info
+**Environment**:
+- Kubernetes version (use `kubectl version`):
+- OS (e.g. from /etc/os-release):
+- Kernel (e.g. `uname -a`):
+- knative version:
+- Others:
+
+**Additional Info**:
