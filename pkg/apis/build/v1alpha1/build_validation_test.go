@@ -338,7 +338,7 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		want: apis.ErrInvalidValue("&Duration{Duration:-48h0m0s,} should be > 0", "spec.timeout"),
+		want: apis.ErrOutOfBoundsValue("-48h0m0s", "0", "24", "spec.timeout"),
 	}, {
 		name: "No template and steps",
 		build: &Build{
@@ -368,7 +368,7 @@ func TestValidateBuild(t *testing.T) {
 		},
 		want: nil,
 	}, {
-		name: "Maximum build timeout",
+		name: "Greater than maximum build timeout",
 		build: &Build{
 			Spec: BuildSpec{
 				Timeout: &metav1.Duration{Duration: 48 * time.Hour},
@@ -378,7 +378,7 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		want: apis.ErrInvalidValue("&Duration{Duration:48h0m0s,} should be < 24h", "spec.timeout"),
+		want: apis.ErrOutOfBoundsValue("48h0m0s", "0", "24", "spec.timeout"),
 	}, {
 		name: "5 minute build timeout",
 		build: &Build{

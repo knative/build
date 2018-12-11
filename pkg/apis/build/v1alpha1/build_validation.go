@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/knative/pkg/apis"
@@ -78,10 +77,8 @@ func (bs *BuildSpec) validateTimeout() *apis.FieldError {
 	}
 	maxTimeout := time.Duration(24 * time.Hour)
 
-	if bs.Timeout.Duration > maxTimeout {
-		return apis.ErrInvalidValue(fmt.Sprintf("%s should be < 24h", bs.Timeout), "timeout")
-	} else if bs.Timeout.Duration < 0 {
-		return apis.ErrInvalidValue(fmt.Sprintf("%s should be > 0", bs.Timeout), "timeout")
+	if bs.Timeout.Duration > maxTimeout || bs.Timeout.Duration < 0 {
+		return apis.ErrOutOfBoundsValue(bs.Timeout.Duration.String(), "0", "24", "timeout")
 	}
 	return nil
 }
