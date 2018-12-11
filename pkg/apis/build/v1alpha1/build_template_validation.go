@@ -47,7 +47,7 @@ func ValidateVolumes(volumes []corev1.Volume) *apis.FieldError {
 	vols := map[string]struct{}{}
 	for _, v := range volumes {
 		if _, ok := vols[v.Name]; ok {
-			return apis.ErrMultipleOneOf("volumeName")
+			return apis.ErrMultipleOneOf("name")
 		}
 		vols[v.Name] = struct{}{}
 	}

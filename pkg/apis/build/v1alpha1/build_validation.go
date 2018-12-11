@@ -46,7 +46,7 @@ func (bs *BuildSpec) Validate() *apis.FieldError {
 	// Below method potentially has a bug:
 	// It does not Validate if only a "Source" has been set, it only validates if multiple sources have been set
 	return bs.validateSources().
-		Also(ValidateVolumes(bs.Volumes)).
+		Also(ValidateVolumes(bs.Volumes).ViaField("volumes")).
 		Also(bs.validateTimeout()).
 		Also(validateSteps(bs.Steps).ViaField("steps"))
 }
