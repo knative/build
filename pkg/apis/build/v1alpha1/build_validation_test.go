@@ -20,16 +20,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestValidateBuild(t *testing.T) {
 	for _, c := range []struct {
-		desc   string
-		build  *Build
-		reason string // if "", expect success.
+		name  string
+		build *Build
+		want  *apis.FieldError
 	}{{
+		name: "Valid Container",
 		build: &Build{
 			Spec: BuildSpec{
 				Steps: []corev1.Container{{
@@ -38,8 +41,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "source and sources presence",
+		name: "Both source and sources present",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -61,9 +65,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "source and sources cannot be declared in same build",
+		want: apis.ErrMultipleOneOf("spec.source", "spec.sources"),
 	}, {
-		desc: "source without name",
+		name: "Source defined without a name",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -78,8 +82,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "source with targetPath",
+		name: "source with targetPath",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -95,8 +100,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "sources with empty targetPaths",
+		name: "Multiple sources with empty targetPaths",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -125,9 +131,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "multiple sources with empty target paths",
+		want: apis.ErrInvalidValue("Empty Target Path", "targetPath").ViaField("sources").ViaField("spec"),
 	}, {
-		desc: "custom sources with targetPaths",
+		name: "Defining a targetPath while using a custom source",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -143,9 +149,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "custom sources with targetPaths",
+		want: apis.ErrInvalidValue("a/b", "targetPath").ViaField("sources").ViaField("spec"),
 	}, {
-		desc: "multiple custom sources without targetPaths",
+		name: "Multiple custom sources without a targetPath",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -166,7 +172,7 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
-		desc: "sources with combination of different targetPath with common parent dir",
+		name: "Sources with targetPaths that overlap with a common parent directory",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -190,9 +196,12 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "multiple sources with overlap of target paths",
+		want: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"spec.sources.targetPath"},
+		},
 	}, {
-		desc: "sources with combination of individual targetpath",
+		name: "Sources with combination of individual targetpath",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -216,8 +225,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "Mix of sources with and without target path",
+		name: "Mix of sources with and without target path",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -247,8 +257,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "source with duplicate names",
+		name: "Multiple sources with duplicate names",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -270,9 +281,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "sources with duplicate names",
+		want: apis.ErrMultipleOneOf("spec.sources.name"),
 	}, {
-		desc: "a source with subpath",
+		name: "Source with a subpath",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -289,8 +300,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "sources with subpath",
+		name: "Multiple sources with subpaths",
 		build: &Build{
 			Spec: BuildSpec{
 				Sources: []SourceSpec{{
@@ -314,9 +326,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "sources without subpaths",
+		want: apis.ErrMultipleOneOf("spec.sources.subpath"),
 	}, {
-		reason: "negative build timeout",
+		name: "Negative build timeout",
 		build: &Build{
 			Spec: BuildSpec{
 				Timeout: &metav1.Duration{Duration: -48 * time.Hour},
@@ -326,15 +338,15 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: apis.ErrInvalidValue("&Duration{Duration:-48h0m0s,} should be > 0", "spec.timeout"),
 	}, {
-		desc:   "No template and steps",
-		reason: "no template & steps",
+		name: "No template and steps",
 		build: &Build{
 			Spec: BuildSpec{},
 		},
+		want: apis.ErrMissingOneOf("spec.template", "spec.steps"),
 	}, {
-		desc:   "Bad template kind",
-		reason: "invalid template",
+		name: "Invalid template Kind",
 		build: &Build{
 			Spec: BuildSpec{
 				Template: &TemplateInstantiationSpec{
@@ -343,8 +355,9 @@ func TestValidateBuild(t *testing.T) {
 				},
 			},
 		},
+		want: apis.ErrInvalidValue("bad-kind", "spec.template.kind"),
 	}, {
-		desc: "good template kind",
+		name: "Valid template Kind",
 		build: &Build{
 			Spec: BuildSpec{
 				Template: &TemplateInstantiationSpec{
@@ -353,8 +366,9 @@ func TestValidateBuild(t *testing.T) {
 				},
 			},
 		},
+		want: nil,
 	}, {
-		reason: "maximum timeout",
+		name: "Maximum build timeout",
 		build: &Build{
 			Spec: BuildSpec{
 				Timeout: &metav1.Duration{Duration: 48 * time.Hour},
@@ -364,7 +378,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: apis.ErrInvalidValue("&Duration{Duration:48h0m0s,} should be < 24h", "spec.timeout"),
 	}, {
+		name: "5 minute build timeout",
 		build: &Build{
 			Spec: BuildSpec{
 				Timeout: &metav1.Duration{Duration: 5 * time.Minute},
@@ -374,8 +390,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
+		want: nil,
 	}, {
-		desc: "Multiple unnamed steps",
+		name: "Multiple unnamed steps",
 		build: &Build{
 			Spec: BuildSpec{
 				Steps: []corev1.Container{{
@@ -388,6 +405,7 @@ func TestValidateBuild(t *testing.T) {
 			},
 		},
 	}, {
+		name: "Multiple steps with the same name",
 		build: &Build{
 			Spec: BuildSpec{
 				Steps: []corev1.Container{{
@@ -399,15 +417,17 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "DuplicateStepName",
+		want: apis.ErrMultipleOneOf("spec.steps.name"),
 	}, {
+		name: "Missing step image",
 		build: &Build{
 			Spec: BuildSpec{
 				Steps: []corev1.Container{{Name: "foo"}},
 			},
 		},
-		reason: "StepMissingImage",
+		want: apis.ErrMissingField("spec.steps.Image"),
 	}, {
+		name: "Multiple volumes with the same name",
 		build: &Build{
 			Spec: BuildSpec{
 				Steps: []corev1.Container{{
@@ -427,8 +447,9 @@ func TestValidateBuild(t *testing.T) {
 				}},
 			},
 		},
-		reason: "DuplicateVolumeName",
+		want: apis.ErrMultipleOneOf("spec.volumes.name"),
 	}, {
+		name: "Template and Steps both defined",
 		build: &Build{
 			Spec: BuildSpec{
 				Steps: []corev1.Container{{
@@ -440,23 +461,21 @@ func TestValidateBuild(t *testing.T) {
 				},
 			},
 		},
-		reason: "TemplateAndSteps",
+		want: apis.ErrMultipleOneOf("spec.template", "spec.steps"),
 	}, {
+		name: "No template name defined",
 		build: &Build{
 			Spec: BuildSpec{
 				Template: &TemplateInstantiationSpec{},
 			},
 		},
-		reason: "MissingTemplateName",
+		want: apis.ErrMissingField("spec.template.name"),
 	}} {
-		name := c.desc
-		if c.reason != "" {
-			name = "invalid-" + c.reason
-		}
+		name := c.name
 		t.Run(name, func(t *testing.T) {
-			verr := c.build.Validate()
-			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
-				t.Errorf("validateBuild(%s); got %#v, want %q", name, verr, c.reason)
+			got := c.build.Validate()
+			if diff := cmp.Diff(c.want.Error(), got.Error()); diff != "" {
+				t.Errorf("validateBuild(%s) (-want, +got) = %v", name, diff)
 			}
 		})
 	}
