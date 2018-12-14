@@ -176,8 +176,6 @@ function teardown() {
 
 enable_admission_webhooks
 
-teardown
-
 create_test_namespace
 
 enable_docker_schema2
@@ -190,6 +188,10 @@ run_go_e2e_tests || failed=1
 
 run_yaml_e2e_tests || failed=1
 
-(( failed )) && fail_test
+(( failed )) && dump_cluster_state
+
+teardown
+
+(( failed )) && exit 1
 
 success
