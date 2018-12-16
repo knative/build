@@ -1,3 +1,8 @@
+
+===========================================================
+Import: github.com/knative/build/vendor/cloud.google.com/go
+
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -4620,4 +4625,3 @@ Import: github.com/knative/build/vendor/k8s.io/client-go
    See the License for the specific language governing permissions and
    limitations under the License.
 
-=======
