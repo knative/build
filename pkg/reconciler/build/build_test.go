@@ -69,7 +69,7 @@ func newBuild(name string) *v1alpha1.Build {
 	}
 }
 
-func (f *fixture) createServceAccount() {
+func (f *fixture) createServiceAccount() {
 	f.t.Helper()
 	f.createServiceAccounts(&corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "default"},
@@ -123,7 +123,7 @@ func TestBuildNotFoundFlow(t *testing.T) {
 		client:     fake.NewSimpleClientset(b),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-	f.createServceAccount()
+	f.createServiceAccount()
 
 	// induce failure when fetching build information in controller
 	reactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -151,7 +151,7 @@ func TestBuildWithBadKey(t *testing.T) {
 		t:          t,
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-	f.createServceAccount()
+	f.createServiceAccount()
 
 	r, _, _ := f.newReconciler()
 	if err := r.Reconcile(context.Background(), "bad/worse/worst"); err != nil {
@@ -167,7 +167,7 @@ func TestBuildNotFoundError(t *testing.T) {
 		client:     fake.NewSimpleClientset(b),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-	f.createServceAccount()
+	f.createServiceAccount()
 
 	r, i, k8sI := f.newReconciler()
 	// Don't update build informers with test build object
@@ -287,7 +287,7 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			client:     fake.NewSimpleClientset(b),
 			kubeclient: k8sfake.NewSimpleClientset(),
 		}
-		f.createServceAccount()
+		f.createServiceAccount()
 
 		r, i, k8sI := f.newReconciler()
 		f.updateIndex(i, b)
@@ -344,7 +344,7 @@ func TestBuildWithTemplate(t *testing.T) {
 		client:     fake.NewSimpleClientset(b, tmpl),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-	f.createServceAccount()
+	f.createServiceAccount()
 
 	r, i, k8sI := f.newReconciler()
 	f.updateIndex(i, b)
@@ -437,7 +437,7 @@ func TestBasicFlows(t *testing.T) {
 				client:     fake.NewSimpleClientset(b),
 				kubeclient: k8sfake.NewSimpleClientset(),
 			}
-			f.createServceAccount()
+			f.createServiceAccount()
 
 			r, i, k8sI := f.newReconciler()
 			f.updateIndex(i, b)
@@ -508,7 +508,7 @@ func TestTimeoutFlow(t *testing.T) {
 		client:     fake.NewSimpleClientset(b),
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
-	f.createServceAccount()
+	f.createServiceAccount()
 
 	r, i, k8sI := f.newReconciler()
 	f.updateIndex(i, b)
