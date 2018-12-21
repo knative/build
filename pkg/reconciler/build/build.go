@@ -170,6 +170,30 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			}
 			return err
 		}
+
+		// Add a unique suffix to avoid confusion when a build
+		// is deleted and re-created with the same name.
+		// We don't use GenerateName here because k8s fakes don't support it.
+		podName, err := resources.GetUniquePodName(build.Name)
+		if err != nil {
+			return err
+		}
+
+		// update with a dummy status first to avoid race condition of another event while the pod is being created
+		build.Status = v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: build.Namespace,
+				PodName:   podName,
+			},
+			StartTime: &metav1.Time{
+				Time: time.Now(),
+			},
+		}
+		if err := c.updateStatus(build); err != nil {
+			return err
+		}
+
 		p, err = c.startPodForBuild(build)
 		if err != nil {
 			build.Status.SetCondition(&duckv1alpha1.Condition{
