@@ -20,6 +20,7 @@ import (
 	"flag"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/version"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -39,7 +40,10 @@ import (
 	"github.com/knative/pkg/signals"
 )
 
-const threadsPerController = 2
+const (
+	threadsPerController = 2
+	minimumVersion       = "v1.10.0"
+)
 
 var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
@@ -64,6 +68,19 @@ func main() {
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatalf("Error building kubernetes clientset: %s", err.Error())
+	}
+
+	// Knative requires a Kubernetes cluster v1.10 or newer, making debugging hard. This makes it easier to
+	// figure out if kubernetes meet the requirement.
+	v, err := kubeClient.Discovery().ServerVersion()
+	if err != nil {
+		logger.Fatalf("ERROR communicating with apiserver: %v", err)
+	}
+	if ver, err := version.ParseGeneric(v.String()); err == nil {
+		info, err := ver.Compare(minimumVersion)
+		if info < 0 || err != nil {
+			logger.Fatalf("Knative requires a Kubernetes cluster v1.10 or newer, current version: %#v\n, err: %v", v, err)
+		}
 	}
 
 	buildClient, err := buildclientset.NewForConfig(cfg)
