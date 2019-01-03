@@ -25,6 +25,10 @@ spec:
     - all
     - knative
   scope: Cluster
+  # Enable the status subresource so we start bumping
+  # metadtaa.generation properly
+  subresources:
+    status: {}
   additionalPrinterColumns:
   - name: Age
     type: date
