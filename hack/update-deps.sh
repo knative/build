@@ -25,4 +25,7 @@ cd ${REPO_ROOT_DIR}
 # Ensure we have everything we need under vendor/
 dep ensure
 
+rm -rf $(find vendor/ -name 'OWNERS')
+rm -rf $(find vendor/ -name '*_test.go')
+
 update_licenses third_party/VENDOR-LICENSE "./cmd/*"
