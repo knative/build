@@ -69,18 +69,6 @@ func TestBuildConditions(t *testing.T) {
 	}
 }
 
-func TestBuildGeneration(t *testing.T) {
-	b := Build{}
-	if a := b.GetGeneration(); a != 0 {
-		t.Errorf("empty build generation should be 0 but got: %d", a)
-	}
-
-	b.SetGeneration(5)
-	if e, a := int64(5), b.GetGeneration(); e != a {
-		t.Errorf("getgeneration mismatch; expected: %d got: %d", e, a)
-	}
-}
-
 func TestBuildGroupVersionKind(t *testing.T) {
 	b := Build{}
 

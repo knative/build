@@ -212,11 +212,7 @@ func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
 	}
 	newb.Status = u.Status
 
-	// Until #38113 is merged, we must use Update instead of UpdateStatus to
-	// update the Status block of the Build resource. UpdateStatus will not
-	// allow changes to the Spec of the resource, which is ideal for ensuring
-	// nothing other than resource status has been updated.
-	_, err = c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Update(newb)
+	_, err = c.buildclientset.BuildV1alpha1().Builds(u.Namespace).UpdateStatus(newb)
 	return err
 }
 

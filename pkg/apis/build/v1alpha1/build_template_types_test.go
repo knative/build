@@ -47,15 +47,3 @@ func TestBuildTemplateGroupVersionKind(t *testing.T) {
 		t.Errorf("GetGroupVersionKind mismatch; expected: %v got: %v", expectedKind, c.GetGroupVersionKind().Kind)
 	}
 }
-
-func TestBuildTemplateGeneration(t *testing.T) {
-	c := BuildTemplate{}
-	if a := c.GetGeneration(); a != 0 {
-		t.Errorf("empty build template generation should be 0 but got: %d", a)
-	}
-
-	c.SetGeneration(5)
-	if e, a := int64(5), c.GetGeneration(); e != a {
-		t.Errorf("getgeneration mismatch; expected: %d got: %d", e, a)
-	}
-}

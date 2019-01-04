@@ -25,6 +25,8 @@ spec:
     - all
     - knative
   scope: Namespaced
+  subresources:
+    status: {}
   additionalPrinterColumns:
   - name: Succeeded
     type: string

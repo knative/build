@@ -18,6 +18,11 @@ rules:
   - apiGroups: ["build.knative.dev"]
     resources: ["builds", "buildtemplates", "clusterbuildtemplates"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  # We enable the status subresource on the templates CRDs so metadata.generation
+  # bumping will work in 1.11
+  - apiGroups: ["build.knative.dev"]
+    resources: ["builds/status", "buildtemplates/status", "clusterbuildtemplates/status"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["caching.internal.knative.dev"]
     resources: ["images"]
     verbs: ["get", "list", "create", "update", "delete", "deletecollection", "patch", "watch"]
