@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/tracing"
 )
 
 const (
@@ -68,7 +69,7 @@ func NewAPIKeyAuthorizer(headers map[string]interface{}, queryParameters map[str
 	return &APIKeyAuthorizer{headers: headers, queryParameters: queryParameters}
 }
 
-// WithAuthorization returns a PrepareDecorator that adds an HTTP headers and Query Paramaters
+// WithAuthorization returns a PrepareDecorator that adds an HTTP headers and Query Parameters.
 func (aka *APIKeyAuthorizer) WithAuthorization() PrepareDecorator {
 	return func(p Preparer) Preparer {
 		return DecoratePreparer(p, WithHeaders(aka.headers), WithQueryParameters(aka.queryParameters))
@@ -113,17 +114,19 @@ func (ba *BearerAuthorizer) WithAuthorization() PrepareDecorator {
 		return PreparerFunc(func(r *http.Request) (*http.Request, error) {
 			r, err := p.Prepare(r)
 			if err == nil {
-				refresher, ok := ba.tokenProvider.(adal.Refresher)
-				if ok {
-					err := refresher.EnsureFresh()
-					if err != nil {
-						var resp *http.Response
-						if tokError, ok := err.(adal.TokenRefreshError); ok {
-							resp = tokError.Response()
-						}
-						return r, NewErrorWithError(err, "azure.BearerAuthorizer", "WithAuthorization", resp,
-							"Failed to refresh the Token for request to %s", r.URL)
+				// the ordering is important here, prefer RefresherWithContext if available
+				if refresher, ok := ba.tokenProvider.(adal.RefresherWithContext); ok {
+					err = refresher.EnsureFreshWithContext(r.Context())
+				} else if refresher, ok := ba.tokenProvider.(adal.Refresher); ok {
+					err = refresher.EnsureFresh()
+				}
+				if err != nil {
+					var resp *http.Response
+					if tokError, ok := err.(adal.TokenRefreshError); ok {
+						resp = tokError.Response()
 					}
+					return r, NewErrorWithError(err, "azure.BearerAuthorizer", "WithAuthorization", resp,
+						"Failed to refresh the Token for request to %s", r.URL)
 				}
 				return Prepare(r, WithHeader(headerAuthorization, fmt.Sprintf("Bearer %s", ba.tokenProvider.OAuthToken())))
 			}
@@ -145,7 +148,7 @@ type BearerAuthorizerCallback struct {
 // is invoked when the HTTP request is submitted.
 func NewBearerAuthorizerCallback(sender Sender, callback BearerAuthorizerCallbackFunc) *BearerAuthorizerCallback {
 	if sender == nil {
-		sender = &http.Client{}
+		sender = &http.Client{Transport: tracing.Transport}
 	}
 	return &BearerAuthorizerCallback{sender: sender, callback: callback}
 }
