@@ -18,6 +18,7 @@ package resources
 
 import (
 	"crypto/rand"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -38,11 +39,15 @@ var (
 	ignorePrivateResourceFields = cmpopts.IgnoreUnexported(resource.Quantity{})
 	ignoreVolatileTime          = cmp.Comparer(func(_, _ apis.VolatileTime) bool { return true })
 	ignoreVolatileTimePtr       = cmp.Comparer(func(_, _ *apis.VolatileTime) bool { return true })
-	nopContainer                = corev1.Container{
-		Name:  "nop",
-		Image: *nopImage,
-	}
 )
+
+var entrypointContainer = corev1.Container{
+	Name:         InitContainerName,
+	Image:        *entrypointImage,
+	Command:      []string{"/bin/cp"},
+	Args:         []string{"/entrypoint", BinaryLocation},
+	VolumeMounts: []corev1.VolumeMount{toolsMount},
+}
 
 func TestMakePod(t *testing.T) {
 	subPath := "subpath"
@@ -82,7 +87,7 @@ func TestMakePod(t *testing.T) {
 		b: v1alpha1.BuildSpec{
 			Steps: []corev1.Container{{
 				Name:  "name",
-				Image: "image",
+				Image: "gcr.io/kaniko-project/executor",
 			}},
 		},
 		bAnnotations: map[string]string{
@@ -97,15 +102,15 @@ func TestMakePod(t *testing.T) {
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
-			}, {
+			}},
+			Containers: []corev1.Container{{
 				Name:         "build-step-name",
-				Image:        "image",
+				Image:        "gcr.io/kaniko-project/executor",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
+			Volumes: implicitVolumes,
 		},
 	}, {
 		desc: "source",
@@ -118,7 +123,7 @@ func TestMakePod(t *testing.T) {
 			},
 			Steps: []corev1.Container{{
 				Name:  "name",
-				Image: "image",
+				Image: "gcr.io/kaniko-project/executor",
 			}},
 		},
 		want: &corev1.PodSpec{
@@ -137,15 +142,15 @@ func TestMakePod(t *testing.T) {
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
-			}, {
+			}},
+			Containers: []corev1.Container{{
 				Name:         "build-step-name",
-				Image:        "image",
+				Image:        "gcr.io/kaniko-project/executor",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
+			Volumes: implicitVolumes,
 		},
 	}, {
 		desc: "sources",
@@ -165,7 +170,7 @@ func TestMakePod(t *testing.T) {
 			}},
 			Steps: []corev1.Container{{
 				Name:  "name",
-				Image: "image",
+				Image: "gcr.io/kaniko-project/executor",
 			}},
 		},
 		want: &corev1.PodSpec{
@@ -191,15 +196,15 @@ func TestMakePod(t *testing.T) {
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
-			}, {
+			}},
+			Containers: []corev1.Container{{
 				Name:         "build-step-name",
-				Image:        "image",
+				Image:        "gcr.io/kaniko-project/executor",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
+			Volumes: implicitVolumes,
 		},
 	}, {
 		desc: "git-source-with-subpath",
@@ -213,7 +218,7 @@ func TestMakePod(t *testing.T) {
 			},
 			Steps: []corev1.Container{{
 				Name:  "name",
-				Image: "image",
+				Image: "gcr.io/kaniko-project/executor",
 			}},
 		},
 		want: &corev1.PodSpec{
@@ -232,15 +237,15 @@ func TestMakePod(t *testing.T) {
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
-			}, {
+			}},
+			Containers: []corev1.Container{{
 				Name:         "build-step-name",
-				Image:        "image",
+				Image:        "gcr.io/kaniko-project/executor",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMountsWithSubPath,
 				WorkingDir:   workspaceDir,
 			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
+			Volumes: implicitVolumes,
 		},
 	}, {
 		desc: "git-sources-with-subpath",
@@ -262,7 +267,7 @@ func TestMakePod(t *testing.T) {
 			}},
 			Steps: []corev1.Container{{
 				Name:  "name",
-				Image: "image",
+				Image: "gcr.io/kaniko-project/executor",
 			}},
 		},
 		want: &corev1.PodSpec{
@@ -288,15 +293,15 @@ func TestMakePod(t *testing.T) {
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
-			}, {
+			}},
+			Containers: []corev1.Container{{
 				Name:         "build-step-name",
-				Image:        "image",
+				Image:        "gcr.io/kaniko-project/executor",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMountsWithSubPath,
 				WorkingDir:   workspaceDir,
 			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
+			Volumes: implicitVolumes,
 		},
 	}, {
 		desc: "gcs-source-with-subpath",
@@ -310,7 +315,7 @@ func TestMakePod(t *testing.T) {
 			},
 			Steps: []corev1.Container{{
 				Name:  "name",
-				Image: "image",
+				Image: "gcr.io/kaniko-project/executor",
 			}},
 		},
 		want: &corev1.PodSpec{
@@ -329,121 +334,124 @@ func TestMakePod(t *testing.T) {
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts, // without subpath
 				WorkingDir:   workspaceDir,
-			}, {
+			}},
+			Containers: []corev1.Container{{
 				Name:         "build-step-name",
-				Image:        "image",
+				Image:        "gcr.io/kaniko-project/executor",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMountsWithSubPath,
 				WorkingDir:   workspaceDir,
 			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
+			Volumes: implicitVolumes,
 		},
-	}, {
-		desc: "gcs-source-with-targetPath",
-		b: v1alpha1.BuildSpec{
-			Source: &v1alpha1.SourceSpec{
-				GCS: &v1alpha1.GCSSourceSpec{
-					Type:     v1alpha1.GCSManifest,
-					Location: "gs://foo/bar",
+	},
+		{
+			desc: "gcs-source-with-targetPath",
+			b: v1alpha1.BuildSpec{
+				Source: &v1alpha1.SourceSpec{
+					GCS: &v1alpha1.GCSSourceSpec{
+						Type:     v1alpha1.GCSManifest,
+						Location: "gs://foo/bar",
+					},
+					TargetPath: "path/foo",
 				},
-				TargetPath: "path/foo",
+			},
+			want: &corev1.PodSpec{
+				RestartPolicy: corev1.RestartPolicyNever,
+				InitContainers: []corev1.Container{{
+					Name:         initContainerPrefix + credsInit,
+					Image:        *credsImage,
+					Args:         []string{},
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMounts, // without subpath
+					WorkingDir:   workspaceDir,
+				}, {
+					Name:         initContainerPrefix + gcsSource + "-0",
+					Image:        *gcsFetcherImage,
+					Args:         []string{"--type", "Manifest", "--location", "gs://foo/bar", "--dest_dir", "/workspace/path/foo"},
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMounts, // without subpath
+					WorkingDir:   workspaceDir,
+				}},
+				Containers: []corev1.Container{},
+				Volumes:    implicitVolumes,
 			},
 		},
-		want: &corev1.PodSpec{
-			RestartPolicy: corev1.RestartPolicyNever,
-			InitContainers: []corev1.Container{{
-				Name:         initContainerPrefix + credsInit,
-				Image:        *credsImage,
-				Args:         []string{},
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMounts, // without subpath
-				WorkingDir:   workspaceDir,
-			}, {
-				Name:         initContainerPrefix + gcsSource + "-0",
-				Image:        *gcsFetcherImage,
-				Args:         []string{"--type", "Manifest", "--location", "gs://foo/bar", "--dest_dir", "/workspace/path/foo"},
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMounts, // without subpath
-				WorkingDir:   workspaceDir,
-			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
-		},
-	}, {
-		desc: "custom-source-with-subpath",
-		b: v1alpha1.BuildSpec{
-			Source: &v1alpha1.SourceSpec{
-				Custom: &corev1.Container{
-					Image: "image",
+		{
+			desc: "custom-source-with-subpath",
+			b: v1alpha1.BuildSpec{
+				Source: &v1alpha1.SourceSpec{
+					Custom: &corev1.Container{
+						Image: "gcr.io/kaniko-project/executor",
+					},
+					SubPath: subPath,
 				},
-				SubPath: subPath,
+				Steps: []corev1.Container{{
+					Name:  "name",
+					Image: "gcr.io/kaniko-project/executor",
+				}},
 			},
-			Steps: []corev1.Container{{
-				Name:  "name",
-				Image: "image",
-			}},
+			want: &corev1.PodSpec{
+				RestartPolicy: corev1.RestartPolicyNever,
+				InitContainers: []corev1.Container{{
+					Name:         initContainerPrefix + credsInit,
+					Image:        *credsImage,
+					Args:         []string{},
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMounts, // without subpath
+					WorkingDir:   workspaceDir,
+				}},
+				Containers: []corev1.Container{{
+					Name:         initContainerPrefix + customSource,
+					Image:        "gcr.io/kaniko-project/executor",
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMountsWithSubPath, // *with* subpath
+					WorkingDir:   workspaceDir,
+				}, {
+					Name:         "build-step-name",
+					Image:        "gcr.io/kaniko-project/executor",
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMountsWithSubPath,
+					WorkingDir:   workspaceDir,
+				}},
+				Volumes: implicitVolumes,
+			},
 		},
-		want: &corev1.PodSpec{
-			RestartPolicy: corev1.RestartPolicyNever,
-			InitContainers: []corev1.Container{{
-				Name:         initContainerPrefix + credsInit,
-				Image:        *credsImage,
-				Args:         []string{},
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMounts, // without subpath
-				WorkingDir:   workspaceDir,
-			}, {
-				Name:         initContainerPrefix + customSource,
-				Image:        "image",
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMountsWithSubPath, // *with* subpath
-				WorkingDir:   workspaceDir,
-			}, {
-				Name:         "build-step-name",
-				Image:        "image",
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMountsWithSubPath,
-				WorkingDir:   workspaceDir,
-			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumes,
-		},
-	}, {
-		desc: "with-service-account",
-		b: v1alpha1.BuildSpec{
-			ServiceAccountName: "service-account",
-			Steps: []corev1.Container{{
-				Name:  "name",
-				Image: "image",
-			}},
-		},
-		want: &corev1.PodSpec{
-			ServiceAccountName: "service-account",
-			RestartPolicy:      corev1.RestartPolicyNever,
-			InitContainers: []corev1.Container{{
-				Name:  initContainerPrefix + credsInit,
-				Image: *credsImage,
-				Args: []string{
-					"-basic-docker=multi-creds=https://docker.io",
-					"-basic-docker=multi-creds=https://us.gcr.io",
-					"-basic-git=multi-creds=github.com",
-					"-basic-git=multi-creds=gitlab.com",
-				},
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMountsWithSecrets,
-				WorkingDir:   workspaceDir,
-			}, {
-				Name:         "build-step-name",
-				Image:        "image",
-				Env:          implicitEnvVars,
-				VolumeMounts: implicitVolumeMounts,
-				WorkingDir:   workspaceDir,
-			}},
-			Containers: []corev1.Container{nopContainer},
-			Volumes:    implicitVolumesWithSecrets,
-		},
-	}} {
+		{
+			desc: "with-service-account",
+			b: v1alpha1.BuildSpec{
+				ServiceAccountName: "service-account",
+				Steps: []corev1.Container{{
+					Name:  "name",
+					Image: "gcr.io/kaniko-project/executor",
+				}},
+			},
+			want: &corev1.PodSpec{
+				ServiceAccountName: "service-account",
+				RestartPolicy:      corev1.RestartPolicyNever,
+				InitContainers: []corev1.Container{{
+					Name:  initContainerPrefix + credsInit,
+					Image: *credsImage,
+					Args: []string{
+						"-basic-docker=multi-creds=https://docker.io",
+						"-basic-docker=multi-creds=https://us.gcr.io",
+						"-basic-git=multi-creds=github.com",
+						"-basic-git=multi-creds=gitlab.com",
+					},
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMountsWithSecrets,
+					WorkingDir:   workspaceDir,
+				}},
+				Containers: []corev1.Container{{
+					Name:         "build-step-name",
+					Image:        "gcr.io/kaniko-project/executor",
+					Env:          implicitEnvVars,
+					VolumeMounts: implicitVolumeMounts,
+					WorkingDir:   workspaceDir,
+				}},
+				Volumes: implicitVolumesWithSecrets,
+			},
+		}} {
 		t.Run(c.desc, func(t *testing.T) {
 			cs := fakek8s.NewSimpleClientset(
 				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
@@ -478,6 +486,24 @@ func TestMakePod(t *testing.T) {
 			if err != c.wantErr {
 				t.Fatalf("MakePod: %v", err)
 			}
+			c.want.InitContainers = append(c.want.InitContainers, entrypointContainer)
+			c.want.Volumes = append(c.want.Volumes, toolsVolume)
+
+			for i := range c.want.Containers {
+				c.want.Containers[i].Command = []string{"/tools/entrypoint"}
+				c.want.Containers[i].VolumeMounts = append(
+					c.want.Containers[i].VolumeMounts, toolsMount)
+				shouldWaitForPrevStep := false
+				if i > 0 {
+					shouldWaitForPrevStep = true
+				}
+				c.want.Containers[i].Env = append(
+					c.want.Containers[i].Env, corev1.EnvVar{Name: "ENTRYPOINT_OPTIONS",
+						Value: fmt.Sprintf(`{"args":["/kaniko/executor"],"process_log":"/tools/process-log.txt","marker_file":"/tools/marker-file.txt","shouldWaitForPrevStep":%t,"preRunFile":"/tools/%d","shouldRunPostRun":true,"postRunFile":"/tools/%d"}`,
+							shouldWaitForPrevStep, i, i+1)},
+				)
+				c.want.Containers[i].Args = []string{}
+			}
 
 			// Generated name from hexlifying a stream of 'a's.
 			wantName := "build-name-pod-616161"
@@ -485,6 +511,17 @@ func TestMakePod(t *testing.T) {
 				t.Errorf("Pod name got %q, want %q", got.Name, wantName)
 			}
 
+			// c.want.Containers[0].Resources.
+			for i := range c.want.Containers {
+				if i != 0 {
+					c.want.Containers[i].Resources = corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							// Must set memory limit to get MemoryStats.AvailableBytes
+							corev1.ResourceCPU: resource.MustParse("0m"),
+						},
+					}
+				}
+			}
 			if d := cmp.Diff(&got.Spec, c.want, ignorePrivateResourceFields); d != "" {
 				t.Errorf("Diff spec:\n%s", d)
 			}
@@ -771,7 +808,6 @@ func TestBuildStatusFromPod(t *testing.T) {
 			}
 			c.want.Builder = v1alpha1.ClusterBuildProvider
 			c.want.StartTime = &now
-
 			if d := cmp.Diff(got, c.want, ignoreVolatileTime); d != "" {
 				t.Errorf("Diff:\n%s", d)
 			}

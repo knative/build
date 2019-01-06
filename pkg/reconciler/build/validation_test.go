@@ -43,7 +43,7 @@ func TestValidateBuild(t *testing.T) {
 				Template: &v1alpha1.TemplateInstantiationSpec{
 					Arguments: []v1alpha1.ArgumentSpec{{
 						Name:  "foo",
-						Value: "hello",
+						Value: "hello-world",
 					}, {
 						Name:  "foo",
 						Value: "world",
@@ -138,7 +138,7 @@ func TestValidateBuild(t *testing.T) {
 					Name: "template",
 					Arguments: []v1alpha1.ArgumentSpec{{
 						Name:  "foo",
-						Value: "hello",
+						Value: "hello-world",
 					}},
 				},
 			},
@@ -162,7 +162,7 @@ func TestValidateBuild(t *testing.T) {
 					Name: "template",
 					Arguments: []v1alpha1.ArgumentSpec{{
 						Name:  "bar",
-						Value: "hello",
+						Value: "hello-world",
 					}},
 				},
 			},
@@ -179,7 +179,7 @@ func TestValidateBuild(t *testing.T) {
 					Name: "template",
 					Arguments: []v1alpha1.ArgumentSpec{{
 						Name:  "foo",
-						Value: "hello",
+						Value: "hello-world",
 					}},
 				},
 			},
@@ -238,7 +238,7 @@ func TestValidateBuild(t *testing.T) {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				// ServiceAccountName will default to "default"
-				Steps: []corev1.Container{{Image: "hello"}},
+				Steps: []corev1.Container{{Image: "hello-world"}},
 			},
 		},
 		sa: &corev1.ServiceAccount{
@@ -275,7 +275,7 @@ func TestValidateBuild(t *testing.T) {
 		build: &v1alpha1.Build{
 			Spec: v1alpha1.BuildSpec{
 				ServiceAccountName: "serviceaccount",
-				Steps:              []corev1.Container{{Image: "hello"}},
+				Steps:              []corev1.Container{{Image: "hello-world"}},
 			},
 		},
 		sa: &corev1.ServiceAccount{

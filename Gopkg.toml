@@ -39,11 +39,6 @@ required = [
   # It seems to be broken at HEAD.
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
-[[override]]
-  name = "github.com/Azure/go-autorest"
-  # This is the commit at which k8s depends on this in 1.11
-  # It seems to be broken at HEAD.
-  revision = "1ff28809256a84bb6966640ff3d0371af82ccba4"
 
 [[override]]
   name = "github.com/knative/pkg"
