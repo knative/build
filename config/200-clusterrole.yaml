@@ -26,3 +26,7 @@ rules:
   - apiGroups: ["caching.internal.knative.dev"]
     resources: ["images"]
     verbs: ["get", "list", "create", "update", "delete", "deletecollection", "patch", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["podsecuritypolicies"]
+    resourceNames: ["knative-build"]
+    verbs: ["use"]
