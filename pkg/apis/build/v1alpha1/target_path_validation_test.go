@@ -23,14 +23,20 @@ func TestValidateTargetPaths(t *testing.T) {
 			"a/b/c/d",
 			"a/b",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with overlap in different order",
 		paths: []string{
 			"a/b",
 			"a/b/c",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with leaf node overlap",
 		paths: []string{
@@ -56,7 +62,10 @@ func TestValidateTargetPaths(t *testing.T) {
 			"a/b/c",
 			"a/b/c",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with same length and different leaf node",
 		paths: []string{
@@ -69,14 +78,20 @@ func TestValidateTargetPaths(t *testing.T) {
 			"github.com/foo/bar",
 			"github.com/foo/",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with overlap in different order",
 		paths: []string{
 			"github.com/foo",
 			"github.com/foo/bar",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with different leaf",
 		paths: []string{
@@ -97,7 +112,10 @@ func TestValidateTargetPaths(t *testing.T) {
 			"/dir/a",
 			"/dir/a/b",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with different parent node",
 		paths: []string{
@@ -112,7 +130,10 @@ func TestValidateTargetPaths(t *testing.T) {
 			"a/d",
 			"a/d",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths starts with combination of / and no /",
 		paths: []string{
@@ -125,7 +146,10 @@ func TestValidateTargetPaths(t *testing.T) {
 			"/a/a/b/d",
 			"a/a",
 		},
-		wantErr: apis.ErrMultipleOneOf("b.spec.sources.targetPath"),
+		wantErr: &apis.FieldError{
+			Message: "Overlapping Target Paths",
+			Paths:   []string{"targetPath"},
+		},
 	}, {
 		desc: "paths with repeating nodes",
 		paths: []string{
