@@ -30,6 +30,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/system"
+	_ "github.com/knative/build/pkg/system/testing"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
@@ -757,7 +758,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 			p := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "pod",
-					Namespace:         system.Namespace,
+					Namespace:         system.Namespace(),
 					CreationTimestamp: now,
 				},
 				Status: c.podStatus,
@@ -767,7 +768,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 			// Common traits, set for test case brevity.
 			c.want.Cluster = &v1alpha1.ClusterSpec{
 				PodName:   "pod",
-				Namespace: system.Namespace,
+				Namespace: system.Namespace(),
 			}
 			c.want.Builder = v1alpha1.ClusterBuildProvider
 			c.want.StartTime = &now

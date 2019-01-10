@@ -142,7 +142,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (c *Reconciler) reconcileImageCaches(ctx context.Context, cbt *v1alpha1.ClusterBuildTemplate) error {
 	ics := resources.MakeImageCaches(cbt)
 
-	eics, err := c.imagesLister.Images(system.Namespace).List(kmeta.MakeVersionLabelSelector(cbt))
+	eics, err := c.imagesLister.Images(system.Namespace()).List(kmeta.MakeVersionLabelSelector(cbt))
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (c *Reconciler) reconcileImageCaches(ctx context.Context, cbt *v1alpha1.Clu
 
 	// Delete any Image caches relevant to older versions of this resource.
 	propPolicy := metav1.DeletePropagationForeground
-	return c.cachingclientset.CachingV1alpha1().Images(system.Namespace).DeleteCollection(
+	return c.cachingclientset.CachingV1alpha1().Images(system.Namespace()).DeleteCollection(
 		&metav1.DeleteOptions{PropagationPolicy: &propPolicy},
 		metav1.ListOptions{LabelSelector: kmeta.MakeOldVersionLabelSelector(cbt).String()},
 	)

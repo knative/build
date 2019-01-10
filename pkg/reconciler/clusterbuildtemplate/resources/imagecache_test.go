@@ -25,6 +25,7 @@ import (
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/system"
+	_ "github.com/knative/build/pkg/system/testing"
 	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 )
 
@@ -53,7 +54,7 @@ func TestMakeImageCache(t *testing.T) {
 		},
 		want: []caching.Image{{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: system.Namespace,
+				Namespace: system.Namespace(),
 				Name:      "bar-asdf-00000",
 				Labels: map[string]string{
 					"controller": "1234",

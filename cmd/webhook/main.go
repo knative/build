@@ -72,7 +72,7 @@ func main() {
 	pkgoptions := webhook.ControllerOptions{
 		ServiceName:    "build-webhook",
 		DeploymentName: "build-webhook",
-		Namespace:      system.Namespace,
+		Namespace:      system.Namespace(),
 		Port:           443,
 		SecretName:     "build-webhook-certs",
 		WebhookName:    "webhook.build.knative.dev",

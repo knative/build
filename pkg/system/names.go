@@ -16,17 +16,33 @@ limitations under the License.
 
 package system
 
-import "os"
-
-var (
-	// Namespace holds the K8s namespace where our build system
-	// components run.
-	Namespace string
+import (
+	"fmt"
+	"os"
 )
 
-func init() {
-	Namespace = os.Getenv("SYSTEM_NAMESPACE")
-	if Namespace == "" {
-		Namespace = "knative-build"
+var (
+	NamespaceEnvKey = "SYSTEM_NAMESPACE"
+)
+
+// Namespace holds the K8s namespace where our build system
+// components run.
+func Namespace() string {
+	if ns := os.Getenv(NamespaceEnvKey); ns != "" {
+		return ns
 	}
+
+	panic(fmt.Sprintf(`The environment variable %q is not set
+If this is a process running on Kubernetes, then it should be using the downward
+API to initialize this variable via:
+  env:
+  - name: %s
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+If this is a Go unit test consuming system.Namespace() then it should add the
+following import:
+import (
+	_ "github.com/knative/build/pkg/system/testing"
+)`, NamespaceEnvKey, NamespaceEnvKey))
 }
