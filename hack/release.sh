@@ -17,7 +17,7 @@
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
 
 # Local generated yaml file
-readonly OUTPUT_YAML=release.yaml
+readonly OUTPUT_YAML=build.yaml
 
 # Script entry point
 
