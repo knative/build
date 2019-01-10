@@ -87,6 +87,14 @@ func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v
 		}
 	}
 
+	// Apply variable expansion to the build's volumes
+	for i, v := range build.Spec.Volumes {
+		build.Spec.Volumes[i].Name = applyReplacements(v.Name)
+		if c := v.PersistentVolumeClaim; c != nil {
+			c.ClaimName = applyReplacements(c.ClaimName)
+		}
+	}
+
 	if buildTmpl := build.Spec.Template; buildTmpl != nil && len(buildTmpl.Env) > 0 {
 		// Apply variable expansion to the build's overridden
 		// environment variables

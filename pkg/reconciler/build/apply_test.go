@@ -115,6 +115,14 @@ func TestApplyTemplate(t *testing.T) {
 				Parameters: []v1alpha1.ParameterSpec{{
 					Name: "FOO",
 				}},
+				Volumes: []corev1.Volume{{
+					Name: "${FOO}",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "${FOO}",
+						},
+					},
+				}},
 			},
 		},
 		want: &v1alpha1.Build{
@@ -141,6 +149,14 @@ func TestApplyTemplate(t *testing.T) {
 						Value: "world",
 					}},
 				},
+				Volumes: []corev1.Volume{{
+					Name: "world",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "world",
+						},
+					},
+				}},
 			},
 		},
 	}, {
