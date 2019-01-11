@@ -720,6 +720,45 @@ func TestApplyReplacements(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "replacement in volumes",
+			args: args{
+				build: &v1alpha1.Build{
+					Spec: v1alpha1.BuildSpec{
+						Volumes: []corev1.Volume{{
+							Name: "${name}",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									corev1.LocalObjectReference{"${configmapname}"},
+									nil,
+									nil,
+									nil,
+								},
+							}},
+						},
+					},
+				},
+				replacements: map[string]string{
+					"name":          "myname",
+					"configmapname": "cfgmapname",
+				},
+			},
+			want: &v1alpha1.Build{
+				Spec: v1alpha1.BuildSpec{
+					Volumes: []corev1.Volume{{
+						Name: "myname",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								corev1.LocalObjectReference{"cfgmapname"},
+								nil,
+								nil,
+								nil,
+							},
+						}},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
