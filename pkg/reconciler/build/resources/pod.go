@@ -341,23 +341,20 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 
-	// Generate a short random hex string.
-	b, err := ioutil.ReadAll(io.LimitReader(randReader, 3))
+	// Add a unique suffix to avoid confusion when a build
+	// is deleted and re-created with the same name.
+	// We don't use GenerateName here because k8s fakes don't support it.
+	podName, err := GetUniquePodName(build.Name)
 	if err != nil {
 		return nil, err
 	}
-	gibberish := hex.EncodeToString(b)
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			// Generate a unique name based on the build's name.
-			// Add a unique suffix to avoid confusion when a build
-			// is deleted and re-created with the same name.
-			// We don't use GenerateName here because k8s fakes don't support it.
-			Name: fmt.Sprintf("%s-pod-%s", build.Name, gibberish),
+			Name: podName,
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(build, schema.GroupVersionKind{
@@ -385,6 +382,18 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			Affinity:           build.Spec.Affinity,
 		},
 	}, nil
+}
+
+// GetUniquePodName returns a unique name based on the build's name.
+func GetUniquePodName(name string) (string, error) {
+	// Generate a short random hex string.
+	b, err := ioutil.ReadAll(io.LimitReader(randReader, 3))
+	if err != nil {
+		return "", err
+	}
+
+	gibberish := hex.EncodeToString(b)
+	return fmt.Sprintf("%s-pod-%s", name, gibberish) , nil
 }
 
 // BuildStatusFromPod returns a BuildStatus based on the Pod and the original BuildSpec.
