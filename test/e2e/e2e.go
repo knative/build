@@ -20,6 +20,7 @@ package e2e
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -40,8 +41,6 @@ type clients struct {
 	buildClient *buildClient
 }
 
-const buildTestNamespace = "build-tests"
-
 var (
 	// Sentinel error from watchBuild when the build failed.
 	errBuildFailed = errors.New("build failed")
@@ -50,7 +49,7 @@ var (
 	errWatchTimeout = errors.New("watch ended before build finished")
 )
 
-func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
+func teardownNamespace(clients *clients, buildTestNamespace string, logger *logging.BaseLogger) {
 	if clients != nil && clients.kubeClient != nil {
 		logger.Infof("Deleting namespace %q", buildTestNamespace)
 
@@ -60,7 +59,7 @@ func teardownNamespace(clients *clients, logger *logging.BaseLogger) {
 	}
 }
 
-func teardownBuild(clients *clients, logger *logging.BaseLogger, name string) {
+func teardownBuild(clients *clients, logger *logging.BaseLogger, buildTestNamespace, name string) {
 	if clients != nil && clients.buildClient != nil {
 		logger.Infof("Deleting build %q in namespace %q", name, buildTestNamespace)
 
@@ -80,7 +79,7 @@ func teardownClusterTemplate(clients *clients, logger *logging.BaseLogger, name 
 	}
 }
 
-func buildClients(logger *logging.BaseLogger) *clients {
+func buildClients(buildTestNamespace string, logger *logging.BaseLogger) *clients {
 	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
 	if err != nil {
 		logger.Fatalf("Error creating newClients: %v", err)
@@ -88,8 +87,9 @@ func buildClients(logger *logging.BaseLogger) *clients {
 	return clients
 }
 
-func setup(logger *logging.BaseLogger) *clients {
-	clients := buildClients(logger)
+func createTestNamespace(logger *logging.BaseLogger) (string, *clients) {
+	buildTestNamespace := AppendRandomString("build-tests")
+	clients := buildClients(buildTestNamespace, logger)
 
 	// Ensure the test namespace exists, by trying to create it and ignoring
 	// already-exists errors.
@@ -104,7 +104,7 @@ func setup(logger *logging.BaseLogger) *clients {
 	} else {
 		logger.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
 	}
-	return clients
+	return buildTestNamespace, clients
 }
 
 func newClients(configPath string, clusterName string, namespace string) (*clients, error) {
@@ -190,4 +190,24 @@ func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 		}
 	}
 	return latest, errWatchTimeout
+}
+
+// initialize is responsible for setting up and tearing down the testing environment,
+// namely the test namespace.
+func initialize(contextName string) (string, *logging.BaseLogger, *clients) {
+        flag.Parse()
+        logging.InitializeLogger(test.Flags.LogVerbose)
+        logger := logging.GetContextLogger("initialize")
+        flag.Set("alsologtostderr", "true")
+        if test.Flags.EmitMetrics {
+                logging.InitializeMetricExporter()
+        }
+
+        buildTestNamespace, clients := createTestNamespace(logger)
+
+        // Cleanup namespace
+        test.CleanupOnInterrupt(func() { teardownNamespace(clients, buildTestNamespace, logger) }, logger)
+
+        testLogger := logging.GetContextLogger(contextName)
+        return buildTestNamespace, testLogger, buildClients(buildTestNamespace, testLogger)
 }
