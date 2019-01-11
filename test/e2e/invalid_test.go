@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -33,8 +32,8 @@ import (
 // TestInvalidBuild tests that invalid builds are rejected by the webhook
 // admission controller.
 func TestInvalidBuild(t *testing.T) {
-	logger := logging.GetContextLogger("TestSimpleBuild")
-	clients := buildClients(logger)
+	buildTestNamespace, logger, clients := initialize("TestInvalidBuild")
+	defer teardownNamespace(clients, buildTestNamespace, logger)
 
 	for _, b := range []*v1alpha1.Build{{
 		ObjectMeta: metav1.ObjectMeta{
