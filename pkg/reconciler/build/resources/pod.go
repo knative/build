@@ -354,7 +354,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			Name: podName,
+			Name:      podName,
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(build, schema.GroupVersionKind{
@@ -393,7 +393,7 @@ func GetUniquePodName(name string) (string, error) {
 	}
 
 	gibberish := hex.EncodeToString(b)
-	return fmt.Sprintf("%s-pod-%s", name, gibberish) , nil
+	return fmt.Sprintf("%s-pod-%s", name, gibberish), nil
 }
 
 // BuildStatusFromPod returns a BuildStatus based on the Pod and the original BuildSpec.
