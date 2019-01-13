@@ -17,36 +17,19 @@
 # This script runs the YAML end-to-end tests against the build controller
 # built from source. It is not run by prow for each PR, see e2e-tests.sh for that.
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 source $(dirname $0)/e2e-common.sh
 
-# Fail fast during setup.
-set -o errexit
-set -o pipefail
+# Script entry point.
 
-header "Building and starting the controller"
-ko apply -f config/ || fail_test
+header "Setting up environment"
 
-# Handle test failures ourselves, so we can dump useful info.
+# Handle failures ourselves, so we can dump useful info.
 set +o errexit
 set +o pipefail
 
-# Make sure that are no builds or build templates in the current namespace.
-kubectl delete --ignore-not-found=true builds.build.knative.dev --all
-kubectl delete --ignore-not-found=true buildtemplates --all
+install_pipeline_crd
 
 # Run the tests
 
-failed=0
-
-header "Running YAML e2e tests"
-if ! run_yaml_tests; then
-  failed=1
-  echo "ERROR: one or more YAML tests failed"
-  # If formatting fails for any reason, use yaml as a fall back.
-  kubectl get builds.build.knative.dev -o=custom-columns-file=./test/columns.txt || \
-    kubectl get builds.build.knative.dev -oyaml
-fi
-
-(( failed )) && fail_test
+run_yaml_tests || fail_test
 success
