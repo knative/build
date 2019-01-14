@@ -63,5 +63,5 @@ func main() {
 		logger.Fatalf("Invalid options: %v", err)
 	}
 
-	os.Exit(o.Run())
+	os.Exit(o.Run(logger))
 }

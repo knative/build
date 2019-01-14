@@ -19,38 +19,42 @@ package entrypoint
 import (
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
-	"github.com/knative/build/pkg/entrypoint/wrapper"
+	"github.com/knative/pkg/logging"
 )
 
 func TestOptions_Run(t *testing.T) {
 	var testCases = []struct {
-		name                          string
-		args                          []string
-		expectedShouldWaitForPrevStep bool
-		expectedPreRunFile            string
-		expectedPostRunFile           string
-		expectedShouldRunPostRun      bool
+		name                        string
+		options                     *Options
+		expectedPreRunFileContents  string
+		expectedPostRunFileContents string
 	}{
 		{
-			name:                     "successful command",
-			args:                     []string{"sh", "-c", "exit 0"},
-			expectedShouldRunPostRun: true,
-			expectedPostRunFile:      "0",
+			name: "successful_command",
+			options: &Options{
+				Args:                  []string{"sh", "-c", "exit 0"},
+				ShouldWaitForPrevStep: true,
+				PreRunFile:            "0",
+				ShouldRunPostRun:      true,
+				PostRunFile:           "1",
+			},
+			expectedPreRunFileContents:  "0",
+			expectedPostRunFileContents: "0",
 		},
 		{
-			name: "successful command with output",
-			args: []string{"echo", "test"},
-		},
-		{
-			name: "unsuccessful command",
-			args: []string{"sh", "-c", "exit 12"},
-		},
-		{
-			name: "unsuccessful command with output",
-			args: []string{"sh", "-c", "echo test && exit 12"},
+			name: "unsuccessful_command",
+			options: &Options{
+				Args:                  []string{"sh", "-c", "exit 1"},
+				ShouldWaitForPrevStep: true,
+				PreRunFile:            "0",
+				ShouldRunPostRun:      true,
+				PostRunFile:           "1",
+			},
+			expectedPreRunFileContents:  "0",
+			expectedPostRunFileContents: "1",
 		},
 	}
 
@@ -65,22 +69,31 @@ func TestOptions_Run(t *testing.T) {
 					t.Errorf("%s: error cleaning up temp dir: %v", testCase.name, err)
 				}
 			}()
+			options := testCase.options
 
-			options := Options{
-				Args: testCase.args,
-				Options: &wrapper.Options{
-					ShouldWaitForPrevStep: false,
-					PreRunFile:            path.Join(tmpDir, "0"),
-					PostRunFile:           path.Join(tmpDir, "0"),
-				},
+			// reset paths to new temp dir
+			options.PreRunFile = filepath.Join(tmpDir, options.PreRunFile)
+			options.PostRunFile = filepath.Join(tmpDir, options.PostRunFile)
+
+			if options.ShouldWaitForPrevStep {
+				// write the temp file it should wait for
+				err := ioutil.WriteFile(options.PreRunFile, []byte("0"), os.ModePerm)
+				if err != nil {
+					t.Errorf("%s: error writing file to temp dir: %v", testCase.name, err)
+				}
 			}
+
+			logger, _ := logging.NewLogger("", "entrypoint")
+			defer logger.Sync()
+
+			options.Run(logger)
 			if options.ShouldWaitForPrevStep {
 				compareFileContents(testCase.name, options.PreRunFile,
-					testCase.expectedPreRunFile, t)
+					testCase.expectedPreRunFileContents, t)
 			}
 			if options.ShouldRunPostRun {
 				compareFileContents(testCase.name, options.PostRunFile,
-					testCase.expectedPostRunFile, t)
+					testCase.expectedPostRunFileContents, t)
 			}
 		})
 	}

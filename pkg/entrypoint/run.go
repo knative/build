@@ -21,11 +21,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"syscall"
 
-	"github.com/knative/pkg/logging"
 	"go.uber.org/zap"
 )
 
@@ -55,7 +53,7 @@ const (
 
 // Run executes the test process then writes the exit code to the marker file.
 // This function returns the status code that should be passed to os.Exit().
-func (o Options) Run(*zap.SugaredLogger logger) int {
+func (o Options) Run(logger *zap.SugaredLogger) int {
 	defer logger.Sync()
 
 	code, err := o.ExecuteProcess()
@@ -94,10 +92,6 @@ func (o Options) ExecuteProcess() (int, error) {
 	}()
 	select {
 	case commandErr = <-done:
-		// execute post run action if specified
-		if o.ShouldRunPostRun {
-			o.postRunWriteFile(0)
-		}
 	}
 
 	var returnCode int
@@ -112,6 +106,11 @@ func (o Options) ExecuteProcess() (int, error) {
 	if returnCode != 0 {
 		commandErr = fmt.Errorf("wrapped process failed: %v", commandErr)
 	}
+
+	if o.ShouldRunPostRun {
+		o.postRunWriteFile(returnCode)
+	}
+
 	return returnCode, commandErr
 }
 
@@ -133,26 +132,10 @@ func (o *Options) waitForPrevStep() error {
 func (o *Options) postRunWriteFile(exitCode int) error {
 	content := []byte(strconv.Itoa(exitCode))
 
-	// create temp file in the same directory as the desired marker file
-	dir := filepath.Dir(o.PostRunFile)
-	tempFile, err := ioutil.TempFile(dir, "temp-marker")
+	err := ioutil.WriteFile(o.PostRunFile, content, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("could not create temp marker file in %s: %v", dir, err)
+		return fmt.Errorf("error writing PostRunFile (%s): %v", o.PostRunFile, err)
 	}
-	// write the exit code to the tempfile, sync to disk and close
-	if _, err = tempFile.Write(content); err != nil {
-		return fmt.Errorf("could not write to temp marker file (%s): %v", tempFile.Name(), err)
-	}
-	if err = tempFile.Sync(); err != nil {
-		return fmt.Errorf("could not sync temp marker file (%s): %v", tempFile.Name(), err)
-	}
-	tempFile.Close()
-	// set desired permission bits, then rename to the desired file name
-	if err = os.Chmod(tempFile.Name(), os.ModePerm); err != nil {
-		return fmt.Errorf("could not chmod (%x) temp marker file (%s): %v", os.ModePerm, tempFile.Name(), err)
-	}
-	if err := os.Rename(tempFile.Name(), o.PostRunFile); err != nil {
-		return fmt.Errorf("could not move marker file to destination path (%s): %v", o.PostRunFile, err)
-	}
+
 	return nil
 }

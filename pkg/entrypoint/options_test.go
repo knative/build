@@ -18,8 +18,6 @@ package entrypoint
 
 import (
 	"testing"
-
-	"github.com/knative/build/pkg/entrypoint/wrapper"
 )
 
 func TestOptions_Validate(t *testing.T) {
@@ -30,21 +28,29 @@ func TestOptions_Validate(t *testing.T) {
 	}{{
 		name: "all ok",
 		input: Options{
-			Args: []string{"/usr/bin/true"},
-			Options: &wrapper.Options{
-				ProcessLog: "output.txt",
-				MarkerFile: "marker.txt",
-			},
+			Args:             []string{"/usr/bin/true"},
+			ShouldRunPostRun: true,
 		},
-	}, {
-		name: "missing args",
+	}}
+
+	for _, testCase := range testCases {
+		if err := testCase.input.Validate(); testCase.expectedErr != (err != nil) {
+			t.Errorf("%s: expected error to be %v but got %v", testCase.name, testCase.expectedErr, err)
+		}
+	}
+}
+
+func TestOptions_AddFlags(t *testing.T) {
+	var testCases = []struct {
+		name        string
+		input       Options
+		expectedErr bool
+	}{{
+		name: "all ok",
 		input: Options{
-			Options: &wrapper.Options{
-				ProcessLog: "output.txt",
-				MarkerFile: "marker.txt",
-			},
+			Args:             []string{"/usr/bin/true"},
+			ShouldRunPostRun: true,
 		},
-		expectedErr: true,
 	}}
 
 	for _, testCase := range testCases {

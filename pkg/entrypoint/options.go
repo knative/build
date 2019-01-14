@@ -20,25 +20,53 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-
-	"github.com/knative/build/pkg/entrypoint/wrapper"
+	"fmt"
 )
 
-// NewOptions returns an empty Options with no nil fields
-func NewOptions() *Options {
-	return &Options{
-		Options: &wrapper.Options{},
-	}
-}
-
-// Options exposes the configuration necessary
-// for defining the process being watched and
-// where in the image repository an upload will land.
+// Options exposes the configuration options
+// used when wrapping test execution
 type Options struct {
 	// Args is the process and args to run
 	Args []string `json:"args"`
 
-	*wrapper.Options
+	// ShouldWaitForPrevStep will be written with the exit code
+	// of the test process or an internal error code
+	// if the entrypoint fails.
+	ShouldWaitForPrevStep bool `json:"shouldWaitForPrevStep"`
+
+	// PreRunFile will be written with the exit code
+	// of the test process or an internal error code
+	// if the entrypoint fails.
+	PreRunFile string `json:"preRunFile"`
+
+	// ShouldWaitForPrevStep will be written with the exit code
+	// of the test process or an internal error code
+	// if the entrypoint fails.
+	ShouldRunPostRun bool `json:"shouldRunPostRun"`
+
+	// PostRunFile will be written with the exit code
+	// of the test process or an internal error code
+	// if the entrypoint fails or if it succeeds
+	PostRunFile string `json:"postRunFile"`
+}
+
+// NewOptions returns an empty Options with no nil fields
+func NewOptions() *Options {
+	return &Options{}
+}
+
+// AddFlags adds flags to the FlagSet that populate
+// the wrapper options struct provided.
+func (o *Options) AddFlags(flags *flag.FlagSet) {
+	flags.BoolVar(&o.ShouldWaitForPrevStep, "should-wait-for-prev-step",
+		DefaultShouldWaitForPrevStep, "If we should wait for prev step.")
+	flags.BoolVar(&o.ShouldRunPostRun, "should-run-post-run",
+		DefaultShouldRunPostRun, "If the post run step should be run after execution finishes.")
+	flags.StringVar(&o.PreRunFile, "prerun-file",
+		DefaultPreRunFile, "The path of the file that acts as a lock for the entrypoint.  The entrypoint binary will wait until that file is present to launch the specified command.")
+	flags.StringVar(&o.PostRunFile, "postrun-file",
+		DefaultPostRunFile, "The path of the file that will be written once the command finishes for the entrypoint.  This can act as a lock for other entrypoint rewritten containers.")
+	return
 }
 
 // Validate ensures that the set of options are
@@ -48,7 +76,13 @@ func (o *Options) Validate() error {
 		return errors.New("no process to wrap specified")
 	}
 
-	return o.Options.Validate()
+	if o.PreRunFile != "" && !o.ShouldWaitForPrevStep {
+		return fmt.Errorf("PreRunFile specified but ShouldWaitForPrevStep is false")
+	}
+	if o.PostRunFile != "" && !o.ShouldRunPostRun {
+		return fmt.Errorf("PostRunFile specified but ShouldRunPostRun is false")
+	}
+	return nil
 }
 
 const (
@@ -67,19 +101,6 @@ func (o *Options) ConfigVar() string {
 // LoadConfig loads options from serialized config
 func (o *Options) LoadConfig(config string) error {
 	return json.Unmarshal([]byte(config), o)
-}
-
-// AddFlags binds flags to options
-func (o *Options) AddFlags(flags *flag.FlagSet) {
-	flags.BoolVar(&o.ShouldWaitForPrevStep, "should-wait-for-prev-step",
-		DefaultShouldWaitForPrevStep, "If we should wait for prev step.")
-	flags.BoolVar(&o.ShouldRunPostRun, "should-run-post-run",
-		DefaultShouldRunPostRun, "If the post run step should be run after execution finishes.")
-	flags.StringVar(&o.PreRunFile, "prerun-file",
-		DefaultPreRunFile, "The path of the file that acts as a lock for the entrypoint.  The entrypoint binary will wait until that file is present to launch the specified command.")
-	flags.StringVar(&o.PostRunFile, "postrun-file",
-		DefaultPostRunFile, "The path of the file that will be written once the command finishes for the entrypoint.  This can act as a lock for other entrypoint rewritten containers.")
-	o.Options.AddFlags(flags)
 }
 
 // Complete internalizes command line arguments
