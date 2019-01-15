@@ -655,7 +655,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 			Conditions: []duckv1alpha1.Condition{{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
-				Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n knative-build logs pod -c status-name`,
+				Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n knative-testing logs pod -c status-name`,
 			}},
 		},
 	}, {
