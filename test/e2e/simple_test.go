@@ -101,7 +101,7 @@ func TestFailingBuild(t *testing.T) {
 		t.Fatalf("Error creating build: %v", err)
 	}
 
-	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil || err == errWatchTimeout {
 		t.Fatalf("watchBuild did not return expected error: %v", err)
 	}
 }
@@ -306,7 +306,7 @@ func TestPendingBuild(t *testing.T) {
 		t.Fatalf("Error creating build: %v", err)
 	}
 
-	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil || err != errWatchTimeout {
 		t.Fatalf("watchBuild did not return expected `watch timeout` error")
 	}
 }
@@ -353,7 +353,7 @@ func TestPodAffinity(t *testing.T) {
 		t.Fatalf("Error creating build: %v", err)
 	}
 
-	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil || err != errWatchTimeout {
 		t.Fatalf("watchBuild did not return expected `watch timeout` error")
 	}
 }
@@ -630,7 +630,7 @@ func TestFailedBuildWithParamsInVolume(t *testing.T) {
 		t.Fatalf("Error creating build: %v", err)
 	}
 
-	if _, err := clients.buildClient.watchBuild(buildName); err == nil {
+	if _, err := clients.buildClient.watchBuild(buildName); err == nil || err != errWatchTimeout {
 		t.Fatalf("watchBuild did not return expected error: %v", err)
 	}
 }
