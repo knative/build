@@ -195,19 +195,19 @@ func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 // initialize is responsible for setting up and tearing down the testing environment,
 // namely the test namespace.
 func initialize(contextName string) (string, *logging.BaseLogger, *clients) {
-        flag.Parse()
-        logging.InitializeLogger(test.Flags.LogVerbose)
-        logger := logging.GetContextLogger("initialize")
-        flag.Set("alsologtostderr", "true")
-        if test.Flags.EmitMetrics {
-                logging.InitializeMetricExporter()
-        }
+	flag.Parse()
+	logging.InitializeLogger(test.Flags.LogVerbose)
+	logger := logging.GetContextLogger("initialize")
+	flag.Set("alsologtostderr", "true")
+	if test.Flags.EmitMetrics {
+		logging.InitializeMetricExporter()
+	}
 
-        buildTestNamespace, clients := createTestNamespace(logger)
+	buildTestNamespace, clients := createTestNamespace(logger)
 
-        // Cleanup namespace
-        test.CleanupOnInterrupt(func() { teardownNamespace(clients, buildTestNamespace, logger) }, logger)
+	// Cleanup namespace
+	test.CleanupOnInterrupt(func() { teardownNamespace(clients, buildTestNamespace, logger) }, logger)
 
-        testLogger := logging.GetContextLogger(contextName)
-        return buildTestNamespace, testLogger, buildClients(buildTestNamespace, testLogger)
+	testLogger := logging.GetContextLogger(contextName)
+	return buildTestNamespace, testLogger, buildClients(buildTestNamespace, testLogger)
 }
