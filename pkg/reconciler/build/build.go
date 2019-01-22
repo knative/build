@@ -153,6 +153,11 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
+	// If the build's status is cancelled, kill resources and update status
+	if isCancelled(build.Spec) {
+		return c.cancelBuild(build, logger)
+	}
+
 	// If the build hasn't started yet, validate it and create a Pod for it
 	// and record that pod's name in the build status.
 	var p *corev1.Pod
@@ -281,7 +286,33 @@ func (c *Reconciler) startPodForBuild(build *v1alpha1.Build) (*corev1.Pod, error
 	return c.kubeclientset.CoreV1().Pods(p.Namespace).Create(p)
 }
 
-// IsDone returns true if the build's status indicates the build is done.
+// isCancelled returns true if the build's spec indicates the build is cancelled.
+func isCancelled(buildSpec v1alpha1.BuildSpec) bool {
+	return buildSpec.Status == v1alpha1.BuildSpecStatusCancelled
+}
+
+func (c *Reconciler) cancelBuild(build *v1alpha1.Build, logger *zap.SugaredLogger) error {
+	logger.Warnf("Build has been cancelled: %v", build.Name)
+	build.Status.SetCondition(&duckv1alpha1.Condition{
+		Type:    v1alpha1.BuildSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildCancelled",
+		Message: fmt.Sprintf("Build %q was cancelled", build.Name),
+	})
+	if err := c.updateStatus(build); err != nil {
+		return err
+	}
+	if build.Status.Cluster == nil {
+		logger.Warnf("build %q has no pod running yet", build.Name)
+		return nil
+	}
+	if err := c.kubeclientset.CoreV1().Pods(build.Namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// isDone returns true if the build's status indicates the build is done.
 func isDone(status *v1alpha1.BuildStatus) bool {
 	cond := status.GetCondition(v1alpha1.BuildSucceeded)
 	return cond != nil && cond.Status != corev1.ConditionUnknown
