@@ -561,3 +561,62 @@ func TestTimeoutFlow(t *testing.T) {
 		t.Errorf("Unexpected build status %s", d)
 	}
 }
+
+func TestCancelledFlow(t *testing.T) {
+	b := newBuild("cancelled")
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{b},
+		client:     fake.NewSimpleClientset(b),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+	f.createServiceAccount()
+
+	r, i, k8sI := f.newReconciler()
+	f.updateIndex(i, b)
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	ctx := context.Background()
+	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+		t.Errorf("Not Expect error when syncing build")
+	}
+
+	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+
+	// Get pod info
+	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("error getting build: %v", err)
+	}
+	if b.Status.Cluster == nil || b.Status.Cluster.PodName == "" {
+		t.Fatalf("build status did not specify podName: %v", b.Status.Cluster)
+	}
+	b.Spec.Status = v1alpha1.BuildSpecStatusCancelled
+
+	f.updateIndex(i, b)
+	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+		t.Errorf("error syncing build: %v", err)
+	}
+
+	// Check that the build has the expected cancelled status.
+	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
+		Type:    duckv1alpha1.ConditionSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildCancelled",
+		Message: fmt.Sprintf("Build %q was cancelled", b.Name),
+	}, ignoreVolatileTime); d != "" {
+		t.Errorf("Unexpected build status %s", d)
+	}
+}

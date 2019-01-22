@@ -98,7 +98,20 @@ type BuildSpec struct {
 	// If specified, the pod's scheduling constraints
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// Used for cancelling a job (and maybe more later on)
+	// +optional
+	Status BuildSpecStatus
 }
+
+// BuildSpecStatus defines the build spec status the user can provide
+type BuildSpecStatus string
+
+const (
+	// BuildSpecStatusCancelled indicates that the user wants to cancel the build,
+	// if not already cancelled or terminated
+	BuildSpecStatusCancelled = "BuildCancelled"
+)
 
 // TemplateKind defines the type of BuildTemplate used by the build.
 type TemplateKind string
@@ -280,6 +293,8 @@ type GoogleSpec struct {
 // If the build is ongoing, its status will be Unknown. If it fails, its status
 // will be False.
 const BuildSucceeded = duckv1alpha1.ConditionSucceeded
+
+const BuildCancelled duckv1alpha1.ConditionType = "Cancelled"
 
 var buildCondSet = duckv1alpha1.NewBatchConditionSet()
 
