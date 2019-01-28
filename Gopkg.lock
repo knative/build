@@ -225,7 +225,7 @@
   revision = "06e9787157505a649b07677e77d26202ac91431c"
 
 [[projects]]
-  digest = "1:e7222d1d533f87f6115cb15eb64faac9501226803d1bd7fca8f8640d71d02eb5"
+  digest = "1:aaab967f81b7580e59b832e81216d827784cfc37996f3b4d4d62030d1a4a05c2"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -235,6 +235,7 @@
     "configmap",
     "controller",
     "kmeta",
+    "kmp",
     "logging",
     "logging/logkey",
     "signals",
@@ -245,7 +246,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "585076ba67e86ccbe9c2c146d49502d7433da7c0"
+  revision = "076ebf4e56758e76cd87fa402e9478da25ed942e"
 
 [[projects]]
   branch = "master"
