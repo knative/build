@@ -41,7 +41,7 @@ func (b *BuildTemplateSpec) Validate() *apis.FieldError {
 }
 
 //ValidateVolumes validates collection of volumes that are available to mount into the
-// steps of the build ot build template.
+// steps of the build or build template.
 func ValidateVolumes(volumes []corev1.Volume) *apis.FieldError {
 	// Build must not duplicate volume names.
 	vols := map[string]struct{}{}
