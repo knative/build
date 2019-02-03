@@ -146,4 +146,8 @@ func applyVolumeReplacements(volume *corev1.Volume, applyReplacements func(strin
 	if volume.VolumeSource.ConfigMap != nil {
 		volume.ConfigMap.Name = applyReplacements(volume.ConfigMap.Name)
 	}
+
+	if volume.VolumeSource.Secret != nil {
+		volume.Secret.SecretName = applyReplacements(volume.Secret.SecretName)
+	}
 }
