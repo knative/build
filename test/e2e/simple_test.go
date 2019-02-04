@@ -575,6 +575,7 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Error creating build: %v", err)
 	}
+
 	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
 		t.Fatalf("Error watching build: %v", err)
 	}
