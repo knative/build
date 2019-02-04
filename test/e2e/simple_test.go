@@ -364,6 +364,12 @@ func TestPodAffinity(t *testing.T) {
 func TestPersistentVolumeClaim(t *testing.T) {
 	buildTestNamespace, logger, clients := initialize("TestPersistentVolumeClaim")
 
+	buildName := "persistent-volume-claim"
+
+	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
+	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
+	defer teardownNamespace(clients, buildTestNamespace, logger)
+
 	// First, create the PVC.
 	if _, err := clients.kubeClient.Kube.CoreV1().PersistentVolumeClaims(buildTestNamespace).Create(&corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -569,7 +575,6 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Error creating build: %v", err)
 	}
-
 	if _, err := clients.buildClient.watchBuild(buildName); err != nil {
 		t.Fatalf("Error watching build: %v", err)
 	}
