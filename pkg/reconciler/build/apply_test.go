@@ -775,6 +775,45 @@ func TestApplyReplacements(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "replacement in volumes (secret) ",
+			args: args{
+				build: &v1alpha1.Build{
+					Spec: v1alpha1.BuildSpec{
+						Volumes: []corev1.Volume{{
+							Name: "${name}",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									"${secretname}",
+									nil,
+									nil,
+									nil,
+								},
+							}},
+						},
+					},
+				},
+				replacements: map[string]string{
+					"name":       "mysecret",
+					"secretname": "totallysecure",
+				},
+			},
+			want: &v1alpha1.Build{
+				Spec: v1alpha1.BuildSpec{
+					Volumes: []corev1.Volume{{
+						Name: "mysecret",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								"totallysecure",
+								nil,
+								nil,
+								nil,
+							},
+						}},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
