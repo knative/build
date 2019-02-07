@@ -22,6 +22,7 @@ import (
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ApplyTemplate applies the values in the template to the build, and replaces
@@ -119,14 +120,14 @@ func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v
 
 func applyEnvOverride(src, override []corev1.EnvVar) []corev1.EnvVar {
 	result := make([]corev1.EnvVar, 0, len(src)+len(override))
-	overrides := make(map[string]bool)
+	overrides := sets.NewString()
 
 	for _, env := range override {
-		overrides[env.Name] = true
+		overrides.Insert(env.Name)
 	}
 
 	for _, env := range src {
-		if _, present := overrides[env.Name]; !present {
+		if !overrides.Has(env.Name) {
 			result = append(result, env)
 		}
 	}
