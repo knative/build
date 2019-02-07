@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -306,12 +307,12 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 
 		// Add implicit volume mounts, unless the user has requested
 		// their own volume mount at that path.
-		requestedVolumeMounts := map[string]bool{}
+		requestedVolumeMounts := sets.NewString()
 		for _, vm := range step.VolumeMounts {
-			requestedVolumeMounts[filepath.Clean(vm.MountPath)] = true
+			requestedVolumeMounts.Insert(filepath.Clean(vm.MountPath))
 		}
 		for _, imp := range implicitVolumeMounts {
-			if !requestedVolumeMounts[filepath.Clean(imp.MountPath)] {
+			if !requestedVolumeMounts.Has(filepath.Clean(imp.MountPath)) {
 				// If the build's source specifies a subpath,
 				// use that in the implicit workspace volume
 				// mount.

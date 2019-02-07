@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/build/pkg/reconciler/build/resources"
@@ -111,12 +112,12 @@ func (ac *Reconciler) validateSecrets(b *v1alpha1.Build) error {
 
 func validateArguments(args []v1alpha1.ArgumentSpec, tmpl v1alpha1.BuildTemplateInterface) error {
 	// Build must not duplicate argument names.
-	seen := map[string]struct{}{}
+	seen := sets.NewString()
 	for _, a := range args {
-		if _, ok := seen[a.Name]; ok {
+		if seen.Has(a.Name) {
 			return validationError("DuplicateArgName", "duplicate argument name %q", a.Name)
 		}
-		seen[a.Name] = struct{}{}
+		seen.Insert(a.Name)
 	}
 	// If a build specifies a template, all the template's parameters without
 	// defaults must be satisfied by the build's parameters.
