@@ -54,10 +54,6 @@ initialize $@
 
 header "Setting up environment"
 
-# Handle failures ourselves, so we can dump useful info.
-set +o errexit
-set +o pipefail
-
 install_build_crd
 
 # Run the tests
