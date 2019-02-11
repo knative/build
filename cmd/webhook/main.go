@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/system"
+	"github.com/knative/pkg/system"
 )
 
 const (

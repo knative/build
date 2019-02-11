@@ -29,10 +29,10 @@ import (
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/system"
-	_ "github.com/knative/build/pkg/system/testing"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/system"
+	_ "github.com/knative/pkg/system/testing"
 )
 
 var (

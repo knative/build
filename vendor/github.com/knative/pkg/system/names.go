@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import (
 	"os"
 )
 
-var (
+const (
 	NamespaceEnvKey = "SYSTEM_NAMESPACE"
 )
 
-// Namespace holds the K8s namespace where our build system
+// Namespace holds the K8s namespace where our serving system
 // components run.
 func Namespace() string {
 	if ns := os.Getenv(NamespaceEnvKey); ns != "" {
@@ -33,16 +33,20 @@ func Namespace() string {
 	}
 
 	panic(fmt.Sprintf(`The environment variable %q is not set
+
 If this is a process running on Kubernetes, then it should be using the downward
 API to initialize this variable via:
+
   env:
   - name: %s
     valueFrom:
       fieldRef:
         fieldPath: metadata.namespace
+
 If this is a Go unit test consuming system.Namespace() then it should add the
 following import:
+
 import (
-	_ "github.com/knative/build/pkg/system/testing"
+	_ "github.com/knative/pkg/system/testing"
 )`, NamespaceEnvKey, NamespaceEnvKey))
 }

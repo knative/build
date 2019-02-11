@@ -19,7 +19,7 @@ package resources
 import (
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildtemplateresources "github.com/knative/build/pkg/reconciler/buildtemplate/resources"
-	"github.com/knative/build/pkg/system"
+	"github.com/knative/pkg/system"
 	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 )
 

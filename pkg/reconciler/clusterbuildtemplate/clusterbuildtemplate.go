@@ -39,10 +39,10 @@ import (
 	"github.com/knative/build/pkg/reconciler"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate/resources"
-	"github.com/knative/build/pkg/system"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
 	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
+	"github.com/knative/pkg/system"
 )
 
 const controllerAgentName = "clusterbuildtemplate-controller"

@@ -24,8 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/system"
-	_ "github.com/knative/build/pkg/system/testing"
+	"github.com/knative/pkg/system"
+	_ "github.com/knative/pkg/system/testing"
 	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 )
 
