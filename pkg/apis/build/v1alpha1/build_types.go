@@ -296,6 +296,8 @@ const BuildSucceeded = duckv1alpha1.ConditionSucceeded
 
 const BuildCancelled duckv1alpha1.ConditionType = "Cancelled"
 
+const BuildStarted duckv1alpha1.ConditionType = "Started"
+
 var buildCondSet = duckv1alpha1.NewBatchConditionSet()
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

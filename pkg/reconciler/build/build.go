@@ -158,10 +158,23 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return c.cancelBuild(build, logger)
 	}
 
+	// If build creation already started, then ignore it.
+	if isStarted(&build.Status) {
+		return nil
+	}
+
 	// If the build hasn't started yet, validate it and create a Pod for it
 	// and record that pod's name in the build status.
 	var p *corev1.Pod
-	if build.Status.Cluster == nil || build.Status.Cluster.PodName == "" {
+	if build.Status.StartTime == nil {
+		build.Status.SetCondition(&duckv1alpha1.Condition{
+			Type:   v1alpha1.BuildStarted,
+			Status: corev1.ConditionTrue,
+		})
+		if err := c.updateStatus(build); err != nil {
+			return err
+		}
+
 		if err = c.validateBuild(build); err != nil {
 			logger.Errorf("Failed to validate build: %v", err)
 			build.Status.SetCondition(&duckv1alpha1.Condition{
@@ -173,29 +186,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			if err := c.updateStatus(build); err != nil {
 				return err
 			}
-			return err
-		}
-
-		// Add a unique suffix to avoid confusion when a build
-		// is deleted and re-created with the same name.
-		// We don't use GenerateName here because k8s fakes don't support it.
-		podName, err := resources.GetUniquePodName(build.Name)
-		if err != nil {
-			return err
-		}
-
-		// update with a dummy status first to avoid race condition of another event while the pod is being created
-		build.Status = v1alpha1.BuildStatus{
-			Builder: v1alpha1.ClusterBuildProvider,
-			Cluster: &v1alpha1.ClusterSpec{
-				Namespace: build.Namespace,
-				PodName:   podName,
-			},
-			StartTime: &metav1.Time{
-				Time: time.Now(),
-			},
-		}
-		if err := c.updateStatus(build); err != nil {
 			return err
 		}
 
@@ -212,7 +202,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			}
 			return err
 		}
-	} else {
+	} else if build.Status.Cluster != nil {
 		// If the build is ongoing, update its status based on its pod, and
 		// check if it's timed out.
 		p, err = c.podsLister.Pods(build.Namespace).Get(build.Status.Cluster.PodName)
@@ -315,6 +305,11 @@ func (c *Reconciler) cancelBuild(build *v1alpha1.Build, logger *zap.SugaredLogge
 // isDone returns true if the build's status indicates the build is done.
 func isDone(status *v1alpha1.BuildStatus) bool {
 	cond := status.GetCondition(v1alpha1.BuildSucceeded)
+	return cond != nil && cond.Status != corev1.ConditionUnknown
+}
+
+func isStarted(status *v1alpha1.BuildStatus) bool {
+	cond := status.GetCondition(v1alpha1.BuildStarted)
 	return cond != nil && cond.Status != corev1.ConditionUnknown
 }
 
