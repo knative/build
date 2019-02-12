@@ -29,9 +29,10 @@ import (
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/system"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/system"
+	_ "github.com/knative/pkg/system/testing"
 )
 
 var (
@@ -654,7 +655,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 			Conditions: []duckv1alpha1.Condition{{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
-				Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n knative-build logs pod -c status-name`,
+				Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n knative-testing logs pod -c status-name`,
 			}},
 		},
 	}, {
@@ -757,7 +758,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 			p := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "pod",
-					Namespace:         system.Namespace,
+					Namespace:         system.Namespace(),
 					CreationTimestamp: now,
 				},
 				Status: c.podStatus,
@@ -767,7 +768,7 @@ func TestBuildStatusFromPod(t *testing.T) {
 			// Common traits, set for test case brevity.
 			c.want.Cluster = &v1alpha1.ClusterSpec{
 				PodName:   "pod",
-				Namespace: system.Namespace,
+				Namespace: system.Namespace(),
 			}
 			c.want.Builder = v1alpha1.ClusterBuildProvider
 			c.want.StartTime = &now

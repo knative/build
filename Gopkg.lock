@@ -225,7 +225,7 @@
   revision = "06e9787157505a649b07677e77d26202ac91431c"
 
 [[projects]]
-  digest = "1:aaab967f81b7580e59b832e81216d827784cfc37996f3b4d4d62030d1a4a05c2"
+  digest = "1:cacf58d3ff7b9071b51c7213ae0879a52330b5e991fa56e2f8db7ae03f23401f"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -239,6 +239,8 @@
     "logging",
     "logging/logkey",
     "signals",
+    "system",
+    "system/testing",
     "test",
     "test/logging",
     "test/spoof",
@@ -246,7 +248,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "076ebf4e56758e76cd87fa402e9478da25ed942e"
+  revision = "ac1f8182274a10bde23df8f964484bce87f06752"
 
 [[projects]]
   branch = "master"
@@ -837,6 +839,8 @@
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
     "github.com/knative/pkg/signals",
+    "github.com/knative/pkg/system",
+    "github.com/knative/pkg/system/testing",
     "github.com/knative/pkg/test",
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/webhook",
