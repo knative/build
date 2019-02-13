@@ -24,9 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
+	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
-	caching "github.com/knative/caching/pkg/apis/caching/v1alpha1"
 )
 
 func TestMakeImageCache(t *testing.T) {
