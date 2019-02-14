@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"log"
+	"sync"
 	"time"
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
@@ -44,12 +45,15 @@ import (
 const (
 	threadsPerController = 2
 	logLevelKey          = "controller"
+	resyncPeriod         = 10 * time.Hour
 )
 
 var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 )
+
+var statusLock sync.Mutex
 
 func main() {
 	flag.Parse()
@@ -90,9 +94,9 @@ func main() {
 		logger.Fatalf("Error building Caching clientset: %v", err)
 	}
 
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, time.Second*30)
-	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, time.Second*30)
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, resyncPeriod)
+	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, resyncPeriod)
+	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, resyncPeriod)
 
 	buildInformer := buildInformerFactory.Build().V1alpha1().Builds()
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
@@ -124,6 +128,10 @@ func main() {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)
 		}
 	}
+
+	buildTimeouts := build.NewTimeoutHandler(logger, kubeClient, buildClient, stopCh, &statusLock)
+	go buildTimeouts.TimeoutHandler()
+
 	var g errgroup.Group
 
 	// Start all of the controllers.

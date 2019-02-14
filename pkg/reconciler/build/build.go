@@ -214,13 +214,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Update the build's status based on the pod's status.
 	build.Status = resources.BuildStatusFromPod(p, build.Spec)
-
-	// Check if build has timed out; if it is, this will set its status
-	// accordingly.
-	if err := c.checkTimeout(build); err != nil {
-		return err
-	}
-
 	return c.updateStatus(build)
 }
 
@@ -228,6 +221,10 @@ func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
 	newb, err := c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
+	}
+	cond := u.Status.GetCondition(v1alpha1.BuildSucceeded)
+	if cond != nil && cond.Status == corev1.ConditionFalse {
+		return fmt.Errorf("build %q is failed, can't update status", u.Name)
 	}
 	newb.Status = u.Status
 
@@ -311,36 +308,4 @@ func isDone(status *v1alpha1.BuildStatus) bool {
 func isStarted(status *v1alpha1.BuildStatus) bool {
 	cond := status.GetCondition(v1alpha1.BuildStarted)
 	return cond != nil && cond.Status != corev1.ConditionUnknown
-}
-
-func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
-	// If build has not started timeout, startTime should be zero.
-	if build.Status.StartTime.IsZero() {
-		return nil
-	}
-
-	// Use default timeout to 10 minute if build timeout is not set.
-	timeout := defaultTimeout
-	if build.Spec.Timeout != nil {
-		timeout = build.Spec.Timeout.Duration
-	}
-	runtime := time.Since(build.Status.StartTime.Time)
-	if runtime > timeout {
-		c.Logger.Infof("Build %q is timeout (runtime %s over %s), deleting pod", build.Name, runtime, timeout)
-		if err := c.kubeclientset.CoreV1().Pods(build.Namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-			c.Logger.Errorf("Failed to terminate pod: %v", err)
-			return err
-		}
-
-		timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, timeout.String())
-		build.Status.SetCondition(&duckv1alpha1.Condition{
-			Type:    v1alpha1.BuildSucceeded,
-			Status:  corev1.ConditionFalse,
-			Reason:  "BuildTimeout",
-			Message: timeoutMsg,
-		})
-		// update build completed time
-		build.Status.CompletionTime = &metav1.Time{time.Now()}
-	}
-	return nil
 }
