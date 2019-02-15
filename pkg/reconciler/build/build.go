@@ -222,9 +222,9 @@ func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
 	if err != nil {
 		return err
 	}
-	cond := u.Status.GetCondition(v1alpha1.BuildSucceeded)
+	cond := newb.Status.GetCondition(v1alpha1.BuildSucceeded)
 	if cond != nil && cond.Status == corev1.ConditionFalse {
-		return fmt.Errorf("build %q is failed, can't update status", u.Name)
+		return fmt.Errorf("can't update status of failed build %q", newb.Name)
 	}
 	newb.Status = u.Status
 
