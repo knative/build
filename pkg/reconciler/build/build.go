@@ -19,6 +19,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -70,7 +71,10 @@ type Reconciler struct {
 }
 
 // Check that we implement the controller.Reconciler interface.
-var _ controller.Reconciler = (*Reconciler)(nil)
+var (
+	_           controller.Reconciler = (*Reconciler)(nil)
+	buildStatus sync.Mutex
+)
 
 func init() {
 	// Add build-controller types to the default Kubernetes Scheme so Events can be
@@ -222,6 +226,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
+	buildStatus.Lock()
+	defer buildStatus.Unlock()
 	newb, err := c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return err

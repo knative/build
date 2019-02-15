@@ -1,7 +1,6 @@
 package build
 
 import (
-	"sync"
 	"time"
 
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
@@ -18,29 +17,23 @@ type TimeoutSet struct {
 	kubeclientset  kubernetes.Interface
 	buildclientset clientset.Interface
 	stopCh         <-chan struct{}
-	buildStatus    *sync.Mutex
 }
 
 // NewTimeoutHandler returns TimeoutSet filled structure
 func NewTimeoutHandler(logger *zap.SugaredLogger,
 	kubeclientset kubernetes.Interface,
 	buildclientset clientset.Interface,
-	stopCh <-chan struct{},
-	buildStatus *sync.Mutex) *TimeoutSet {
+	stopCh <-chan struct{}) *TimeoutSet {
 	return &TimeoutSet{
 		logger:         logger,
 		kubeclientset:  kubeclientset,
 		buildclientset: buildclientset,
 		stopCh:         stopCh,
-		buildStatus:    buildStatus,
 	}
 }
 
 // TimeoutHandler walks through all namespaces, gets list of builds and checks timeouts
 func (t *TimeoutSet) TimeoutHandler() error {
-	t.buildStatus.Lock()
-	defer t.buildStatus.Unlock()
-
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
 

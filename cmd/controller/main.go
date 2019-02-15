@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"log"
-	"sync"
 	"time"
 
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
@@ -52,8 +51,6 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 )
-
-var statusLock sync.Mutex
 
 func main() {
 	flag.Parse()
@@ -129,7 +126,7 @@ func main() {
 		}
 	}
 
-	buildTimeouts := build.NewTimeoutHandler(logger, kubeClient, buildClient, stopCh, &statusLock)
+	buildTimeouts := build.NewTimeoutHandler(logger, kubeClient, buildClient, stopCh)
 	go buildTimeouts.TimeoutHandler()
 
 	var g errgroup.Group
