@@ -1,16 +1,11 @@
 package build
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
-	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -74,50 +69,20 @@ func (t *TimeoutSet) checkPodTimeouts(namespace string) error {
 		return err
 	}
 	for _, build := range builds.Items {
-		cond := build.Status.GetCondition(v1alpha1.BuildSucceeded)
-		// Check pod timeout only for ongoing build
-		if cond == nil || cond.Status != corev1.ConditionUnknown {
+		if isDone(&build.Status) {
 			continue
 		}
-		// Build doesn't have pod yet
-		if build.Status.StartTime.IsZero() {
-			continue
+		r := Reconciler{
+			buildclientset: t.buildclientset,
+			kubeclientset:  t.kubeclientset,
+			Logger:         t.logger,
 		}
-		timeout := defaultTimeout
-		if build.Spec.Timeout != nil {
-			timeout = build.Spec.Timeout.Duration
+		if err = r.checkTimeout(&build); err != nil {
+			t.logger.Errorf("timeout check error: %s", err)
 		}
-		runtime := time.Since(build.Status.StartTime.Time)
-		// Build timeout is not exceeded
-		if runtime < timeout {
-			continue
+		if err = r.updateStatus(&build); err != nil {
+			t.logger.Errorf("status update error: %s", err)
 		}
-		if build.Status.Cluster == nil {
-			continue
-		}
-		t.logger.Infof("Build %s timeout (runtime %s over %s timeout)", build.Name, runtime, timeout)
-		if err := t.deletePodAndUpdateStatus(build.Status.Cluster.PodName, &build); err != nil {
-			t.logger.Error(err)
-		}
-	}
-	return nil
-}
-
-func (t *TimeoutSet) deletePodAndUpdateStatus(pod string, build *v1alpha1.Build) error {
-	build.Status.SetCondition(&duckv1alpha1.Condition{
-		Type:    v1alpha1.BuildSucceeded,
-		Status:  corev1.ConditionFalse,
-		Reason:  "BuildTimeout",
-		Message: fmt.Sprintf("Build %q timeout", build.Name),
-	})
-	build.Status.CompletionTime = &metav1.Time{
-		Time: time.Now(),
-	}
-	if _, err := t.buildclientset.BuildV1alpha1().Builds(build.Namespace).UpdateStatus(build); err != nil {
-		return fmt.Errorf("Failed to update build status: %v", err)
-	}
-	if err := t.kubeclientset.CoreV1().Pods(build.Namespace).Delete(pod, &metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("Failed to terminate pod: %v", err)
 	}
 	return nil
 }
