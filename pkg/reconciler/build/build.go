@@ -162,20 +162,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// and record that pod's name in the build status.
 	var p *corev1.Pod
 	if build.Status.Cluster == nil || build.Status.Cluster.PodName == "" {
-		if err = c.validateBuild(build); err != nil {
-			logger.Errorf("Failed to validate build: %v", err)
-			build.Status.SetCondition(&duckv1alpha1.Condition{
-				Type:    v1alpha1.BuildSucceeded,
-				Status:  corev1.ConditionFalse,
-				Reason:  "BuildValidationFailed",
-				Message: err.Error(),
-			})
-			if err := c.updateStatus(build); err != nil {
-				return err
-			}
-			return err
-		}
-
 		// Add a unique suffix to avoid confusion when a build
 		// is deleted and re-created with the same name.
 		// We don't use GenerateName here because k8s fakes don't support it.
@@ -183,7 +169,6 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		if err != nil {
 			return err
 		}
-
 		// update with a dummy status first to avoid race condition of another event while the pod is being created
 		build.Status = v1alpha1.BuildStatus{
 			Builder: v1alpha1.ClusterBuildProvider,
@@ -196,6 +181,20 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			},
 		}
 		if err := c.updateStatus(build); err != nil {
+			return err
+		}
+
+		if err = c.validateBuild(build); err != nil {
+			logger.Errorf("Failed to validate build: %v", err)
+			build.Status.SetCondition(&duckv1alpha1.Condition{
+				Type:    v1alpha1.BuildSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "BuildValidationFailed",
+				Message: err.Error(),
+			})
+			if err := c.updateStatus(build); err != nil {
+				return err
+			}
 			return err
 		}
 

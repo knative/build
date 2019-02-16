@@ -342,11 +342,11 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 
-	// Add a unique suffix to avoid confusion when a build
-	// is deleted and re-created with the same name.
-	// We don't use GenerateName here because k8s fakes don't support it.
-	podName, err := GetUniquePodName(build.Name)
-	if err != nil {
+	var podName string
+	// Use podName from build status structure if passed, otherwise generate new unique name
+	if build.Status.Cluster != nil && build.Status.Cluster.PodName != "" {
+		podName = build.Status.Cluster.PodName
+	} else if podName, err = GetUniquePodName(build.Name); err != nil {
 		return nil, err
 	}
 
