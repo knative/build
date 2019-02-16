@@ -258,7 +258,7 @@ func TestBuildLowTimeout(t *testing.T) {
 		Reason:  "BuildTimeout",
 		Message: fmt.Sprintf("Build %q failed to finish within %q", b.Name, buildTimeout),
 	}, ignoreVolatileTime); d != "" {
-		t.Errorf("Unexpected build status %s", b.Status)
+		t.Errorf("Unexpected build status %#v", b.Status)
 	}
 
 	if b.Status.CompletionTime == nil || b.Status.StartTime == nil {
