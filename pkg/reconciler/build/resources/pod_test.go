@@ -474,6 +474,11 @@ func TestMakePod(t *testing.T) {
 					Annotations: c.bAnnotations,
 				},
 				Spec: c.b,
+				Status: v1alpha1.BuildStatus{
+					Cluster: &v1alpha1.ClusterSpec{
+						PodName: "build-name-pod-616161",
+					},
+				},
 			}
 			got, err := MakePod(b, cs)
 			if err != c.wantErr {

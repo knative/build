@@ -640,3 +640,45 @@ func TestFailedBuildWithParamsInVolume(t *testing.T) {
 		t.Fatalf("watchBuild did not return expected error: %v", err)
 	}
 }
+
+// TestDuplicatePodBuild creates 10 builds and checks that each of them has only one build pod.
+func TestDuplicatePodBuild(t *testing.T) {
+	buildTestNamespace, logger, clients := initialize("TestDuplicatePodBuild")
+	defer teardownNamespace(clients, buildTestNamespace, logger)
+
+	for i := 0; i < 10; i++ {
+		buildName := fmt.Sprintf("duplicate-pod-build-%d", i)
+		test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
+		defer teardownBuild(clients, logger, buildTestNamespace, buildName)
+
+		logger.Infof("Creating build %q", buildName)
+		if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: buildTestNamespace,
+				Name:      buildName,
+			},
+			Spec: v1alpha1.BuildSpec{
+				Timeout: &metav1.Duration{Duration: 120 * time.Second},
+				Steps: []corev1.Container{{
+					Image: "busybox",
+					Args:  []string{"echo", "simple"},
+				}},
+			},
+		}); err != nil {
+			t.Fatalf("Error creating build: %v", err)
+		}
+		if _, err := clients.buildClient.watchBuild(buildName); err != nil {
+			t.Fatalf("Error watching build: %v", err)
+		}
+
+		pods, err := clients.kubeClient.Kube.CoreV1().Pods(buildTestNamespace).List(metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("build.knative.dev/buildName=%s", buildName),
+		})
+		if err != nil {
+			t.Fatalf("Error getting build pod list: %v", err)
+		}
+		if n := len(pods.Items); n != 1 {
+			t.Fatalf("Error matching the number of build pods: expecting 1 pod, got %d", n)
+		}
+	}
+}
