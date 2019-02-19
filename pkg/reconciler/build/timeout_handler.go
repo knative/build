@@ -2,6 +2,7 @@ package build
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -14,7 +15,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var done = make(map[string]chan bool)
+var (
+	done    = make(map[string]chan bool)
+	doneMut = sync.Mutex{}
+)
 
 // TimeoutSet contains required k8s interfaces to handle build timeouts
 type TimeoutSet struct {
@@ -68,13 +72,17 @@ func (t *TimeoutSet) wait(build *v1alpha1.Build) {
 		timeout = build.Spec.Timeout.Duration
 	}
 	runtime := time.Duration(0)
+	statusLock(build)
 	if build.Status.StartTime != nil && !build.Status.StartTime.Time.IsZero() {
 		runtime = time.Since(build.Status.StartTime.Time)
 	}
+	statusUnlock(build)
 	timeout -= runtime
 
 	finished := make(chan bool)
+	doneMut.Lock()
 	done[key] = finished
+	doneMut.Unlock()
 	defer t.release(build)
 
 	select {
@@ -88,6 +96,8 @@ func (t *TimeoutSet) wait(build *v1alpha1.Build) {
 }
 
 func (t *TimeoutSet) release(build *v1alpha1.Build) {
+	doneMut.Lock()
+	defer doneMut.Unlock()
 	key := fmt.Sprintf("%s/%s", build.Namespace, build.Name)
 	if finished, ok := done[key]; ok {
 		delete(done, key)

@@ -511,7 +511,7 @@ func TestBasicFlows(t *testing.T) {
 
 func TestTimeoutFlow(t *testing.T) {
 	b := newBuild("timeout")
-	b.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
+	b.Spec.Timeout = &metav1.Duration{Duration: 500 * time.Millisecond}
 
 	f := &fixture{
 		t:          t,
@@ -539,24 +539,8 @@ func TestTimeoutFlow(t *testing.T) {
 		t.Errorf("error fetching build: %v", err)
 	}
 
-	// Update the pod to indicate it was created 10m ago, which is
-	// longer than the build's timeout.
-	podName := b.Status.Cluster.PodName
-	p, err := f.kubeclient.CoreV1().Pods(metav1.NamespaceDefault).Get(podName, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("error getting pod %q: %v", podName, err)
-	}
-	p.CreationTimestamp.Time = metav1.Now().Time.Add(-10 * time.Minute)
-	if _, err := f.kubeclient.CoreV1().Pods(metav1.NamespaceDefault).Update(p); err != nil {
-		t.Fatalf("error updating pod %q: %v", podName, err)
-	}
-
-	// Reconcile to pick up pod changes.
-	f.updatePodIndex(k8sI, p)
-	f.updateIndex(i, b)
-	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
-		t.Errorf("error syncing build: %v", err)
-	}
+	// Right now there is no better way to test timeout rather than wait for it
+	time.Sleep(600 * time.Millisecond)
 
 	// Check that the build has the expected timeout status.
 	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
@@ -567,7 +551,7 @@ func TestTimeoutFlow(t *testing.T) {
 		Type:    duckv1alpha1.ConditionSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildTimeout",
-		Message: fmt.Sprintf("Build %q failed to finish within \"1s\"", b.Name),
+		Message: fmt.Sprintf("Build %q failed to finish within \"500ms\"", b.Name),
 	}, ignoreVolatileTime); d != "" {
 		t.Errorf("Unexpected build status %s", d)
 	}

@@ -234,7 +234,9 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Update the build's status based on the pod's status.
+	statusLock(build)
 	build.Status = resources.BuildStatusFromPod(p, build.Spec)
+	statusUnlock(build)
 	if isDone(&build.Status) {
 		// release goroutine that waits for build timeout
 		c.timeoutHandler.release(build)
