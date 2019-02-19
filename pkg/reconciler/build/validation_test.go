@@ -50,6 +50,11 @@ func TestValidateBuild(t *testing.T) {
 					}},
 				},
 			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
+			},
 		},
 		tmpl: &v1alpha1.BuildTemplate{
 			Spec: v1alpha1.BuildTemplateSpec{
@@ -71,6 +76,11 @@ func TestValidateBuild(t *testing.T) {
 						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				}},
+			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
 			},
 		},
 		tmpl: &v1alpha1.BuildTemplate{
@@ -94,6 +104,11 @@ func TestValidateBuild(t *testing.T) {
 				Template: &v1alpha1.TemplateInstantiationSpec{
 					Name: "foo-bar",
 					Kind: v1alpha1.ClusterBuildTemplateKind,
+				},
+			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
 				},
 			},
 		},
@@ -129,6 +144,11 @@ func TestValidateBuild(t *testing.T) {
 					Name: "template",
 				},
 			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
+			},
 		},
 		reason: "TemplateAndSteps",
 	}, {
@@ -140,6 +160,11 @@ func TestValidateBuild(t *testing.T) {
 						Name:  "foo",
 						Value: "hello",
 					}},
+				},
+			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
 				},
 			},
 		},
@@ -166,6 +191,11 @@ func TestValidateBuild(t *testing.T) {
 					}},
 				},
 			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
+			},
 		},
 		tmpl: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: "template"},
@@ -181,6 +211,11 @@ func TestValidateBuild(t *testing.T) {
 						Name:  "foo",
 						Value: "hello",
 					}},
+				},
+			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
 				},
 			},
 		},
@@ -204,6 +239,11 @@ func TestValidateBuild(t *testing.T) {
 					Kind: "BuildTemplate",
 				},
 			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
+			},
 		},
 		tmpl: &v1alpha1.BuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
@@ -223,6 +263,11 @@ func TestValidateBuild(t *testing.T) {
 					Kind: "ClusterBuildTemplate",
 				},
 			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
+			},
 		},
 		ctmpl: &v1alpha1.ClusterBuildTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: "empty-default"},
@@ -239,6 +284,11 @@ func TestValidateBuild(t *testing.T) {
 			Spec: v1alpha1.BuildSpec{
 				// ServiceAccountName will default to "default"
 				Steps: []corev1.Container{{Image: "hello"}},
+			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
 			},
 		},
 		sa: &corev1.ServiceAccount{
@@ -276,6 +326,11 @@ func TestValidateBuild(t *testing.T) {
 			Spec: v1alpha1.BuildSpec{
 				ServiceAccountName: "serviceaccount",
 				Steps:              []corev1.Container{{Image: "hello"}},
+			},
+			Status: v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "foo",
+				},
 			},
 		},
 		sa: &corev1.ServiceAccount{
