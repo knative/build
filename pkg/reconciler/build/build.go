@@ -19,6 +19,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -55,6 +56,7 @@ type Reconciler struct {
 	kubeclientset kubernetes.Interface
 	// buildclientset is a clientset for our own API group
 	buildclientset clientset.Interface
+	timeoutHandler *TimeoutSet
 
 	buildsLister                listers.BuildLister
 	buildTemplatesLister        listers.BuildTemplateLister
@@ -71,6 +73,7 @@ type Reconciler struct {
 
 // Check that we implement the controller.Reconciler interface.
 var _ controller.Reconciler = (*Reconciler)(nil)
+var statusMap = sync.Map{}
 
 func init() {
 	// Add build-controller types to the default Kubernetes Scheme so Events can be
@@ -87,6 +90,7 @@ func NewController(
 	buildInformer informers.BuildInformer,
 	buildTemplateInformer informers.BuildTemplateInformer,
 	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
+	timeoutHandler *TimeoutSet,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
@@ -100,6 +104,7 @@ func NewController(
 		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
 		podsLister:                  podInformer.Lister(),
 		Logger:                      logger,
+		timeoutHandler:              timeoutHandler,
 	}
 	impl := controller.NewImpl(r, logger, "Builds",
 		reconciler.MustNewStatsReporter("Builds", r.Logger))
@@ -216,6 +221,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			}
 			return err
 		}
+		// Start goroutine that waits for either build timeout or build finish
+		go c.timeoutHandler.wait(build)
 	} else {
 		// If the build is ongoing, update its status based on its pod, and
 		// check if it's timed out.
@@ -227,22 +234,32 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Update the build's status based on the pod's status.
+	statusLock(build)
 	build.Status = resources.BuildStatusFromPod(p, build.Spec)
-
-	// Check if build has timed out; if it is, this will set its status
-	// accordingly.
-	if err := c.checkTimeout(build); err != nil {
-		return err
+	statusUnlock(build)
+	if isDone(&build.Status) {
+		// release goroutine that waits for build timeout
+		c.timeoutHandler.release(build)
+		// and remove key from status map
+		defer statusMap.Delete(key)
 	}
 
 	return c.updateStatus(build)
 }
 
 func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
+	statusLock(u)
+	defer statusUnlock(u)
 	newb, err := c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
+
+	cond := newb.Status.GetCondition(v1alpha1.BuildSucceeded)
+	if cond != nil && cond.Status == corev1.ConditionFalse {
+		return fmt.Errorf("can't update status of failed build %q", newb.Name)
+	}
+
 	newb.Status = u.Status
 
 	_, err = c.buildclientset.BuildV1alpha1().Builds(u.Namespace).UpdateStatus(newb)
@@ -352,4 +369,21 @@ func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 		build.Status.CompletionTime = &metav1.Time{time.Now()}
 	}
 	return nil
+}
+
+func statusLock(build *v1alpha1.Build) {
+	key := fmt.Sprintf("%s/%s", build.Namespace, build.Name)
+	m, _ := statusMap.LoadOrStore(key, &sync.Mutex{})
+	mut := m.(*sync.Mutex)
+	mut.Lock()
+}
+
+func statusUnlock(build *v1alpha1.Build) {
+	key := fmt.Sprintf("%s/%s", build.Namespace, build.Name)
+	m, ok := statusMap.Load(key)
+	if !ok {
+		return
+	}
+	mut := m.(*sync.Mutex)
+	mut.Unlock()
 }
