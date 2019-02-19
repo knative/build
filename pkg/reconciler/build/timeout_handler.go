@@ -104,11 +104,15 @@ func (t *TimeoutSet) stopBuild(build *v1alpha1.Build) error {
 		}
 	}
 
+	timeout := defaultTimeout
+	if build.Spec.Timeout != nil {
+		timeout = build.Spec.Timeout.Duration
+	}
 	build.Status.SetCondition(&duckv1alpha1.Condition{
 		Type:    v1alpha1.BuildSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildTimeout",
-		Message: fmt.Sprintf("Build %q is timeout", build.Name),
+		Message: fmt.Sprintf("Build %q failed to finish within %q", build.Name, timeout.String()),
 	})
 	build.Status.CompletionTime = &metav1.Time{time.Now()}
 
