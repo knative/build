@@ -343,11 +343,10 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 
 	var podName string
-	// Use podName from build status structure if passed, otherwise generate new unique name
 	if build.Status.Cluster != nil && build.Status.Cluster.PodName != "" {
 		podName = build.Status.Cluster.PodName
-	} else if podName, err = GetUniquePodName(build.Name); err != nil {
-		return nil, err
+	} else {
+		return nil, fmt.Errorf("Can't create pod for build %q: pod name not set", build.Name)
 	}
 
 	return &corev1.Pod{

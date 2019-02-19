@@ -186,6 +186,11 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 		if err = c.validateBuild(build); err != nil {
 			logger.Errorf("Failed to validate build: %v", err)
+			build.Status = v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "",
+				},
+			}
 			build.Status.SetCondition(&duckv1alpha1.Condition{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
