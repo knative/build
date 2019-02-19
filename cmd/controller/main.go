@@ -44,6 +44,7 @@ import (
 const (
 	threadsPerController = 2
 	logLevelKey          = "controller"
+	resyncPeriod         = 10 * time.Hour
 )
 
 var (
@@ -90,9 +91,9 @@ func main() {
 		logger.Fatalf("Error building Caching clientset: %v", err)
 	}
 
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, time.Second*30)
-	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, time.Second*30)
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, resyncPeriod)
+	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, resyncPeriod)
+	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, resyncPeriod)
 
 	buildInformer := buildInformerFactory.Build().V1alpha1().Builds()
 	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()

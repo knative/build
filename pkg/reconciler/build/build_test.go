@@ -86,7 +86,7 @@ func (f *fixture) createServiceAccounts(serviceAccounts ...*corev1.ServiceAccoun
 	}
 }
 
-func (f *fixture) newReconciler() (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
+func (f *fixture) newReconciler(stopCh <-chan struct{}) (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
 	logger := zap.NewExample().Sugar()
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
@@ -94,7 +94,8 @@ func (f *fixture) newReconciler() (controller.Reconciler, informers.SharedInform
 	buildTemplateInformer := i.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := i.Build().V1alpha1().ClusterBuildTemplates()
 	podInformer := k8sI.Core().V1().Pods()
-	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer)
+	timeoutHandler := NewTimeoutHandler(logger, f.kubeclient, f.client, stopCh)
+	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, timeoutHandler)
 	return c.Reconciler, i, k8sI
 }
 
@@ -134,10 +135,11 @@ func TestBuildNotFoundFlow(t *testing.T) {
 	}
 	f.client.PrependReactor("*", "*", reactor)
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -153,7 +155,10 @@ func TestBuildWithBadKey(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, _, _ := f.newReconciler()
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	r, _, _ := f.newReconciler(stopCh)
 	if err := r.Reconcile(context.Background(), "bad/worse/worst"); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
@@ -169,10 +174,11 @@ func TestBuildNotFoundError(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	// Don't update build informers with test build object
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	// Don't update build informers with test build object
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -195,10 +201,11 @@ func TestBuildWithMissingServiceAccount(t *testing.T) {
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -242,10 +249,11 @@ func TestBuildWithMissingSecret(t *testing.T) {
 		Secrets:    []corev1.ObjectReference{{Name: "missing-secret"}},
 	})
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -289,10 +297,11 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 		}
 		f.createServiceAccount()
 
-		r, i, k8sI := f.newReconciler()
-		f.updateIndex(i, b)
 		stopCh := make(chan struct{})
 		defer close(stopCh)
+
+		r, i, k8sI := f.newReconciler(stopCh)
+		f.updateIndex(i, b)
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
 
@@ -346,10 +355,11 @@ func TestBuildWithTemplate(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -439,10 +449,11 @@ func TestBasicFlows(t *testing.T) {
 			}
 			f.createServiceAccount()
 
-			r, i, k8sI := f.newReconciler()
-			f.updateIndex(i, b)
 			stopCh := make(chan struct{})
 			defer close(stopCh)
+
+			r, i, k8sI := f.newReconciler(stopCh)
+			f.updateIndex(i, b)
 			i.Start(stopCh)
 			k8sI.Start(stopCh)
 
@@ -510,10 +521,10 @@ func TestTimeoutFlow(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -573,10 +584,11 @@ func TestCancelledFlow(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
