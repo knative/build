@@ -260,7 +260,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	annotations["sidecar.istio.io/inject"] = "false"
 
 	// Copy labels on the build through to the underlying pod to allow users
-	// to specify pod lablels.
+	// to specify pod labels.
 	labels := map[string]string{}
 	for key, val := range build.Labels {
 		labels[key] = val
