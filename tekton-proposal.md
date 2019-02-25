@@ -48,7 +48,7 @@ If you want automatic triggered CI/CD or build-test-rollout scenarios, I have go
 
 ### Tekton Pipelines
 
-[`github.com/knative/build-pipeline`](https://github.com/knative/build-pipeline] should continue its move to a new GitHub org, to `github.com/tektoncd/pipeline`.
+[`github.com/knative/build-pipeline`](https://github.com/knative/build-pipeline) should continue its move to a new GitHub org, to `github.com/tektoncd/pipeline`.
 
 Its charter and roadmap should continue to focus on building infrastructure to run CI/CD workloads, including triggering, workflow, resources, retries, the works. It should not focus on enabling better serverless deployments specifically, but better continuous deployments to any target generally.
 
