@@ -23,7 +23,7 @@ source $(dirname $0)/e2e-common.sh
 
 header "Setting up environment"
 
-install_pipeline_crd
+knative_setup
 
 # Run the tests
 

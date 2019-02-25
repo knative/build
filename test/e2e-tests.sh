@@ -52,10 +52,6 @@ function dump_extra_cluster_state() {
 
 initialize $@
 
-header "Setting up environment"
-
-install_build_crd
-
 # Run the tests
 
 failed=0

@@ -18,13 +18,13 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
-function teardown() {
+function test_teardown() {
   subheader "Tearing down Build CRD"
   ko delete --ignore-not-found=true -R -f test/
   ko delete --ignore-not-found=true -f config/
 }
 
-function install_build_crd() {
+function knative_setup() {
   echo "Building and starting the controller"
   ko apply -f config/ || fail_test "Build installation failed"
 
