@@ -38,7 +38,7 @@ The above decisions have regrettably all been made and would be difficult (and I
 
 ### Knative Build
 
-[Knative Build (`knative/build`)](https://github.com/knative/build) will be supported as it is for the foreseeable future, overseen by the Knative Build WG which will hold weekly meetings for the foreseeable future. It will continue to do releases co-versioned and timed with the other Knative components.
+[`github.com/knative/build`](https://github.com/knative/build) will be supported as it is for the foreseeable future, overseen by the Knative Build WG which will hold weekly meetings for the foreseeable future. It will continue to do releases co-versioned and timed with the other Knative components.
 
 Its charter and roadmap (which we will write with community input) will focus on enabling better serverless deployment experiences -- source-to-deployment scenarios -- and no more. No workflow, no triggering, just a better developer experience for the Knative serverless platform.
 
@@ -48,7 +48,7 @@ If you want automatic triggered CI/CD or build-test-rollout scenarios, I have go
 
 ### Tekton Pipelines
 
-[Tekton Pipelines (currently `knative/build-pipeline`)](https://github.com/knative/build-pipeline] should continue its move to a new GitHub org, to `github.com/tektoncd/pipeline`.
+[`github.com/knative/build-pipeline`](https://github.com/knative/build-pipeline] should continue its move to a new GitHub org, to `github.com/tektoncd/pipeline`.
 
 Its charter and roadmap should continue to focus on building infrastructure to run CI/CD workloads, including triggering, workflow, resources, retries, the works. It should not focus on enabling better serverless deployments specifically, but better continuous deployments to any target generally.
 
