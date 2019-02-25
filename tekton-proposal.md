@@ -34,25 +34,21 @@ This was an attempt to signal the Pipelines project's separateness, and help res
 
 The above decisions have regrettably all been made and would be difficult (and I would argue even more confusing) to walk back. We can only hope to make better more publicly-informed decisions going forward. This proposal is an attempt to do that. Everything below this paragraph is a **proposal** and is open for discussion. Please leave comments and ask questions.
 
-
 ## Proposal
-
 
 ### Knative Build
 
-https://github.com/knative/build will be supported as it is for the foreseeable future, overseen by the Knative Build WG which will hold weekly meetings for the foreseeable future. It will continue to do releases co-versioned and timed with the other Knative components.
+[Knative Build (`knative/build`)](https://github.com/knative/build) will be supported as it is for the foreseeable future, overseen by the Knative Build WG which will hold weekly meetings for the foreseeable future. It will continue to do releases co-versioned and timed with the other Knative components.
 
- \
 Its charter and roadmap (which we will write with community input) will focus on enabling better serverless deployment experiences -- source-to-deployment scenarios -- and no more. No workflow, no triggering, just a better developer experience for the Knative serverless platform.
 
 When someone asks, "is Knative's serverless developer experience good?" we should be able to say, "yes, because Knative Build focuses on exactly that."
 
 If you want automatic triggered CI/CD or build-test-rollout scenarios, I have good news for you...
 
-
 ### Tekton Pipelines
 
-https://github.com/knative/build-pipeline should continue its move to a new GitHub org, to https://github.com/tektoncd/pipeline.
+[Tekton Pipelines (currently `knative/build-pipeline`)](https://github.com/knative/build-pipeline] should continue its move to a new GitHub org, to `github.com/tektoncd/pipeline`.
 
 Its charter and roadmap should continue to focus on building infrastructure to run CI/CD workloads, including triggering, workflow, resources, retries, the works. It should not focus on enabling better serverless deployments specifically, but better continuous deployments to any target generally.
 
@@ -60,14 +56,11 @@ When someone asks, "is there a way to run CI/CD on Kubernetes?" we should be abl
 
 Until separate Tekton governance is established (weeks, not months), Tekton Pipelines work will continue to be overseen by the Knative Build WG -- largely by Christie (@, as she has been doing a great job leading Pipelines work so far -- though this will likely cause confusion and should be resolved as soon as possible. How we resolve that is TBD, and I think that's outside the scope of this proposal.
 
-
 ## Future Directions
 
 There may come a time in the future when we decide that maintaining Knative Build and Tekton Pipelines as separate efforts is not the best use of engineering resources, and we have in the past discussed the possibility of reimplementing Build as a wrapper around Tekton TaskRuns, or having Tekton Pipelines produce a library that Knative Build could use to avoid duplicated code and maintenance. _Neither of these is currently a plan of record_, and before we pursue these or any other future structural changes to Build, those will be proposed and adopted separately in the future. These are only mentioned here as possible future directions worth noting.
 
-
 ## Alternatives Considered
-
 
 ### Keep Pipelines in Knative
 
