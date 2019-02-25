@@ -6,7 +6,7 @@ Feb 25 2019
 
 ## Objective
 
-Propose a resolution to the ongoing confusion and FUD around the future of Knative Build with regard to the recently announced Tekton Pipelines change. This doc should be used as a forum for external comment and questions, to resolve any concerns before the Steering Committee decides whether to adopt the proposal.
+Propose a resolution to the ongoing confusion around the future of Knative Build with regard to the recently announced Tekton Pipelines change. This doc should be used as a forum for external comment and questions, to resolve any concerns before the Steering Committee decides whether to adopt the proposal.
 
 Please leave comments on this PR. The text of the proposal may change based on feedback, and the PR will retain the history of these edits.
 
@@ -18,11 +18,11 @@ From the beginning, Build had bigger ambitions. Its [2018 roadmap](https://githu
 
 This tension has existed in Build from the beginning: did it exist to accelerate the Knative serverless platform? Or is it supposed to be a full-featured CI/CD platform? How should Build prioritize features that don't have anything to do with the rest of Knative? These are not hypothetical questions, these are questions we've heard from users, operators and contributors.
 
-To further add confusion, in August 2019 Knative began the Pipelines effort in the knative/build-pipeline repo. This was an experimental ground-up design to build on the experience with the Build resource, and build real CI/CD workflow infrastructure running on Kubernetes. Its [2019 roadmap](https://github.com/knative/build-pipeline/blob/master/roadmap-2019.md) (the knative/build repo never had a 2019 roadmap) included all the CI/CD features from 2018 and more, and makes only [passing mention](https://github.com/knative/build-pipeline/blob/master/roadmap-2019.md#dont-break-serving) of its relationship with Serving.
+To further add confusion, in August 2018 Knative began the Pipelines effort in the knative/build-pipeline repo. This was an experimental ground-up design to build on the experience with the Build resource, and build real CI/CD workflow infrastructure running on Kubernetes. Its [2019 roadmap](https://github.com/knative/build-pipeline/blob/master/roadmap-2019.md) (the knative/build repo never had a 2019 roadmap) included all the CI/CD features from 2018 and more, and makes only [passing mention](https://github.com/knative/build-pipeline/blob/master/roadmap-2019.md#dont-break-serving) of its relationship with Serving.
 
 Around the same time, Knative Serving added duck-typing support, which meant any Kubernetes resource that satisfies its barebones interface could be used in a pre-deployment build, and all of Build, TaskRun and PipelineRun satisfy that interface and can be used.
 
-Since the inception of the build-pipeline repo, most active development has happened there (with contributions from Pivotal, CloudBees, Red Hat and others). At this point, Knative Build is largely stable, requiring less than a single full-time engineer effort for requested features, high-priority bug fixes, and scheduled releases. This is not necessarily a bad thing! With the CI/CD features moving to Pipelines, there just aren't many serverless-focused features left for Build to implement at this time, and it could largely be considered "done" until it gets new feature requests from Knative's users and operators.
+Since the inception of the build-pipeline repo, most active development has happened there (with contributions from Pivotal, CloudBees, Red Hat and others). At this point, Knative Build is largely stable, requiring less than a single full-time engineer effort for requested features, high-priority bug fixes, and scheduled releases. This is most likely a good thing! With the CI/CD features moving to Pipelines, there just aren't many serverless-focused features left for Build to implement at this time, and it could largely be considered "done" until it gets new feature requests from Knative's users and operators.
 
 Pipelines contributors' ambitions continue to expand to address the market for CI/CD for deployment to platforms outside of Kubernetes: raw VMs, mobile devices, IoT devices, and the Kubernetes platform itself. Pipelines may primarily run _on Kubernetes_ but it's not necessarily _for Kubernetes_.
 
