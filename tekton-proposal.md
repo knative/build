@@ -54,7 +54,7 @@ Its charter and roadmap should continue to focus on building infrastructure to r
 
 When someone asks, "is there a way to run CI/CD on Kubernetes?" we should be able to say, "yes, because Tekton Pipelines focuses on exactly that."
 
-Until separate Tekton governance is established (weeks, not months), Tekton Pipelines work will continue to be overseen by the Knative Build WG -- largely by Christie (@, as she has been doing a great job leading Pipelines work so far -- though this will likely cause confusion and should be resolved as soon as possible. How we resolve that is TBD, and I think that's outside the scope of this proposal.
+Until separate Tekton governance is established (weeks, not months), Tekton Pipelines work will continue to be overseen by the Knative Build WG -- largely by Christie (@bobcatfish), as she has been doing a great job leading Pipelines work so far -- though this will likely cause confusion and should be resolved as soon as possible. How we resolve that is TBD, and I think that's outside the scope of this proposal.
 
 ## Future Directions
 
