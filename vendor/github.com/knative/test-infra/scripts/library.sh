@@ -200,6 +200,29 @@ function get_app_pods() {
   kubectl get pods ${namespace} --selector=app=$1 --output=jsonpath="{.items[*].metadata.name}"
 }
 
+# Capitalize the first letter of each word.
+# Parameters: $1..$n - words to capitalize.
+function capitalize() {
+  local capitalized=()
+  for word in $@; do
+    local initial="$(echo ${word:0:1}| tr 'a-z' 'A-Z')"
+    capitalized+=("${initial}${word:1}")
+  done
+  echo "${capitalized[@]}"
+}
+
+# Dumps pod logs for the given app.
+# Parameters: $1 - app name.
+#             $2 - namespace.
+function dump_app_logs() {
+  echo ">>> ${REPO_NAME_FORMATTED} $1 logs:"
+  for pod in $(get_app_pods "$1" "$2")
+  do
+    echo ">>> Pod: $pod"
+    kubectl -n "$2" logs "$pod" -c "$1"
+  done
+}
+
 # Sets the given user as cluster admin.
 # Parameters: $1 - user
 #             $2 - cluster name
@@ -392,3 +415,4 @@ function get_canonical_path() {
 # These MUST come last.
 
 readonly _TEST_INFRA_SCRIPTS_DIR="$(dirname $(get_canonical_path ${BASH_SOURCE[0]}))"
+readonly REPO_NAME_FORMATTED="Knative $(capitalize ${REPO_NAME//-/})"
