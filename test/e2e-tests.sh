@@ -30,22 +30,13 @@ source $(dirname $0)/e2e-common.sh
 
 # Helper functions.
 
-function dump_app_logs() {
-  echo ">>> Knative Build $1 logs:"
-  for pod in $(get_app_pods "$1" knative-build)
-  do
-    echo ">>> Pod: $pod"
-    kubectl -n knative-build logs "$pod" -c "$1"
-  done
-}
-
 function dump_extra_cluster_state() {
   echo ">>> Builds:"
   kubectl get builds -o yaml --all-namespaces
   echo ">>> Pods:"
   kubectl get pods -o yaml --all-namespaces
 
-  dump_app_logs controller
+  dump_app_logs controller knative-build
 }
 
 # Script entry point.
