@@ -68,6 +68,6 @@ The Knative brand is strong, and staying in Knative has the benefit of inertia; 
 
 Ultimately, however, I don't think this resolves enough confusion. Knative Build and Knative Pipelines _sound_ very similar, but they serve two very different purposes. There's a resource in the Pipelines repo that isn't Build but looks and acts very much like one, and will continue to grow features wholly unrelated to serverless deployments -- which should we direct users to? This is the problem we have today, and doing nothing does nothing to solve it.
 
-Knative's brand is also heavily associated with "serverless" -- serverless on-demand request serving, autoscaling to zero, event consumption and developer experience -- and while this is great for Knative's branding and positioning in the market, if we expand Knative to include CI/CD primitives then we'll have to reframe what Knative means in people's minds, which won't be easy.
+Knative's brand is also heavily associated with "serverless" -- serverless on-demand request serving, autoscaling to zero, event consumption, source-focused deployment developer experience -- and while this is great for Knative's branding and positioning in the market, if we expand Knative to include CI/CD primitives then we'll have to reframe what Knative means in people's minds, which won't be easy.
 
 In the end, I think having a separate term for "CI/CD _on_ K8s" and "Serverless _for_ K8s" will be valuable to both projects.
