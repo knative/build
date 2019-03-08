@@ -45,6 +45,9 @@ spec:
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging
+        resources:
+          limits:
+            memory: 1000Mi
       volumes:
         - name: config-logging
           configMap:
