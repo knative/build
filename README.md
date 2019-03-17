@@ -34,7 +34,7 @@ While today, a Knative build does not provide a complete standalone CI/CD
 solution, it does however, provide a lower-level building block that was
 purposefully designed to enable integration and utilization in larger systems.
 
-### Learn more
+## Learn more
 
 To learn more about builds in Knative, see the
 [Knative build documentation](https://github.com/knative/docs/tree/master/docs/build).
@@ -42,10 +42,10 @@ To learn more about builds in Knative, see the
 To learn more about Knative in general, see the
 [Overview](https://github.com/knative/docs/blob/master/docs/README.md).
 
-### Developing Knative builds
+## Developing Knative builds
 
 If you are interested in contributing to Knative builds:
 
 1. Visit the [How to contribute](./CONTRIBUTING.md) page for information about
    how to become a Knative contributor.
-2. Learn how to [set up your development environment](DEVELOPMENT.md).
+1. Learn how to [set up your development environment](DEVELOPMENT.md).
