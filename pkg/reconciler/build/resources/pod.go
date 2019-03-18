@@ -259,6 +259,14 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 	annotations["sidecar.istio.io/inject"] = "false"
 
+	// Copy labels on the build through to the underlying pod to allow users
+	// to specify pod labels.
+	labels := map[string]string{}
+	for key, val := range build.Labels {
+		labels[key] = val
+	}
+	labels[buildNameLabelKey] = build.Name
+
 	cred, secrets, err := makeCredentialInitializer(build, kubeclient)
 	if err != nil {
 		return nil, err
@@ -364,9 +372,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 				}),
 			},
 			Annotations: annotations,
-			Labels: map[string]string{
-				buildNameLabelKey: build.Name,
-			},
+			Labels:      labels,
 		},
 		Spec: corev1.PodSpec{
 			// If the build fails, don't restart it.
