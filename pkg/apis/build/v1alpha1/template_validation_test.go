@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -92,7 +93,7 @@ func TestValidateClusterBuildTemplate(t *testing.T) {
 
 		t.Run("namespaced-"+c.desc, func(t *testing.T) {
 			testTmpl := &BuildTemplate{Spec: c.tmpl}
-			verr := testTmpl.Validate()
+			verr := testTmpl.Validate(context.Background())
 			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
 				t.Errorf("validateBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
 			}
@@ -100,7 +101,7 @@ func TestValidateClusterBuildTemplate(t *testing.T) {
 
 		t.Run("cluster-namespaced-"+c.desc, func(t *testing.T) {
 			testClusterTmpl := &ClusterBuildTemplate{Spec: c.tmpl}
-			verr := testClusterTmpl.Validate()
+			verr := testClusterTmpl.Validate(context.Background())
 
 			if gotErr, wantErr := verr != nil, c.reason != ""; gotErr != wantErr {
 				t.Errorf("validateClusterBuildTemplate(%s); got %v, want %q", name, verr, c.reason)
