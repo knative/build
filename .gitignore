@@ -39,4 +39,4 @@
 
 # e2e test cruft
 kubernetes.tar.gz
-kubernetes/
+# kubernetes/

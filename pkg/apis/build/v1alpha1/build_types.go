@@ -238,6 +238,8 @@ const (
 
 // BuildStatus is the status for a Build resource
 type BuildStatus struct {
+	duckv1alpha1.Status `json:",inline"`
+
 	// +optional
 	Builder BuildProvider `json:"builder,omitempty"`
 
@@ -264,10 +266,6 @@ type BuildStatus struct {
 	// StepsCompleted lists the name of build steps completed.
 	// +optional
 	StepsCompleted []string `json:"stepsCompleted",omitempty`
-
-	// Conditions describes the set of conditions of this build.
-	// +optional
-	Conditions duckv1alpha1.Conditions `json:"conditions,omitempty"`
 }
 
 // Check that BuildStatus may have its conditions managed.

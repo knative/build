@@ -42,7 +42,7 @@ var ignoreVolatileTime = cmp.Comparer(func(_, _ apis.VolatileTime) bool {
 // TestSimpleBuild tests that a simple build that does nothing interesting
 // succeeds.
 func TestSimpleBuild(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestSimpleBuild")
+	buildTestNamespace, clients := initialize(t)
 
 	// Emit a metric for null-build latency (i.e., time to schedule and execute
 	// and finish watching a build).
@@ -51,9 +51,9 @@ func TestSimpleBuild(t *testing.T) {
 
 	buildName := "simple-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -78,13 +78,13 @@ func TestSimpleBuild(t *testing.T) {
 
 // TestFailingBuild tests that a simple build that fails, fails as expected.
 func TestFailingBuild(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestFailingBuild")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "failing-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -107,14 +107,14 @@ func TestFailingBuild(t *testing.T) {
 }
 
 func TestBuildWithTemplate(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestBuildWithTemplate")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "build-with-template"
 	templateName := "simple-template"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.buildTemplates.Create(&v1alpha1.BuildTemplate{
 		ObjectMeta: metav1.ObjectMeta{
@@ -161,15 +161,15 @@ func TestBuildWithTemplate(t *testing.T) {
 }
 
 func TestBuildWithClusterTemplate(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestBuildWithClusterTemplate")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "build-with-template"
 	templateName := "cluster-template"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownClusterTemplate(clients, logger, templateName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownClusterTemplate(t, clients, templateName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.clusterTemplates.Create(&v1alpha1.ClusterBuildTemplate{
 		ObjectMeta: metav1.ObjectMeta{
@@ -215,7 +215,7 @@ func TestBuildWithClusterTemplate(t *testing.T) {
 }
 
 func TestBuildLowTimeout(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestBuildLowTimeout")
+	buildTestNamespace, clients := initialize(t)
 
 	// TODO(jasonhall): builds created in quick succession, e.g., by `go
 	// test --count=N`, can sometimes produce confusing behavior around
@@ -224,9 +224,9 @@ func TestBuildLowTimeout(t *testing.T) {
 	// here to avoid this behavior. We need a better general solution.
 	buildName := fmt.Sprintf("build-low-timeout-%d", time.Now().Unix())
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	buildTimeout := 10 * time.Second
 
@@ -282,13 +282,13 @@ func TestBuildLowTimeout(t *testing.T) {
 // TestPendingBuild tests that a build with non existent node selector will remain in pending
 // state until watch timeout.
 func TestPendingBuild(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestPendingBuild")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "pending-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -314,13 +314,13 @@ func TestPendingBuild(t *testing.T) {
 // TestPodAffinity tests that a build with non existent pod affinity does not scheduled
 // and fails after watch timeout
 func TestPodAffinity(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestPodAffinity")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "affinity-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -362,13 +362,13 @@ func TestPodAffinity(t *testing.T) {
 // by the same persist volume claim can use it to pass build information
 // between builds.
 func TestPersistentVolumeClaim(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestPersistentVolumeClaim")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "persistent-volume-claim"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	// First, create the PVC.
 	if _, err := clients.kubeClient.Kube.CoreV1().PersistentVolumeClaims(buildTestNamespace).Create(&corev1.PersistentVolumeClaim{
@@ -387,7 +387,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Error creating PVC: %v", err)
 	}
-	logger.Infof("Created PVC")
+	t.Logf("Created PVC")
 
 	// Then, run a build that populates the PVC.
 	firstBuild := "cache-populate"
@@ -418,11 +418,11 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Error creating first build: %v", err)
 	}
-	logger.Infof("Created first build")
+	t.Logf("Created first build")
 	if _, err := clients.buildClient.watchBuild(firstBuild); err != nil {
 		t.Fatalf("Error watching build: %v", err)
 	}
-	logger.Infof("First build finished successfully")
+	t.Logf("First build finished successfully")
 
 	// Then, run a build that reads from the PVC.
 	secondBuild := "cache-retrieve"
@@ -452,23 +452,23 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Error creating second build: %v", err)
 	}
-	logger.Infof("Created second build")
+	t.Logf("Created second build")
 	if _, err := clients.buildClient.watchBuild(secondBuild); err != nil {
 		t.Fatalf("Error watching build: %v", err)
 	}
-	logger.Infof("Second build finished successfully")
+	t.Logf("Second build finished successfully")
 }
 
 // TestBuildWithSources tests that a build can have multiple similar sources
 // under different names
 func TestBuildWithSources(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestBuildWithSources")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "build-sources"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -513,13 +513,13 @@ func TestBuildWithSources(t *testing.T) {
 
 // TestSimpleBuildWithHybridSources tests hybrid input sources can be accessed in all steps
 func TestSimpleBuildWithHybridSources(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestSimpleBuildWithHybridSources")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "hybrid-sources"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -582,14 +582,14 @@ func TestSimpleBuildWithHybridSources(t *testing.T) {
 }
 
 func TestFailedBuildWithParamsInVolume(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestFailedBuildWithParamsInVolume")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "build-cm-not-exist"
 	templateName := "simple-template-with-params-in-volume"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.buildTemplates.Create(&v1alpha1.BuildTemplate{
 		ObjectMeta: metav1.ObjectMeta{
@@ -643,15 +643,15 @@ func TestFailedBuildWithParamsInVolume(t *testing.T) {
 
 // TestDuplicatePodBuild creates 10 builds and checks that each of them has only one build pod.
 func TestDuplicatePodBuild(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestDuplicatePodBuild")
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	buildTestNamespace, clients := initialize(t)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	for i := 0; i < 10; i++ {
 		buildName := fmt.Sprintf("duplicate-pod-build-%d", i)
-		test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-		defer teardownBuild(clients, logger, buildTestNamespace, buildName)
+		test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+		defer teardownBuild(t, clients, buildTestNamespace, buildName)
 
-		logger.Infof("Creating build %q", buildName)
+		t.Logf("Creating build %q", buildName)
 		if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: buildTestNamespace,

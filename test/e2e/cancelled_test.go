@@ -42,13 +42,13 @@ const (
 // TestCancelledBuild tests that a build with a long running step
 // so that we have time to cancel it.
 func TestCancelledBuild(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestCancelledBuild")
+	buildTestNamespace, clients := initialize(t)
 
 	buildName := "cancelled-build"
 
-	test.CleanupOnInterrupt(func() { teardownBuild(clients, logger, buildTestNamespace, buildName) }, logger)
-	defer teardownBuild(clients, logger, buildTestNamespace, buildName)
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	test.CleanupOnInterrupt(func() { teardownBuild(t, clients, buildTestNamespace, buildName) }, t.Logf)
+	defer teardownBuild(t, clients, buildTestNamespace, buildName)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	if _, err := clients.buildClient.builds.Create(&v1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
