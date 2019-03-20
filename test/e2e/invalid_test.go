@@ -32,8 +32,8 @@ import (
 // TestInvalidBuild tests that invalid builds are rejected by the webhook
 // admission controller.
 func TestInvalidBuild(t *testing.T) {
-	buildTestNamespace, logger, clients := initialize("TestInvalidBuild")
-	defer teardownNamespace(clients, buildTestNamespace, logger)
+	buildTestNamespace, clients := initialize(t)
+	defer teardownNamespace(t, clients, buildTestNamespace)
 
 	for _, b := range []*v1alpha1.Build{{
 		ObjectMeta: metav1.ObjectMeta{

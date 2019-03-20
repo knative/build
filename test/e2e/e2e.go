@@ -22,6 +22,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"testing"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildversioned "github.com/knative/build/pkg/client/clientset/versioned"
@@ -49,47 +50,47 @@ var (
 	errWatchTimeout = errors.New("watch ended before build finished")
 )
 
-func teardownNamespace(clients *clients, buildTestNamespace string, logger *logging.BaseLogger) {
+func teardownNamespace(t *testing.T, clients *clients, buildTestNamespace string) {
 	if clients != nil && clients.kubeClient != nil {
-		logger.Infof("Deleting namespace %q", buildTestNamespace)
+		t.Logf("Deleting namespace %q", buildTestNamespace)
 
 		if err := clients.kubeClient.Kube.CoreV1().Namespaces().Delete(buildTestNamespace, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
-			logger.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
+			t.Fatalf("Error deleting namespace %q: %v", buildTestNamespace, err)
 		}
 	}
 }
 
-func teardownBuild(clients *clients, logger *logging.BaseLogger, buildTestNamespace, name string) {
+func teardownBuild(t *testing.T, clients *clients, buildTestNamespace, name string) {
 	if clients != nil && clients.buildClient != nil {
-		logger.Infof("Deleting build %q in namespace %q", name, buildTestNamespace)
+		t.Logf("Deleting build %q in namespace %q", name, buildTestNamespace)
 
 		if err := clients.buildClient.builds.Delete(name, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
-			logger.Fatalf("Error deleting build %q: %v", name, err)
+			t.Fatalf("Error deleting build %q: %v", name, err)
 		}
 	}
 }
 
-func teardownClusterTemplate(clients *clients, logger *logging.BaseLogger, name string) {
+func teardownClusterTemplate(t *testing.T, clients *clients, name string) {
 	if clients != nil && clients.buildClient != nil {
-		logger.Infof("Deleting cluster template %q", name)
+		t.Logf("Deleting cluster template %q", name)
 
 		if err := clients.buildClient.clusterTemplates.Delete(name, &metav1.DeleteOptions{}); err != nil && !kuberrors.IsNotFound(err) {
-			logger.Fatalf("Error deleting cluster template %q: %v", name, err)
+			t.Fatalf("Error deleting cluster template %q: %v", name, err)
 		}
 	}
 }
 
-func buildClients(buildTestNamespace string, logger *logging.BaseLogger) *clients {
+func buildClients(t *testing.T, buildTestNamespace string) *clients {
 	clients, err := newClients(test.Flags.Kubeconfig, test.Flags.Cluster, buildTestNamespace)
 	if err != nil {
-		logger.Fatalf("Error creating newClients: %v", err)
+		t.Fatalf("Error creating newClients: %v", err)
 	}
 	return clients
 }
 
-func createTestNamespace(logger *logging.BaseLogger) (string, *clients) {
+func createTestNamespace(t *testing.T) (string, *clients) {
 	buildTestNamespace := AppendRandomString("build-tests")
-	clients := buildClients(buildTestNamespace, logger)
+	clients := buildClients(t, buildTestNamespace)
 
 	// Ensure the test namespace exists, by trying to create it and ignoring
 	// already-exists errors.
@@ -98,11 +99,11 @@ func createTestNamespace(logger *logging.BaseLogger) (string, *clients) {
 			Name: buildTestNamespace,
 		},
 	}); err == nil {
-		logger.Infof("Created namespace %q", buildTestNamespace)
+		t.Logf("Created namespace %q", buildTestNamespace)
 	} else if kuberrors.IsAlreadyExists(err) {
-		logger.Infof("Namespace %q already exists", buildTestNamespace)
+		t.Logf("Namespace %q already exists", buildTestNamespace)
 	} else {
-		logger.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
+		t.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
 	}
 	return buildTestNamespace, clients
 }
@@ -194,20 +195,18 @@ func (c *buildClient) watchBuild(name string) (*v1alpha1.Build, error) {
 
 // initialize is responsible for setting up and tearing down the testing environment,
 // namely the test namespace.
-func initialize(contextName string) (string, *logging.BaseLogger, *clients) {
+func initialize(t *testing.T) (string, *clients) {
 	flag.Parse()
 	logging.InitializeLogger(test.Flags.LogVerbose)
-	logger := logging.GetContextLogger("initialize")
 	flag.Set("alsologtostderr", "true")
 	if test.Flags.EmitMetrics {
-		logging.InitializeMetricExporter()
+		logging.InitializeMetricExporter(t.Name())
 	}
 
-	buildTestNamespace, clients := createTestNamespace(logger)
+	buildTestNamespace, clients := createTestNamespace(t)
 
 	// Cleanup namespace
-	test.CleanupOnInterrupt(func() { teardownNamespace(clients, buildTestNamespace, logger) }, logger)
+	test.CleanupOnInterrupt(func() { teardownNamespace(t, clients, buildTestNamespace) }, t.Logf)
 
-	testLogger := logging.GetContextLogger(contextName)
-	return buildTestNamespace, testLogger, buildClients(buildTestNamespace, testLogger)
+	return buildTestNamespace, buildClients(t, buildTestNamespace)
 }
