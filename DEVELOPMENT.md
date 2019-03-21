@@ -61,7 +61,7 @@ Then ensure `ko` is set up:
 
 ```shell
 # Install the "ko" cli
-go get -u github.com/google/go-containerregistry/cmd/ko
+go get -u github.com/google/ko/cmd/ko
 
 # Check that "ko" is on your path
 which ko
