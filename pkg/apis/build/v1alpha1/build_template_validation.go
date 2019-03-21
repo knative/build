@@ -17,18 +17,20 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // Validate build template
-func (b *BuildTemplate) Validate() *apis.FieldError {
-	return validateObjectMetadata(b.GetObjectMeta()).ViaField("metadata").Also(b.Spec.Validate().ViaField("spec"))
+func (b *BuildTemplate) Validate(ctx context.Context) *apis.FieldError {
+	return validateObjectMetadata(b.GetObjectMeta()).ViaField("metadata").Also(b.Spec.Validate(ctx).ViaField("spec"))
 }
 
 // Validate Build Template
-func (b *BuildTemplateSpec) Validate() *apis.FieldError {
+func (b *BuildTemplateSpec) Validate(ctx context.Context) *apis.FieldError {
 	if err := validateSteps(b.Steps); err != nil {
 		return err
 	}

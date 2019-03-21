@@ -35,13 +35,13 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/caching"
-  # HEAD as of 2019-03-14
-  revision = "b9d80eaec52c6ee5841271438cb020a80be72cb2"
+  # HEAD as of 2019-03-21
+  revision = "3fc06fd3c9880a9ebb5c401f4b20cf6666cc7bc0"
 
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-03-19
-  revision = "4840bbe7b47ff2f6abb4bbf7d023bf98c0a51b6a"
+  # HEAD as of 2019-03-21
+  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
 
 [[override]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"
@@ -53,6 +53,11 @@ required = [
   name = "golang.org/x/net"
   # Override opencensus "master" constraint
   branch = "release-branch.go1.9"
+
+[[override]]
+  name = "github.com/golang/protobuf"
+  # Lock the version of protobuf to keep things building.
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
 
 [prune]
   go-tests = true
