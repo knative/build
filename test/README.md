@@ -25,7 +25,7 @@ Setting up a running `Knative Build` cluster.
 
 1. A Kubernetes cluster v1.10 or newer with the `MutatingAdmissionWebhook`
    admission controller enabled. `kubectl` v1.10 is also required.
-   [see here](https://github.com/knative/docs/blob/master/install/Knative-with-any-k8s.md)
+   [see here](https://www.knative.dev/docs/install/knative-with-any-k8s/)
 
 1. Configure `ko` to point to your registry.
    [see here](https://github.com/knative/build/blob/master/DEVELOPMENT.md#one-time-setup)
