@@ -50,7 +50,7 @@ variable should be `docker.io/<username>`.
 **Note**: Currently Docker Hub doesn't let you create subdirs under your
 username.
 
-For a local registry (using insecure http://) it needs to be on localhost:
+For a local registry (using insecure `http://`) it needs to be on localhost:
 
 ```shell
 docker run -it -d -p 5000:5000 registry:2
