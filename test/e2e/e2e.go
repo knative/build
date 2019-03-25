@@ -32,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
@@ -106,6 +107,20 @@ func createTestNamespace(t *testing.T) (string, *clients) {
 		t.Fatalf("Error creating namespace %q: %v", buildTestNamespace, err)
 	}
 	return buildTestNamespace, clients
+}
+
+func verifyDefaultServiceAccountCreation(namespace string, t *testing.T, c *clients) {
+	defaultSA := "default"
+	t.Logf("Verify SA %q is created in namespace %q", defaultSA, namespace)
+	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+		_, err := c.kubeClient.Kube.CoreV1().ServiceAccounts(namespace).Get(defaultSA, metav1.GetOptions{})
+		if err != nil && kuberrors.IsNotFound(err) {
+			return false, nil
+		}
+		return true, err
+	}); err != nil {
+		t.Fatalf("Failed to get SA %q in namespace %q for tests: %s", defaultSA, namespace, err)
+	}
 }
 
 func newClients(configPath string, clusterName string, namespace string) (*clients, error) {
@@ -204,7 +219,7 @@ func initialize(t *testing.T) (string, *clients) {
 	}
 
 	buildTestNamespace, clients := createTestNamespace(t)
-
+	verifyDefaultServiceAccountCreation(buildTestNamespace, t, clients)
 	// Cleanup namespace
 	test.CleanupOnInterrupt(func() { teardownNamespace(t, clients, buildTestNamespace) }, t.Logf)
 
