@@ -42,15 +42,17 @@ func run(logger *zap.SugaredLogger, cmd string, args ...string) {
 	}
 }
 
-func runOrFail(logger *zap.SugaredLogger, cmd string, args ...string) {
+func runOrFail(logger *zap.SugaredLogger, cmd string, args ...string) error {
 	c := exec.Command(cmd, args...)
 	var output bytes.Buffer
 	c.Stderr = &output
 	c.Stdout = &output
 
 	if err := c.Run(); err != nil {
-		logger.Fatalf("Unexpected error running %v %v: %v\n%v", cmd, args, err, output.String())
+		logger.Errorf("Unexpected error running %v %v: %v\n%v", cmd, args, err, output.String())
+		return err
 	}
+	return nil
 }
 
 func main() {
@@ -86,8 +88,15 @@ func main() {
 	}
 
 	run(logger, "git", "remote", "add", "origin", *url)
-	runOrFail(logger, "git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *revision)
-	runOrFail(logger, "git", "reset", "--hard", "FETCH_HEAD")
+	err = runOrFail(logger, "git", "fetch", "--depth=1", "--recurse-submodules=yes", "origin", *revision)
+	if err != nil {
+		// Fetch can fail if an old commitid was used so try git pull, performing regardless of error
+		// as no guarantee that the same error is returned by all git servers gitlab, github etc...
+		run(logger, "git", "pull", "--recurse-submodules=yes", "origin")
+		runOrFail(logger, "git", "checkout", *revision)
+	} else {
+		runOrFail(logger, "git", "reset", "--hard", "FETCH_HEAD")
+	}
 
 	logger.Infof("Successfully cloned %q @ %q in path %q", *url, *revision, dir)
 }
