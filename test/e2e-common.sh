@@ -14,12 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function teardown() {
+# Helper functions for E2E tests.
+
+source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
+
+function test_teardown() {
+  subheader "Tearing down Build CRD"
   ko delete --ignore-not-found=true -R -f test/
   ko delete --ignore-not-found=true -f config/
 }
 
-function run_yaml_tests() {
+function knative_setup() {
+  echo "Building and starting the controller"
+  ko apply -f config/ || fail_test "Build installation failed"
+
+  # Make sure that are no builds or build templates in the current namespace.
+  kubectl delete --ignore-not-found=true builds.build.knative.dev --all
+  kubectl delete --ignore-not-found=true buildtemplates --all
+
+  wait_until_pods_running knative-build || fail_test "Build did not come up"
+}
+
+function _run_and_check_yaml_tests() {
   echo ">> Starting tests"
   ko apply -R -f test/ || return 1
 
@@ -66,5 +82,17 @@ function run_yaml_tests() {
   done
   (( failed )) && return 1
   echo ">> All YAML tests passed"
+  return 0
+}
+
+function run_yaml_tests() {
+  header "Running YAML e2e tests"
+  if ! _run_and_check_yaml_tests; then
+    echo "ERROR: one or more YAML tests failed"
+    # If formatting fails for any reason, use yaml as a fall back.
+    kubectl get builds.build.knative.dev -o=custom-columns-file=./test/columns.txt || \
+      kubectl get builds.build.knative.dev -oyaml
+    return 1
+  fi
   return 0
 }

@@ -86,7 +86,7 @@ func (f *fixture) createServiceAccounts(serviceAccounts ...*corev1.ServiceAccoun
 	}
 }
 
-func (f *fixture) newReconciler() (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
+func (f *fixture) newReconciler(stopCh <-chan struct{}) (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
 	logger := zap.NewExample().Sugar()
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
@@ -94,7 +94,8 @@ func (f *fixture) newReconciler() (controller.Reconciler, informers.SharedInform
 	buildTemplateInformer := i.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := i.Build().V1alpha1().ClusterBuildTemplates()
 	podInformer := k8sI.Core().V1().Pods()
-	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer)
+	timeoutHandler := NewTimeoutHandler(logger, f.kubeclient, f.client, stopCh)
+	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, timeoutHandler)
 	return c.Reconciler, i, k8sI
 }
 
@@ -134,10 +135,11 @@ func TestBuildNotFoundFlow(t *testing.T) {
 	}
 	f.client.PrependReactor("*", "*", reactor)
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -153,7 +155,10 @@ func TestBuildWithBadKey(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, _, _ := f.newReconciler()
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	r, _, _ := f.newReconciler(stopCh)
 	if err := r.Reconcile(context.Background(), "bad/worse/worst"); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
@@ -169,10 +174,11 @@ func TestBuildNotFoundError(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	// Don't update build informers with test build object
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	// Don't update build informers with test build object
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -195,10 +201,11 @@ func TestBuildWithMissingServiceAccount(t *testing.T) {
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -242,10 +249,11 @@ func TestBuildWithMissingSecret(t *testing.T) {
 		Secrets:    []corev1.ObjectReference{{Name: "missing-secret"}},
 	})
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -289,10 +297,11 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 		}
 		f.createServiceAccount()
 
-		r, i, k8sI := f.newReconciler()
-		f.updateIndex(i, b)
 		stopCh := make(chan struct{})
 		defer close(stopCh)
+
+		r, i, k8sI := f.newReconciler(stopCh)
+		f.updateIndex(i, b)
 		i.Start(stopCh)
 		k8sI.Start(stopCh)
 
@@ -346,10 +355,11 @@ func TestBuildWithTemplate(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -439,10 +449,11 @@ func TestBasicFlows(t *testing.T) {
 			}
 			f.createServiceAccount()
 
-			r, i, k8sI := f.newReconciler()
-			f.updateIndex(i, b)
 			stopCh := make(chan struct{})
 			defer close(stopCh)
+
+			r, i, k8sI := f.newReconciler(stopCh)
+			f.updateIndex(i, b)
 			i.Start(stopCh)
 			k8sI.Start(stopCh)
 
@@ -500,7 +511,7 @@ func TestBasicFlows(t *testing.T) {
 
 func TestTimeoutFlow(t *testing.T) {
 	b := newBuild("timeout")
-	b.Spec.Timeout = &metav1.Duration{Duration: 1 * time.Second}
+	b.Spec.Timeout = &metav1.Duration{Duration: 500 * time.Millisecond}
 
 	f := &fixture{
 		t:          t,
@@ -510,10 +521,10 @@ func TestTimeoutFlow(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	r, i, k8sI := f.newReconciler()
-	f.updateIndex(i, b)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
 	i.Start(stopCh)
 	k8sI.Start(stopCh)
 
@@ -528,24 +539,8 @@ func TestTimeoutFlow(t *testing.T) {
 		t.Errorf("error fetching build: %v", err)
 	}
 
-	// Update the pod to indicate it was created 10m ago, which is
-	// longer than the build's timeout.
-	podName := b.Status.Cluster.PodName
-	p, err := f.kubeclient.CoreV1().Pods(metav1.NamespaceDefault).Get(podName, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("error getting pod %q: %v", podName, err)
-	}
-	p.CreationTimestamp.Time = metav1.Now().Time.Add(-10 * time.Minute)
-	if _, err := f.kubeclient.CoreV1().Pods(metav1.NamespaceDefault).Update(p); err != nil {
-		t.Fatalf("error updating pod %q: %v", podName, err)
-	}
-
-	// Reconcile to pick up pod changes.
-	f.updatePodIndex(k8sI, p)
-	f.updateIndex(i, b)
-	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
-		t.Errorf("error syncing build: %v", err)
-	}
+	// Right now there is no better way to test timeout rather than wait for it
+	time.Sleep(600 * time.Millisecond)
 
 	// Check that the build has the expected timeout status.
 	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
@@ -556,7 +551,67 @@ func TestTimeoutFlow(t *testing.T) {
 		Type:    duckv1alpha1.ConditionSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildTimeout",
-		Message: fmt.Sprintf("Build %q failed to finish within \"1s\"", b.Name),
+		Message: fmt.Sprintf("Build %q failed to finish within \"500ms\"", b.Name),
+	}, ignoreVolatileTime); d != "" {
+		t.Errorf("Unexpected build status %s", d)
+	}
+}
+
+func TestCancelledFlow(t *testing.T) {
+	b := newBuild("cancelled")
+
+	f := &fixture{
+		t:          t,
+		objects:    []runtime.Object{b},
+		client:     fake.NewSimpleClientset(b),
+		kubeclient: k8sfake.NewSimpleClientset(),
+	}
+	f.createServiceAccount()
+
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	r, i, k8sI := f.newReconciler(stopCh)
+	f.updateIndex(i, b)
+	i.Start(stopCh)
+	k8sI.Start(stopCh)
+
+	ctx := context.Background()
+	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+		t.Errorf("Not Expect error when syncing build")
+	}
+
+	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+
+	// Get pod info
+	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("error getting build: %v", err)
+	}
+	if b.Status.Cluster == nil || b.Status.Cluster.PodName == "" {
+		t.Fatalf("build status did not specify podName: %v", b.Status.Cluster)
+	}
+	b.Spec.Status = v1alpha1.BuildSpecStatusCancelled
+
+	f.updateIndex(i, b)
+	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+		t.Errorf("error syncing build: %v", err)
+	}
+
+	// Check that the build has the expected cancelled status.
+	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Errorf("error fetching build: %v", err)
+	}
+	if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
+		Type:    duckv1alpha1.ConditionSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildCancelled",
+		Message: fmt.Sprintf("Build %q was cancelled", b.Name),
 	}, ignoreVolatileTime); d != "" {
 		t.Errorf("Unexpected build status %s", d)
 	}

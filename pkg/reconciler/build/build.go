@@ -19,6 +19,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -55,6 +56,7 @@ type Reconciler struct {
 	kubeclientset kubernetes.Interface
 	// buildclientset is a clientset for our own API group
 	buildclientset clientset.Interface
+	timeoutHandler *TimeoutSet
 
 	buildsLister                listers.BuildLister
 	buildTemplatesLister        listers.BuildTemplateLister
@@ -71,6 +73,7 @@ type Reconciler struct {
 
 // Check that we implement the controller.Reconciler interface.
 var _ controller.Reconciler = (*Reconciler)(nil)
+var statusMap = sync.Map{}
 
 func init() {
 	// Add build-controller types to the default Kubernetes Scheme so Events can be
@@ -87,6 +90,7 @@ func NewController(
 	buildInformer informers.BuildInformer,
 	buildTemplateInformer informers.BuildTemplateInformer,
 	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
+	timeoutHandler *TimeoutSet,
 ) *controller.Impl {
 
 	// Enrich the logs with controller name
@@ -100,6 +104,7 @@ func NewController(
 		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
 		podsLister:                  podInformer.Lister(),
 		Logger:                      logger,
+		timeoutHandler:              timeoutHandler,
 	}
 	impl := controller.NewImpl(r, logger, "Builds",
 		reconciler.MustNewStatsReporter("Builds", r.Logger))
@@ -153,12 +158,44 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
+	// If the build's status is cancelled, kill resources and update status
+	if isCancelled(build.Spec) {
+		return c.cancelBuild(build, logger)
+	}
+
 	// If the build hasn't started yet, validate it and create a Pod for it
 	// and record that pod's name in the build status.
 	var p *corev1.Pod
 	if build.Status.Cluster == nil || build.Status.Cluster.PodName == "" {
+		// Add a unique suffix to avoid confusion when a build
+		// is deleted and re-created with the same name.
+		// We don't use GenerateName here because k8s fakes don't support it.
+		podName, err := resources.GetUniquePodName(build.Name)
+		if err != nil {
+			return err
+		}
+		// update with a dummy status first to avoid race condition of another event while the pod is being created
+		build.Status = v1alpha1.BuildStatus{
+			Builder: v1alpha1.ClusterBuildProvider,
+			Cluster: &v1alpha1.ClusterSpec{
+				Namespace: build.Namespace,
+				PodName:   podName,
+			},
+			StartTime: &metav1.Time{
+				Time: time.Now(),
+			},
+		}
+		if err := c.updateStatus(build); err != nil {
+			return err
+		}
+
 		if err = c.validateBuild(build); err != nil {
 			logger.Errorf("Failed to validate build: %v", err)
+			build.Status = v1alpha1.BuildStatus{
+				Cluster: &v1alpha1.ClusterSpec{
+					PodName: "",
+				},
+			}
 			build.Status.SetCondition(&duckv1alpha1.Condition{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
@@ -170,6 +207,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			}
 			return err
 		}
+
 		p, err = c.startPodForBuild(build)
 		if err != nil {
 			build.Status.SetCondition(&duckv1alpha1.Condition{
@@ -183,6 +221,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			}
 			return err
 		}
+		// Start goroutine that waits for either build timeout or build finish
+		go c.timeoutHandler.wait(build)
 	} else {
 		// If the build is ongoing, update its status based on its pod, and
 		// check if it's timed out.
@@ -194,22 +234,32 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Update the build's status based on the pod's status.
+	statusLock(build)
 	build.Status = resources.BuildStatusFromPod(p, build.Spec)
-
-	// Check if build has timed out; if it is, this will set its status
-	// accordingly.
-	if err := c.checkTimeout(build); err != nil {
-		return err
+	statusUnlock(build)
+	if isDone(&build.Status) {
+		// release goroutine that waits for build timeout
+		c.timeoutHandler.release(build)
+		// and remove key from status map
+		defer statusMap.Delete(key)
 	}
 
 	return c.updateStatus(build)
 }
 
 func (c *Reconciler) updateStatus(u *v1alpha1.Build) error {
+	statusLock(u)
+	defer statusUnlock(u)
 	newb, err := c.buildclientset.BuildV1alpha1().Builds(u.Namespace).Get(u.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
+
+	cond := newb.Status.GetCondition(v1alpha1.BuildSucceeded)
+	if cond != nil && cond.Status == corev1.ConditionFalse {
+		return fmt.Errorf("can't update status of failed build %q", newb.Name)
+	}
+
 	newb.Status = u.Status
 
 	_, err = c.buildclientset.BuildV1alpha1().Builds(u.Namespace).UpdateStatus(newb)
@@ -257,7 +307,33 @@ func (c *Reconciler) startPodForBuild(build *v1alpha1.Build) (*corev1.Pod, error
 	return c.kubeclientset.CoreV1().Pods(p.Namespace).Create(p)
 }
 
-// IsDone returns true if the build's status indicates the build is done.
+// isCancelled returns true if the build's spec indicates the build is cancelled.
+func isCancelled(buildSpec v1alpha1.BuildSpec) bool {
+	return buildSpec.Status == v1alpha1.BuildSpecStatusCancelled
+}
+
+func (c *Reconciler) cancelBuild(build *v1alpha1.Build, logger *zap.SugaredLogger) error {
+	logger.Warnf("Build has been cancelled: %v", build.Name)
+	build.Status.SetCondition(&duckv1alpha1.Condition{
+		Type:    v1alpha1.BuildSucceeded,
+		Status:  corev1.ConditionFalse,
+		Reason:  "BuildCancelled",
+		Message: fmt.Sprintf("Build %q was cancelled", build.Name),
+	})
+	if err := c.updateStatus(build); err != nil {
+		return err
+	}
+	if build.Status.Cluster == nil {
+		logger.Warnf("build %q has no pod running yet", build.Name)
+		return nil
+	}
+	if err := c.kubeclientset.CoreV1().Pods(build.Namespace).Delete(build.Status.Cluster.PodName, &metav1.DeleteOptions{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// isDone returns true if the build's status indicates the build is done.
 func isDone(status *v1alpha1.BuildStatus) bool {
 	cond := status.GetCondition(v1alpha1.BuildSucceeded)
 	return cond != nil && cond.Status != corev1.ConditionUnknown
@@ -293,4 +369,21 @@ func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 		build.Status.CompletionTime = &metav1.Time{time.Now()}
 	}
 	return nil
+}
+
+func statusLock(build *v1alpha1.Build) {
+	key := fmt.Sprintf("%s/%s", build.Namespace, build.Name)
+	m, _ := statusMap.LoadOrStore(key, &sync.Mutex{})
+	mut := m.(*sync.Mutex)
+	mut.Lock()
+}
+
+func statusUnlock(build *v1alpha1.Build) {
+	key := fmt.Sprintf("%s/%s", build.Namespace, build.Name)
+	m, ok := statusMap.Load(key)
+	if !ok {
+		return
+	}
+	mut := m.(*sync.Mutex)
+	mut.Unlock()
 }

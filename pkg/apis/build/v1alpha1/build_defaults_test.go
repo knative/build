@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func TestSetDefault(t *testing.T) {
 			Template: &TemplateInstantiationSpec{},
 		},
 	}
-	emptyBuild.SetDefaults()
+	emptyBuild.SetDefaults(context.Background())
 	if emptyBuild.Spec.ServiceAccountName != "default" {
 		t.Errorf("Expect default to be the serviceaccount name but got %s", emptyBuild.Spec.ServiceAccountName)
 	}
@@ -53,7 +54,7 @@ func TestAlreadySetDefault(t *testing.T) {
 			},
 		},
 	}
-	setDefaultBuild.SetDefaults()
+	setDefaultBuild.SetDefaults(context.Background())
 	if setDefaultBuild.Spec.ServiceAccountName != setAccountName {
 		t.Errorf("Expect build.spec.serviceaccount name not to be overridden; but got %s", setDefaultBuild.Spec.ServiceAccountName)
 	}

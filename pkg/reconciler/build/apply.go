@@ -22,6 +22,7 @@ import (
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ApplyTemplate applies the values in the template to the build, and replaces
@@ -87,6 +88,14 @@ func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v
 		}
 	}
 
+	// Apply variable expansion to the build's volumes
+	for i, v := range build.Spec.Volumes {
+		build.Spec.Volumes[i].Name = applyReplacements(v.Name)
+		if c := v.PersistentVolumeClaim; c != nil {
+			c.ClaimName = applyReplacements(c.ClaimName)
+		}
+	}
+
 	if buildTmpl := build.Spec.Template; buildTmpl != nil && len(buildTmpl.Env) > 0 {
 		// Apply variable expansion to the build's overridden
 		// environment variables
@@ -98,22 +107,48 @@ func ApplyReplacements(build *v1alpha1.Build, replacements map[string]string) *v
 			steps[i].Env = applyEnvOverride(steps[i].Env, buildTmpl.Env)
 		}
 	}
+
+	// Apply variable expansion to volumes fields.
+	if volumes := build.Spec.Volumes; volumes != nil && len(volumes) > 0 {
+		for i := range volumes {
+			applyVolumeReplacements(&volumes[i], applyReplacements)
+		}
+	}
+
 	return build
 }
 
 func applyEnvOverride(src, override []corev1.EnvVar) []corev1.EnvVar {
 	result := make([]corev1.EnvVar, 0, len(src)+len(override))
-	overrides := make(map[string]bool)
+	overrides := sets.NewString()
 
 	for _, env := range override {
-		overrides[env.Name] = true
+		overrides.Insert(env.Name)
 	}
 
 	for _, env := range src {
-		if _, present := overrides[env.Name]; !present {
+		if !overrides.Has(env.Name) {
 			result = append(result, env)
 		}
 	}
 
 	return append(result, override...)
+}
+
+func applyVolumeReplacements(volume *corev1.Volume, applyReplacements func(string) string) {
+	if volume == nil {
+		return
+	}
+
+	volume.Name = applyReplacements(volume.Name)
+
+	// Apply variable expansion to configMap's name
+	// TODO: Apply variable expansion to other volumeSource
+	if volume.VolumeSource.ConfigMap != nil {
+		volume.ConfigMap.Name = applyReplacements(volume.ConfigMap.Name)
+	}
+
+	if volume.VolumeSource.Secret != nil {
+		volume.Secret.SecretName = applyReplacements(volume.Secret.SecretName)
+	}
 }

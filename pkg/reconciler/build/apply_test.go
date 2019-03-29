@@ -115,6 +115,14 @@ func TestApplyTemplate(t *testing.T) {
 				Parameters: []v1alpha1.ParameterSpec{{
 					Name: "FOO",
 				}},
+				Volumes: []corev1.Volume{{
+					Name: "${FOO}",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "${FOO}",
+						},
+					},
+				}},
 			},
 		},
 		want: &v1alpha1.Build{
@@ -141,6 +149,14 @@ func TestApplyTemplate(t *testing.T) {
 						Value: "world",
 					}},
 				},
+				Volumes: []corev1.Volume{{
+					Name: "world",
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: "world",
+						},
+					},
+				}},
 			},
 		},
 	}, {
@@ -716,6 +732,84 @@ func TestApplyReplacements(t *testing.T) {
 							},
 							WorkingDir: "/myworkdir",
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "replacement in volumes",
+			args: args{
+				build: &v1alpha1.Build{
+					Spec: v1alpha1.BuildSpec{
+						Volumes: []corev1.Volume{{
+							Name: "${name}",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									corev1.LocalObjectReference{"${configmapname}"},
+									nil,
+									nil,
+									nil,
+								},
+							}},
+						},
+					},
+				},
+				replacements: map[string]string{
+					"name":          "myname",
+					"configmapname": "cfgmapname",
+				},
+			},
+			want: &v1alpha1.Build{
+				Spec: v1alpha1.BuildSpec{
+					Volumes: []corev1.Volume{{
+						Name: "myname",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								corev1.LocalObjectReference{"cfgmapname"},
+								nil,
+								nil,
+								nil,
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
+			name: "replacement in volumes (secret) ",
+			args: args{
+				build: &v1alpha1.Build{
+					Spec: v1alpha1.BuildSpec{
+						Volumes: []corev1.Volume{{
+							Name: "${name}",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									"${secretname}",
+									nil,
+									nil,
+									nil,
+								},
+							}},
+						},
+					},
+				},
+				replacements: map[string]string{
+					"name":       "mysecret",
+					"secretname": "totallysecure",
+				},
+			},
+			want: &v1alpha1.Build{
+				Spec: v1alpha1.BuildSpec{
+					Volumes: []corev1.Volume{{
+						Name: "mysecret",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								"totallysecure",
+								nil,
+								nil,
+								nil,
+							},
+						}},
 					},
 				},
 			},

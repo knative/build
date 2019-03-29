@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -473,7 +474,7 @@ func TestValidateBuild(t *testing.T) {
 	}} {
 		name := c.name
 		t.Run(name, func(t *testing.T) {
-			got := c.build.Validate()
+			got := c.build.Validate(context.Background())
 			if diff := cmp.Diff(c.want.Error(), got.Error()); diff != "" {
 				t.Errorf("validateBuild(%s) (-want, +got) = %v", name, diff)
 			}

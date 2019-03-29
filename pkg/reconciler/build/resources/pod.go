@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
@@ -258,6 +259,14 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 	}
 	annotations["sidecar.istio.io/inject"] = "false"
 
+	// Copy labels on the build through to the underlying pod to allow users
+	// to specify pod labels.
+	labels := map[string]string{}
+	for key, val := range build.Labels {
+		labels[key] = val
+	}
+	labels[buildNameLabelKey] = build.Name
+
 	cred, secrets, err := makeCredentialInitializer(build, kubeclient)
 	if err != nil {
 		return nil, err
@@ -306,12 +315,12 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 
 		// Add implicit volume mounts, unless the user has requested
 		// their own volume mount at that path.
-		requestedVolumeMounts := map[string]bool{}
+		requestedVolumeMounts := sets.NewString()
 		for _, vm := range step.VolumeMounts {
-			requestedVolumeMounts[filepath.Clean(vm.MountPath)] = true
+			requestedVolumeMounts.Insert(filepath.Clean(vm.MountPath))
 		}
 		for _, imp := range implicitVolumeMounts {
-			if !requestedVolumeMounts[filepath.Clean(imp.MountPath)] {
+			if !requestedVolumeMounts.Has(filepath.Clean(imp.MountPath)) {
 				// If the build's source specifies a subpath,
 				// use that in the implicit workspace volume
 				// mount.
@@ -341,23 +350,19 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 		return nil, err
 	}
 
-	// Generate a short random hex string.
-	b, err := ioutil.ReadAll(io.LimitReader(randReader, 3))
-	if err != nil {
-		return nil, err
+	var podName string
+	if build.Status.Cluster != nil && build.Status.Cluster.PodName != "" {
+		podName = build.Status.Cluster.PodName
+	} else {
+		return nil, fmt.Errorf("Can't create pod for build %q: pod name not set", build.Name)
 	}
-	gibberish := hex.EncodeToString(b)
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			// We execute the build's pod in the same namespace as where the build was
 			// created so that it can access colocated resources.
 			Namespace: build.Namespace,
-			// Generate a unique name based on the build's name.
-			// Add a unique suffix to avoid confusion when a build
-			// is deleted and re-created with the same name.
-			// We don't use GenerateName here because k8s fakes don't support it.
-			Name: fmt.Sprintf("%s-pod-%s", build.Name, gibberish),
+			Name:      podName,
 			// If our parent Build is deleted, then we should be as well.
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(build, schema.GroupVersionKind{
@@ -367,9 +372,7 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 				}),
 			},
 			Annotations: annotations,
-			Labels: map[string]string{
-				buildNameLabelKey: build.Name,
-			},
+			Labels:      labels,
 		},
 		Spec: corev1.PodSpec{
 			// If the build fails, don't restart it.
@@ -385,6 +388,18 @@ func MakePod(build *v1alpha1.Build, kubeclient kubernetes.Interface) (*corev1.Po
 			Affinity:           build.Spec.Affinity,
 		},
 	}, nil
+}
+
+// GetUniquePodName returns a unique name based on the build's name.
+func GetUniquePodName(name string) (string, error) {
+	// Generate a short random hex string.
+	b, err := ioutil.ReadAll(io.LimitReader(randReader, 3))
+	if err != nil {
+		return "", err
+	}
+
+	gibberish := hex.EncodeToString(b)
+	return fmt.Sprintf("%s-pod-%s", name, gibberish), nil
 }
 
 // BuildStatusFromPod returns a BuildStatus based on the Pod and the original BuildSpec.

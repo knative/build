@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -113,7 +114,7 @@ func NewImpl(r Reconciler, logger *zap.SugaredLogger, workQueueName string, repo
 func (c *Impl) Enqueue(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		c.logger.Error(zap.Error(err))
+		c.logger.Errorw("Enqueue", zap.Error(err))
 		return
 	}
 	c.EnqueueKey(key)
@@ -200,7 +201,7 @@ func (c *Impl) EnqueueLabelOfClusterScopedResource(nameLabel string) func(obj in
 
 // EnqueueKey takes a namespace/name string and puts it onto the work queue.
 func (c *Impl) EnqueueKey(key string) {
-	c.WorkQueue.AddRateLimited(key)
+	c.WorkQueue.Add(key)
 }
 
 // Run starts the controller's worker threads, the number of which is threadiness.
@@ -208,13 +209,17 @@ func (c *Impl) EnqueueKey(key string) {
 // work queue and waits for workers to finish processing their current work items.
 func (c *Impl) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
+	sg := sync.WaitGroup{}
+	defer sg.Wait()
 	defer c.WorkQueue.ShutDown()
 
 	// Launch workers to process resources that get enqueued to our workqueue.
 	logger := c.logger
 	logger.Info("Starting controller and workers")
 	for i := 0; i < threadiness; i++ {
+		sg.Add(1)
 		go func() {
+			defer sg.Done()
 			for c.processNextWorkItem() {
 			}
 		}()
@@ -253,7 +258,7 @@ func (c *Impl) processNextWorkItem() bool {
 		if err != nil {
 			status = falseString
 		}
-		c.statsReporter.ReportReconcile(time.Now().Sub(startTime), key, status)
+		c.statsReporter.ReportReconcile(time.Since(startTime), key, status)
 	}()
 
 	// Embed the key into the logger and attach that to the context we pass
@@ -265,20 +270,20 @@ func (c *Impl) processNextWorkItem() bool {
 	// resource to be synced.
 	if err = c.Reconciler.Reconcile(ctx, key); err != nil {
 		c.handleErr(err, key)
-		logger.Errorf("Reconcile failed. Time taken: %v.", time.Now().Sub(startTime))
+		logger.Infof("Reconcile failed. Time taken: %v.", time.Since(startTime))
 		return true
 	}
 
 	// Finally, if no error occurs we Forget this item so it does not
 	// have any delay when another change happens.
 	c.WorkQueue.Forget(key)
-	logger.Infof("Reconcile succeeded. Time taken: %v.", time.Now().Sub(startTime))
+	logger.Infof("Reconcile succeeded. Time taken: %v.", time.Since(startTime))
 
 	return true
 }
 
 func (c *Impl) handleErr(err error, key string) {
-	c.logger.Error(zap.Error(err))
+	c.logger.Errorw("Reconcile error", zap.Error(err))
 
 	// Re-queue the key if it's an transient error.
 	if !IsPermanentError(err) {

@@ -19,15 +19,15 @@
 # called from command line.
 
 # Default GKE version to be used with Knative Serving
-readonly SERVING_GKE_VERSION=latest
+readonly SERVING_GKE_VERSION=gke-latest
 readonly SERVING_GKE_IMAGE=cos
 
 # Public latest stable nightly images and yaml files.
 readonly KNATIVE_BASE_YAML_SOURCE=https://storage.googleapis.com/knative-nightly/@/latest
 readonly KNATIVE_ISTIO_CRD_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio-crds.yaml
 readonly KNATIVE_ISTIO_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio.yaml
-readonly KNATIVE_SERVING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/serving}/release.yaml
-readonly KNATIVE_BUILD_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/build}/release.yaml
+readonly KNATIVE_SERVING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/serving}/serving.yaml
+readonly KNATIVE_BUILD_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/build}/build.yaml
 readonly KNATIVE_EVENTING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/eventing}/release.yaml
 
 # Conveniently set GOPATH if unset
@@ -43,6 +43,9 @@ fi
 readonly IS_PROW
 readonly REPO_ROOT_DIR="$(git rev-parse --show-toplevel)"
 readonly REPO_NAME="$(basename ${REPO_ROOT_DIR})"
+
+# On a Prow job, redirect stderr to stdout so it's synchronously added to log
+(( IS_PROW )) && exec 2>&1
 
 # Print error message and exit 1
 # Parameters: $1..$n - error message to be displayed
@@ -138,21 +141,26 @@ function wait_until_pods_running() {
   return 1
 }
 
-# Waits until the given service has an external IP address.
+# Waits until the given service has an external address (IP/hostname).
 # Parameters: $1 - namespace.
 #             $2 - service name.
 function wait_until_service_has_external_ip() {
-  echo -n "Waiting until service $2 in namespace $1 has an external IP"
+  echo -n "Waiting until service $2 in namespace $1 has an external address (IP/hostname)"
   for i in {1..150}; do  # timeout after 15 minutes
     local ip=$(kubectl get svc -n $1 $2 -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
     if [[ -n "${ip}" ]]; then
       echo -e "\nService $2.$1 has IP $ip"
       return 0
     fi
+    local hostname=$(kubectl get svc -n $1 $2 -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+    if [[ -n "${hostname}" ]]; then
+      echo -e "\nService $2.$1 has hostname $hostname"
+      return 0
+    fi
     echo -n "."
     sleep 6
   done
-  echo -e "\n\nERROR: timeout waiting for service $svc.$ns to have an external IP"
+  echo -e "\n\nERROR: timeout waiting for service $2.$1 to have an external address"
   kubectl get pods -n $1
   return 1
 }
@@ -192,15 +200,42 @@ function get_app_pods() {
   kubectl get pods ${namespace} --selector=app=$1 --output=jsonpath="{.items[*].metadata.name}"
 }
 
+# Capitalize the first letter of each word.
+# Parameters: $1..$n - words to capitalize.
+function capitalize() {
+  local capitalized=()
+  for word in $@; do
+    local initial="$(echo ${word:0:1}| tr 'a-z' 'A-Z')"
+    capitalized+=("${initial}${word:1}")
+  done
+  echo "${capitalized[@]}"
+}
+
+# Dumps pod logs for the given app.
+# Parameters: $1 - app name.
+#             $2 - namespace.
+function dump_app_logs() {
+  echo ">>> ${REPO_NAME_FORMATTED} $1 logs:"
+  for pod in $(get_app_pods "$1" "$2")
+  do
+    echo ">>> Pod: $pod"
+    kubectl -n "$2" logs "$pod" -c "$1"
+  done
+}
+
 # Sets the given user as cluster admin.
 # Parameters: $1 - user
 #             $2 - cluster name
 #             $3 - cluster region
+#             $4 - cluster zone, optional
 function acquire_cluster_admin_role() {
+  echo "Acquiring cluster-admin role for user '$1'"
+  local geoflag="--region=$3"
+  [[ -n $4 ]] && geoflag="--zone=$3-$4"
   # Get the password of the admin and use it, as the service account (or the user)
   # might not have the necessary permission.
   local password=$(gcloud --format="value(masterAuth.password)" \
-      container clusters describe $2 --region=$3)
+      container clusters describe $2 ${geoflag})
   if [[ -n "${password}" ]]; then
     # Cluster created with basic authentication
     kubectl config set-credentials cluster-admin \
@@ -210,9 +245,9 @@ function acquire_cluster_admin_role() {
     local key=$(mktemp)
     echo "Certificate in ${cert}, key in ${key}"
     gcloud --format="value(masterAuth.clientCertificate)" \
-      container clusters describe $2 --region=$3 | base64 -d > ${cert}
+      container clusters describe $2 ${geoflag} | base64 -d > ${cert}
     gcloud --format="value(masterAuth.clientKey)" \
-      container clusters describe $2 --region=$3 | base64 -d > ${key}
+      container clusters describe $2 ${geoflag} | base64 -d > ${key}
     kubectl config set-credentials cluster-admin \
       --client-certificate=${cert} --client-key=${key}
   fi
@@ -223,7 +258,7 @@ function acquire_cluster_admin_role() {
       --user=$1
   # Reset back to the default account
   gcloud container clusters get-credentials \
-      $2 --region=$3 --project $(gcloud config get-value project)
+      $2 ${geoflag} --project $(gcloud config get-value project)
 }
 
 # Runs a go test and generate a junit summary.
@@ -247,7 +282,10 @@ function report_go_test() {
   # Install go-junit-report if necessary.
   run_go_tool github.com/jstemmer/go-junit-report go-junit-report --help > /dev/null 2>&1
   local xml=$(mktemp ${ARTIFACTS}/junit_XXXXXXXX.xml)
-  cat ${report} | go-junit-report > ${xml}
+  cat ${report} \
+      | go-junit-report \
+      | sed -e "s#\"github.com/knative/${REPO_NAME}/#\"#g" \
+      > ${xml}
   echo "XML report written to ${xml}"
   return ${failed}
 }
@@ -266,16 +304,13 @@ function start_latest_knative_serving() {
   echo "Installing Serving from ${KNATIVE_SERVING_RELEASE}"
   kubectl apply -f ${KNATIVE_SERVING_RELEASE} || return 1
   wait_until_pods_running knative-serving || return 1
-  wait_until_pods_running knative-build || return 1
 }
 
 # Install the latest stable Knative/build in the current cluster.
 function start_latest_knative_build() {
   header "Starting Knative Build"
-  subheader "Installing Istio"
-  kubectl apply -f ${KNATIVE_ISTIO_YAML} || return 1
-  wait_until_pods_running istio-system || return 1
   subheader "Installing Knative Build"
+  echo "Installing Build from ${KNATIVE_BUILD_RELEASE}"
   kubectl apply -f ${KNATIVE_BUILD_RELEASE} || return 1
   wait_until_pods_running knative-build || return 1
 }
@@ -337,27 +372,47 @@ function run_lint_tool() {
 # Check links in the given markdown files.
 # Parameters: $1...$n - files to inspect
 function check_links_in_markdown() {
-  # https://github.com/tcort/markdown-link-check
-  run_lint_tool markdown-link-check "checking links in markdown files" -q $@
+  # https://github.com/raviqqe/liche
+  local config="${REPO_ROOT_DIR}/test/markdown-link-check-config.rc"
+  [[ ! -e ${config} ]] && config="${_TEST_INFRA_SCRIPTS_DIR}/markdown-link-check-config.rc"
+  local options="$(grep '^-' ${config} | tr \"\n\" ' ')"
+  run_lint_tool liche "checking links in markdown files" "-d ${REPO_ROOT_DIR} ${options}" $@
 }
 
 # Check format of the given markdown files.
 # Parameters: $1..$n - files to inspect
 function lint_markdown() {
   # https://github.com/markdownlint/markdownlint
-  run_lint_tool mdl "linting markdown files" "-r ~MD013" $@
+  local config="${REPO_ROOT_DIR}/test/markdown-lint-config.rc"
+  [[ ! -e ${config} ]] && config="${_TEST_INFRA_SCRIPTS_DIR}/markdown-lint-config.rc"
+  run_lint_tool mdl "linting markdown files" "-c ${config}" $@
 }
 
-# Return 0 if the given parameter is an integer, otherwise 1
-# Parameters: $1 - an integer
+# Return whether the given parameter is an integer.
+# Parameters: $1 - integer to check
 function is_int() {
   [[ -n $1 && $1 =~ ^[0-9]+$ ]]
 }
 
-# Return 0 if the given parameter is the knative release/nightly gcr, 1
-# otherwise
-# Parameters: $1 - gcr name, e.g. gcr.io/knative-nightly
+# Return whether the given parameter is the knative release/nightly GCF.
+# Parameters: $1 - full GCR name, e.g. gcr.io/knative-foo-bar
 function is_protected_gcr() {
   [[ -n $1 && "$1" =~ "^gcr.io/knative-(releases|nightly)/?$" ]]
 }
 
+# Returns the canonical path of a filesystem object.
+# Parameters: $1 - path to return in canonical form
+#             $2 - base dir for relative links; optional, defaults to current
+function get_canonical_path() {
+  # We don't use readlink because it's not available on every platform.
+  local path=$1
+  local pwd=${2:-.}
+  [[ ${path} == /* ]] || path="${pwd}/${path}"
+  echo "$(cd ${path%/*} && echo $PWD/${path##*/})"
+}
+
+# Initializations that depend on previous functions.
+# These MUST come last.
+
+readonly _TEST_INFRA_SCRIPTS_DIR="$(dirname $(get_canonical_path ${BASH_SOURCE[0]}))"
+readonly REPO_NAME_FORMATTED="Knative $(capitalize ${REPO_NAME//-/})"
