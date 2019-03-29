@@ -7,7 +7,8 @@ Knative `caching` defines resources that can be used to express a desire to
 cache things.  These are **just** API definitions for caching custom resources
 plugins, it does not include an implementation of this API.
 
-To learn more about Knative, [see the documentation](https://www.knative.dev/docs/).
+To learn more about Knative, please visit our
+[Knative docs](https://github.com/knative/docs) repository.
 
 If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md)
 and [DEVELOPMENT.md](./DEVELOPMENT.md).
