@@ -37,10 +37,9 @@ purposefully designed to enable integration and utilization in larger systems.
 ## Learn more
 
 To learn more about builds in Knative, see the
-[Knative build documentation](https://github.com/knative/docs/tree/master/docs/build).
+[Knative build documentation](https://www.knative.dev/docs/build/).
 
-To learn more about Knative in general, see the
-[Overview](https://github.com/knative/docs/blob/master/docs/README.md).
+To learn more about Knative in general, [see the documentation](https://www.knative.dev/docs/).
 
 ## Developing Knative builds
 
