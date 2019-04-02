@@ -22,22 +22,22 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 )
 
 func TestBuildImplementsConditions(t *testing.T) {
-	if err := duck.VerifyType(&Build{}, &duckv1alpha1.Conditions{}); err != nil {
+	if err := duck.VerifyType(&Build{}, &duckv1beta1.Conditions{}); err != nil {
 		t.Errorf("Expect Build to implement duck verify type: err %#v", err)
 	}
 }
 
 func TestBuildConditions(t *testing.T) {
 	b := &Build{}
-	foo := &duckv1alpha1.Condition{
+	foo := &apis.Condition{
 		Type:   "Foo",
 		Status: "True",
 	}
-	bar := &duckv1alpha1.Condition{
+	bar := &apis.Condition{
 		Type:   "Bar",
 		Status: "True",
 	}
@@ -49,20 +49,20 @@ func TestBuildConditions(t *testing.T) {
 	// Add a new condition.
 	b.Status.SetCondition(foo)
 
-	want := duckv1alpha1.Conditions([]duckv1alpha1.Condition{*foo})
-	if cmp.Diff(b.Status.GetConditions(), want, ignoreVolatileTime) != "" {
-		t.Errorf("Unexpected build condition type; want %v got %v", want, b.Status.GetConditions())
+	want := apis.Conditions{*foo}
+	if diff := cmp.Diff(b.Status.GetConditions(), want, ignoreVolatileTime); diff != "" {
+		t.Errorf("Unexpected build condition type; %s", diff)
 	}
 
 	fooStatus := b.Status.GetCondition(foo.Type)
-	if cmp.Diff(fooStatus, foo, ignoreVolatileTime) != "" {
-		t.Errorf("Unexpected build condition type; want %v got %v", fooStatus, foo)
+	if diff := cmp.Diff(fooStatus, foo, ignoreVolatileTime); diff != "" {
+		t.Errorf("Unexpected build condition type; %s", diff)
 	}
 
 	// Add a second condition.
 	b.Status.SetCondition(bar)
 
-	want = duckv1alpha1.Conditions([]duckv1alpha1.Condition{*bar, *foo})
+	want = apis.Conditions{*bar, *foo}
 
 	if d := cmp.Diff(b.Status.GetConditions(), want, ignoreVolatileTime); d != "" {
 		t.Fatalf("Unexpected build condition type; want %v got %v; diff %s", want, b.Status.GetConditions(), d)

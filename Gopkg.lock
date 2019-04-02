@@ -317,12 +317,12 @@
   revision = "3fc06fd3c9880a9ebb5c401f4b20cf6666cc7bc0"
 
 [[projects]]
-  digest = "1:a66d44912c829a3da2d0360629bdd25f8f7b3f82e18c3faa88c775fe3c2f7932"
+  digest = "1:b342394ed59041eb49407a8f585d8790455a393d3f12bb8a62f402125a2d2216"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
     "apis/duck",
-    "apis/duck/v1alpha1",
+    "apis/duck/v1beta1",
     "changeset",
     "configmap",
     "controller",
@@ -336,6 +336,7 @@
     "system",
     "system/testing",
     "test",
+    "test/ingress",
     "test/logging",
     "test/monitoring",
     "test/spoof",
@@ -343,7 +344,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
+  revision = "281cda84ceb316a70c2eafc5b3250a4b72c2d468"
 
 [[projects]]
   branch = "master"
@@ -1089,7 +1090,7 @@
     "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
-    "github.com/knative/pkg/apis/duck/v1alpha1",
+    "github.com/knative/pkg/apis/duck/v1beta1",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/kmeta",

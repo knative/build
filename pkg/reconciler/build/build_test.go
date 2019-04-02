@@ -28,7 +28,6 @@ import (
 	"github.com/knative/build/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -220,8 +219,8 @@ func TestBuildWithMissingServiceAccount(t *testing.T) {
 		t.Errorf("error fetching build: %v", err)
 	}
 	// Check that build has the expected status.
-	gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
-	if d := cmp.Diff(gotCondition, &duckv1alpha1.Condition{
+	gotCondition := b.Status.GetCondition(apis.ConditionSucceeded)
+	if d := cmp.Diff(gotCondition, &apis.Condition{
 		Type:    v1alpha1.BuildSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildValidationFailed",
@@ -268,8 +267,8 @@ func TestBuildWithMissingSecret(t *testing.T) {
 		t.Errorf("error fetching build: %v", err)
 	}
 	// Check that build has the expected status.
-	gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
-	if d := cmp.Diff(gotCondition, &duckv1alpha1.Condition{
+	gotCondition := b.Status.GetCondition(apis.ConditionSucceeded)
+	if d := cmp.Diff(gotCondition, &apis.Condition{
 		Type:    v1alpha1.BuildSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildValidationFailed",
@@ -316,8 +315,8 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			t.Errorf("error fetching build: %v", err)
 		}
 		// Check that build has the expected status.
-		gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
-		if d := cmp.Diff(gotCondition, &duckv1alpha1.Condition{
+		gotCondition := b.Status.GetCondition(apis.ConditionSucceeded)
+		if d := cmp.Diff(gotCondition, &apis.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Reason:  "BuildValidationFailed",
@@ -390,18 +389,18 @@ func TestBasicFlows(t *testing.T) {
 	for _, c := range []struct {
 		desc          string
 		podStatus     corev1.PodStatus
-		wantCondition *duckv1alpha1.Condition
+		wantCondition *apis.Condition
 	}{{
 		desc:      "success",
 		podStatus: corev1.PodStatus{Phase: corev1.PodSucceeded},
-		wantCondition: &duckv1alpha1.Condition{
+		wantCondition: &apis.Condition{
 			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionTrue,
 		},
 	}, {
 		desc:      "running",
 		podStatus: corev1.PodStatus{Phase: corev1.PodRunning},
-		wantCondition: &duckv1alpha1.Condition{
+		wantCondition: &apis.Condition{
 			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionUnknown,
 			Reason: "Building",
@@ -412,7 +411,7 @@ func TestBasicFlows(t *testing.T) {
 			Phase:   corev1.PodFailed,
 			Message: "boom",
 		},
-		wantCondition: &duckv1alpha1.Condition{
+		wantCondition: &apis.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Message: "boom",
@@ -432,7 +431,7 @@ func TestBasicFlows(t *testing.T) {
 				},
 			}},
 		},
-		wantCondition: &duckv1alpha1.Condition{
+		wantCondition: &apis.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "Pending",
@@ -501,7 +500,7 @@ func TestBasicFlows(t *testing.T) {
 			}
 
 			// Check that build has the expected status.
-			gotCondition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+			gotCondition := b.Status.GetCondition(apis.ConditionSucceeded)
 			if d := cmp.Diff(gotCondition, c.wantCondition, ignoreVolatileTime); d != "" {
 				t.Errorf("Unexpected build status %s", d)
 			}
@@ -547,8 +546,8 @@ func TestTimeoutFlow(t *testing.T) {
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
-	if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
-		Type:    duckv1alpha1.ConditionSucceeded,
+	if d := cmp.Diff(b.Status.GetCondition(apis.ConditionSucceeded), &apis.Condition{
+		Type:    apis.ConditionSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildTimeout",
 		Message: fmt.Sprintf("Build %q failed to finish within \"500ms\"", b.Name),
@@ -607,8 +606,8 @@ func TestCancelledFlow(t *testing.T) {
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
-	if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
-		Type:    duckv1alpha1.ConditionSucceeded,
+	if d := cmp.Diff(b.Status.GetCondition(apis.ConditionSucceeded), &apis.Condition{
+		Type:    apis.ConditionSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildCancelled",
 		Message: fmt.Sprintf("Build %q was cancelled", b.Name),

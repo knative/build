@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/test"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -68,7 +68,7 @@ func TestCancelledBuild(t *testing.T) {
 
 	// Wait for the build to be running
 	if err := waitForBuildState(clients, buildName, func(b *v1alpha1.Build) (bool, error) {
-		c := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+		c := b.Status.GetCondition(apis.ConditionSucceeded)
 		if c != nil {
 			if c.Status == corev1.ConditionTrue || c.Status == corev1.ConditionFalse {
 				return true, fmt.Errorf("build %s already finished!", buildName)
@@ -94,8 +94,8 @@ func TestCancelledBuild(t *testing.T) {
 	if err == nil {
 		t.Fatalf("watchBuild did not return expected `cancelled` error")
 	}
-	if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
-		Type:    duckv1alpha1.ConditionSucceeded,
+	if d := cmp.Diff(b.Status.GetCondition(apis.ConditionSucceeded), &apis.Condition{
+		Type:    apis.ConditionSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildCancelled",
 		Message: fmt.Sprintf("Build %q was cancelled", b.Name),

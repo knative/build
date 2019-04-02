@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/test"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -252,8 +251,8 @@ func TestBuildLowTimeout(t *testing.T) {
 		t.Fatalf("watchBuild got %v, want %v (build status: %+v)", err, errBuildFailed, b.Status)
 	}
 
-	if d := cmp.Diff(b.Status.GetCondition(duckv1alpha1.ConditionSucceeded), &duckv1alpha1.Condition{
-		Type:    duckv1alpha1.ConditionSucceeded,
+	if d := cmp.Diff(b.Status.GetCondition(apis.ConditionSucceeded), &apis.Condition{
+		Type:    apis.ConditionSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildTimeout",
 		Message: fmt.Sprintf("Build %q failed to finish within %q", b.Name, buildTimeout),

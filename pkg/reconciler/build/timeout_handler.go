@@ -7,7 +7,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -118,7 +118,7 @@ func (t *TimeoutSet) stopBuild(build *v1alpha1.Build) error {
 	if build.Spec.Timeout != nil {
 		timeout = build.Spec.Timeout.Duration
 	}
-	build.Status.SetCondition(&duckv1alpha1.Condition{
+	build.Status.SetCondition(&apis.Condition{
 		Type:    v1alpha1.BuildSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildTimeout",

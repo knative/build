@@ -30,7 +30,7 @@ import (
 
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 )
@@ -619,8 +619,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 		desc:      "success",
 		podStatus: corev1.PodStatus{Phase: corev1.PodSucceeded},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:   v1alpha1.BuildSucceeded,
 					Status: corev1.ConditionTrue,
 				}},
@@ -630,8 +630,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 		desc:      "running",
 		podStatus: corev1.PodStatus{Phase: corev1.PodRunning},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:   v1alpha1.BuildSucceeded,
 					Status: corev1.ConditionUnknown,
 					Reason: "Building",
@@ -661,8 +661,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 					ExitCode: 123,
 				},
 			}},
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionFalse,
 					Message: `build step "status-name" exited with code 123 (image: "image-id"); for logs run: kubectl -n knative-testing logs pod -c status-name`,
@@ -676,8 +676,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 			Message: "boom",
 		},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionFalse,
 					Message: "boom",
@@ -688,8 +688,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 		desc:      "failure-unspecified",
 		podStatus: corev1.PodStatus{Phase: corev1.PodFailed},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionFalse,
 					Message: "build failed for unspecified reasons.",
@@ -717,8 +717,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 					Message: "i'm pending",
 				},
 			}},
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "Pending",
@@ -737,8 +737,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 			}},
 		},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "Pending",
@@ -753,8 +753,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 			Message: "pod status message",
 		},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "Pending",
@@ -766,8 +766,8 @@ func TestBuildStatusFromPod(t *testing.T) {
 		desc:      "pending-no-message",
 		podStatus: corev1.PodStatus{Phase: corev1.PodPending},
 		want: v1alpha1.BuildStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{{
 					Type:    v1alpha1.BuildSucceeded,
 					Status:  corev1.ConditionUnknown,
 					Reason:  "Pending",

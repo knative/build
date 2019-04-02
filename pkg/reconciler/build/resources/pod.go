@@ -39,7 +39,6 @@ import (
 	"github.com/knative/build/pkg/credentials/dockercreds"
 	"github.com/knative/build/pkg/credentials/gitcreds"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 const workspaceDir = "/workspace"
@@ -433,28 +432,28 @@ func BuildStatusFromPod(p *corev1.Pod, buildSpec v1alpha1.BuildSpec) v1alpha1.Bu
 
 	switch p.Status.Phase {
 	case corev1.PodRunning:
-		status.SetCondition(&duckv1alpha1.Condition{
+		status.SetCondition(&apis.Condition{
 			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionUnknown,
 			Reason: "Building",
 		})
 	case corev1.PodFailed:
 		msg := getFailureMessage(p)
-		status.SetCondition(&duckv1alpha1.Condition{
+		status.SetCondition(&apis.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Message: msg,
 		})
 	case corev1.PodPending:
 		msg := getWaitingMessage(p)
-		status.SetCondition(&duckv1alpha1.Condition{
+		status.SetCondition(&apis.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "Pending",
 			Message: msg,
 		})
 	case corev1.PodSucceeded:
-		status.SetCondition(&duckv1alpha1.Condition{
+		status.SetCondition(&apis.Condition{
 			Type:   v1alpha1.BuildSucceeded,
 			Status: corev1.ConditionTrue,
 		})

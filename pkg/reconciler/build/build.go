@@ -29,7 +29,7 @@ import (
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
 	"github.com/knative/build/pkg/reconciler"
 	"github.com/knative/build/pkg/reconciler/build/resources"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
@@ -196,7 +196,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 					PodName: "",
 				},
 			}
-			build.Status.SetCondition(&duckv1alpha1.Condition{
+			build.Status.SetCondition(&apis.Condition{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
 				Reason:  "BuildValidationFailed",
@@ -210,7 +210,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 		p, err = c.startPodForBuild(build)
 		if err != nil {
-			build.Status.SetCondition(&duckv1alpha1.Condition{
+			build.Status.SetCondition(&apis.Condition{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
 				Reason:  "BuildExecuteFailed",
@@ -314,7 +314,7 @@ func isCancelled(buildSpec v1alpha1.BuildSpec) bool {
 
 func (c *Reconciler) cancelBuild(build *v1alpha1.Build, logger *zap.SugaredLogger) error {
 	logger.Warnf("Build has been cancelled: %v", build.Name)
-	build.Status.SetCondition(&duckv1alpha1.Condition{
+	build.Status.SetCondition(&apis.Condition{
 		Type:    v1alpha1.BuildSucceeded,
 		Status:  corev1.ConditionFalse,
 		Reason:  "BuildCancelled",
@@ -359,7 +359,7 @@ func (c *Reconciler) checkTimeout(build *v1alpha1.Build) error {
 		}
 
 		timeoutMsg := fmt.Sprintf("Build %q failed to finish within %q", build.Name, timeout.String())
-		build.Status.SetCondition(&duckv1alpha1.Condition{
+		build.Status.SetCondition(&apis.Condition{
 			Type:    v1alpha1.BuildSucceeded,
 			Status:  corev1.ConditionFalse,
 			Reason:  "BuildTimeout",
