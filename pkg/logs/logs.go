@@ -22,6 +22,7 @@ import (
 	"time"
 
 	buildv1alpha1 "github.com/knative/build/pkg/client/clientset/versioned/typed/build/v1alpha1"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -44,7 +45,7 @@ func Tail(ctx context.Context, out io.Writer, buildName, namespace string) error
 
 	podName, err := podName(cfg, out, buildName, namespace)
 	if err != nil {
-		return fmt.Errorf("getting build pod: %v", err)
+		return fmt.Errorf("Error getting build pod: %v", err)
 	}
 
 	client, err := corev1.NewForConfig(cfg)
@@ -212,13 +213,13 @@ func streamLogs(ctx context.Context, out io.Writer, containerName string, rc io.
 func podName(cfg *rest.Config, out io.Writer, buildName, namespace string) (string, error) {
 	client, err := buildv1alpha1.NewForConfig(cfg)
 	if err != nil {
-		return "", fmt.Errorf("getting build client: %v", err)
+		return "", fmt.Errorf("Error getting build client: %v", err)
 	}
 
 	for ; ; time.Sleep(time.Second) {
 		b, err := client.Builds(namespace).Get(buildName, metav1.GetOptions{IncludeUninitialized: true})
 		if err != nil {
-			return "", fmt.Errorf("getting build: %v", err)
+			return "", fmt.Errorf("Error getting build: %v", err)
 		}
 
 		cluster := b.Status.Cluster
@@ -226,10 +227,9 @@ func podName(cfg *rest.Config, out io.Writer, buildName, namespace string) (stri
 			return cluster.PodName, nil
 		}
 
-		for _, condition := range b.Status.Conditions {
-			if condition.Reason == buildExecuteFailed {
-				return "", fmt.Errorf("build failed: %s", condition.Message)
-			}
+		condition := b.Status.GetCondition(duckv1alpha1.ConditionSucceeded)
+		if condition.IsFalse() {
+			return "", fmt.Errorf("build failed for reason: %s and msg: %s", condition.Reason, condition.Message)
 		}
 	}
 }
