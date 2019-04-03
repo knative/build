@@ -1,0 +1,55 @@
+# Copyright 2018 Knative Authors LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: build-config
+  namespace: knative-build
+data:
+  # Common configuration for all knative codebase
+  build.json: |
+        {
+                "apiVersion": "build.knative.dev/v1alpha1",
+                "kind": "Build",
+                "metadata": {
+                        "name": "example-build-name",
+                        "namespace": "default"
+                },
+                "spec": {
+                        "serviceAccountName": "build-auth-example",
+                        "source": {
+                                "git": {
+                                        "url": "https://github.com/example/build-example.git",
+                                        "revision": "master"
+                                }
+                        },
+                        "steps": [
+                                {
+                                        "name": "ubuntu-example",
+                                        "image": "ubuntu",
+                                        "args": [
+                                                "ubuntu-build-example",
+                                                "SECRETS-example.md"
+                                        ]
+                                }
+                        ],
+                        "volumes": [
+                                {
+                                        "name": "example-volume",
+                                        "emptyDir": {}
+                                }
+                        ]
+                }
+        }

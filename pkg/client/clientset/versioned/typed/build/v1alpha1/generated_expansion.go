@@ -19,4 +19,6 @@ type BuildExpansion interface{}
 
 type BuildTemplateExpansion interface{}
 
+type CloudEventsListenerExpansion interface{}
+
 type ClusterBuildTemplateExpansion interface{}

@@ -1,0 +1,22 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cloudeventslisteners.build.knative.dev
+spec:
+  group: build.knative.dev
+  version: v1alpha1
+  names:
+    kind: cloudeventslistener
+    plural: cloudeventslisteners
+    categories:
+    - all
+    - knative
+  scope: Cluster
+  # Enable the status subresource so we start bumping
+  # metadata.generation properly
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp

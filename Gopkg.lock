@@ -93,6 +93,26 @@
   revision = "7f2434bc10da710debe5c4315ed6d4df454b4024"
 
 [[projects]]
+  digest = "1:f616892b62757b2dcd70957602981d4f05c4d75017138cea02b3845d07c18785"
+  name = "github.com/cloudevents/sdk-go"
+  packages = [
+    "pkg/cloudevents",
+    "pkg/cloudevents/client",
+    "pkg/cloudevents/codec",
+    "pkg/cloudevents/context",
+    "pkg/cloudevents/datacodec",
+    "pkg/cloudevents/datacodec/json",
+    "pkg/cloudevents/datacodec/xml",
+    "pkg/cloudevents/observability",
+    "pkg/cloudevents/transport",
+    "pkg/cloudevents/transport/http",
+    "pkg/cloudevents/types",
+  ]
+  pruneopts = "NUT"
+  revision = "e00e75c8a1befe895cc00def1f88adb611195159"
+  version = "0.4.4"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -210,6 +230,14 @@
   revision = "e979a0b10eebe748549c702a25e997c556349da6"
 
 [[projects]]
+  digest = "1:ab3ec1fe3e39bac4b3ab63390767766622be35b7cab03f47f787f9ec60522a53"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:fd4d1f4c2d75aee3833ee7d8ef11fcf42ddec3c63d1819548288c3d868d6eb14"
   name = "github.com/googleapis/gax-go"
   packages = [
@@ -299,6 +327,14 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
+  digest = "1:b8870bf2606dca65dc382f4cb8b7a434f17ff36a915451bda12788e9620be368"
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
+
+[[projects]]
   digest = "1:9a670ce0109361c513e7103c478dbbea261bb81d41d0f9c822707451bce139bb"
   name = "github.com/knative/caching"
   packages = [
@@ -355,6 +391,14 @@
   ]
   pruneopts = "UT"
   revision = "cfcb8c3d5b2eb146c40e5d8a828520f240b35747"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f142cc9c8177a31661d789d8e45bbd172d1811cc48c5725cbcbe5e18dbb442cc"
+  name = "github.com/kubernetes/apimachinery"
+  packages = ["pkg/util/json"]
+  pruneopts = "NUT"
+  revision = "10bf64c7018d1bf6b021767df5126dec74b08010"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -733,6 +777,14 @@
   version = "v1.19.1"
 
 [[projects]]
+  digest = "1:d424e1da4f56fdb1ca8fdc6ec34ea9ac46690ce117bd52bf44997344a11a66a7"
+  name = "gopkg.in/go-playground/webhooks.v5"
+  packages = ["github"]
+  pruneopts = "NUT"
+  revision = "a1e2052ae0ab4278c6d45f062228413f7a710c00"
+  version = "v5.7.0"
+
+[[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
   name = "gopkg.in/inf.v0"
   packages = ["."]
@@ -1079,8 +1131,12 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/cloudevents/sdk-go/pkg/cloudevents",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/kelseyhightower/envconfig",
     "github.com/knative/caching/pkg/apis/caching",
     "github.com/knative/caching/pkg/apis/caching/v1alpha1",
     "github.com/knative/caching/pkg/client/clientset/versioned",
@@ -1103,9 +1159,13 @@
     "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra/scripts",
     "github.com/knative/test-infra/tools/dep-collector",
+    "github.com/kubernetes/apimachinery/pkg/util/json",
+    "github.com/pkg/errors",
     "go.opencensus.io/trace",
     "go.uber.org/zap",
     "golang.org/x/sync/errgroup",
+    "gopkg.in/go-playground/webhooks.v5/github",
+    "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",

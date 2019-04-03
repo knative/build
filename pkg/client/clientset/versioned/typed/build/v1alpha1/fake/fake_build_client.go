@@ -33,6 +33,10 @@ func (c *FakeBuildV1alpha1) BuildTemplates(namespace string) v1alpha1.BuildTempl
 	return &FakeBuildTemplates{c, namespace}
 }
 
+func (c *FakeBuildV1alpha1) CloudEventsListeners(namespace string) v1alpha1.CloudEventsListenerInterface {
+	return &FakeCloudEventsListeners{c, namespace}
+}
+
 func (c *FakeBuildV1alpha1) ClusterBuildTemplates() v1alpha1.ClusterBuildTemplateInterface {
 	return &FakeClusterBuildTemplates{c}
 }

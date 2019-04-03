@@ -26,6 +26,7 @@ type BuildV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BuildsGetter
 	BuildTemplatesGetter
+	CloudEventsListenersGetter
 	ClusterBuildTemplatesGetter
 }
 
@@ -40,6 +41,10 @@ func (c *BuildV1alpha1Client) Builds(namespace string) BuildInterface {
 
 func (c *BuildV1alpha1Client) BuildTemplates(namespace string) BuildTemplateInterface {
 	return newBuildTemplates(c, namespace)
+}
+
+func (c *BuildV1alpha1Client) CloudEventsListeners(namespace string) CloudEventsListenerInterface {
+	return newCloudEventsListeners(c, namespace)
 }
 
 func (c *BuildV1alpha1Client) ClusterBuildTemplates() ClusterBuildTemplateInterface {

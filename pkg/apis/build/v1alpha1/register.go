@@ -51,6 +51,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&BuildList{},
 		&BuildTemplate{},
 		&BuildTemplateList{},
+		&CloudEventsListener{},
+		&CloudEventsListenerList{},
 		&ClusterBuildTemplate{},
 		&ClusterBuildTemplateList{},
 	)

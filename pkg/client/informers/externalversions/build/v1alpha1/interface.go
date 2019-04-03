@@ -25,6 +25,8 @@ type Interface interface {
 	Builds() BuildInformer
 	// BuildTemplates returns a BuildTemplateInformer.
 	BuildTemplates() BuildTemplateInformer
+	// CloudEventsListeners returns a CloudEventsListenerInformer.
+	CloudEventsListeners() CloudEventsListenerInformer
 	// ClusterBuildTemplates returns a ClusterBuildTemplateInformer.
 	ClusterBuildTemplates() ClusterBuildTemplateInformer
 }
@@ -48,6 +50,11 @@ func (v *version) Builds() BuildInformer {
 // BuildTemplates returns a BuildTemplateInformer.
 func (v *version) BuildTemplates() BuildTemplateInformer {
 	return &buildTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// CloudEventsListeners returns a CloudEventsListenerInformer.
+func (v *version) CloudEventsListeners() CloudEventsListenerInformer {
+	return &cloudEventsListenerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterBuildTemplates returns a ClusterBuildTemplateInformer.

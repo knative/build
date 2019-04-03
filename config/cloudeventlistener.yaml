@@ -1,0 +1,44 @@
+# Copyright 2018 Knative Authors LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: build-cloud-event-listener
+  namespace: knative-build
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: build-cloud-event-listener
+  template:
+    metadata:
+      labels:
+        app: build-cloud-event-listener
+        role: build-cloud-event-listener
+    spec:
+      serviceAccountName: build-controller
+      containers:
+      - name: build-cloud-event-listener
+        image: github.com/knative/build/cmd/cloudevent-listener
+        args: [
+          " -build-path", "/tmp/build.json"
+        ]
+        volumeMounts:
+        - name: build-config
+          mountPath: /tmp
+      volumes:
+        - name: build-config
+          configMap:
+            name: build-config

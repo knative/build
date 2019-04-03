@@ -25,6 +25,7 @@ import (
 	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/build/pkg/reconciler/build"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
+	"github.com/knative/build/pkg/reconciler/cloudeventslistener"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
 	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
@@ -100,6 +101,7 @@ func main() {
 	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 	podInformer := kubeInformerFactory.Core().V1().Pods()
+	cloudEventsListenerInformer := buildInformerFactory.Build().V1alpha1().CloudEventsListeners()
 
 	timeoutHandler := build.NewTimeoutHandler(logger, kubeClient, buildClient, stopCh)
 	timeoutHandler.CheckTimeouts()
@@ -111,6 +113,8 @@ func main() {
 			cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient,
 			cachingClient, buildTemplateInformer, imageInformer),
+		cloudeventslistener.NewController(kubeClient, buildClient, logger,
+			cloudEventsListenerInformer),
 	}
 
 	go kubeInformerFactory.Start(stopCh)

@@ -31,6 +31,14 @@ type BuildTemplateListerExpansion interface{}
 // BuildTemplateNamespaceLister.
 type BuildTemplateNamespaceListerExpansion interface{}
 
+// CloudEventsListenerListerExpansion allows custom methods to be added to
+// CloudEventsListenerLister.
+type CloudEventsListenerListerExpansion interface{}
+
+// CloudEventsListenerNamespaceListerExpansion allows custom methods to be added to
+// CloudEventsListenerNamespaceLister.
+type CloudEventsListenerNamespaceListerExpansion interface{}
+
 // ClusterBuildTemplateListerExpansion allows custom methods to be added to
 // ClusterBuildTemplateLister.
 type ClusterBuildTemplateListerExpansion interface{}
