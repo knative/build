@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2018 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,43 +16,22 @@ limitations under the License.
 
 package v1alpha1
 
-//import (
-//	"testing"
-//
-//	"github.com/onsi/gomega"
-//	"golang.org/x/net/context"
-//	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-//	"k8s.io/apimachinery/pkg/types"
-//)
+import (
+	"testing"
 
-//func TestStorageCloudEventsListener(t *testing.T) {
-//	key := types.NamespacedName{
-//		Name:      "foo",
-//		Namespace: "default",
-//	}
-//	created := &CloudEventsListener{
-//		ObjectMeta: metav1.ObjectMeta{
-//			Name:      "foo",
-//			Namespace: "default",
-//		}}
-//	g := gomega.NewGomegaWithT(t)
-//
-//	// Test Create
-//	fetched := &CloudEventsListener{}
-//	g.Expect(c.Create(context.TODO(), created)).NotTo(gomega.HaveOccurred())
-//
-//	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
-//	g.Expect(fetched).To(gomega.Equal(created))
-//
-//	// Test Updating the Labels
-//	updated := fetched.DeepCopy()
-//	updated.Labels = map[string]string{"hello": "world"}
-//	g.Expect(c.Update(context.TODO(), updated)).NotTo(gomega.HaveOccurred())
-//
-//	g.Expect(c.Get(context.TODO(), key, fetched)).NotTo(gomega.HaveOccurred())
-//	g.Expect(fetched).To(gomega.Equal(updated))
-//
-//	// Test Delete
-//	g.Expect(c.Delete(context.TODO(), fetched)).NotTo(gomega.HaveOccurred())
-//	g.Expect(c.Get(context.TODO(), key, fetched)).To(gomega.HaveOccurred())
-//}
+	"github.com/google/go-cmp/cmp"
+)
+
+func TestCloudEventListenerSpec(t *testing.T) {
+	c := CloudEventsListener{
+		Spec: CloudEventsListenerSpec{
+			CloudEventType: "com.github.pr.create",
+		},
+	}
+
+	expectedCloudEventsListenerSpec := CloudEventsListenerSpec{CloudEventType: "com.github.pr.create"}
+
+	if a := cmp.Diff(c.TemplateSpec(), expectedCloudEventsListenerSpec); a != "" {
+		t.Errorf("templateSpec mismatch; expected: %v got: %v", expectedCloudEventsListenerSpec, a)
+	}
+}

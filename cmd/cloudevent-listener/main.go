@@ -80,8 +80,9 @@ func main() {
 	log.Fatalf("Failed to start cloudevent receiver: %q", client.StartReceiver(context.Background(), c.HandleRequest))
 }
 
-// HandleRequest will decode the body into cloudevent, match on the event type and submit build from repo/branch.
-// Only check suite events are supported by this proposal.
+// HandleRequest will decode the body of the cloudevent into the correct payload type based on event type,
+// match on the event type and submit build from repo/branch.
+// Only check_suite events are supported by this proposal.
 func (r *CloudEventListener) HandleRequest(ctx context.Context, event cloudevents.Event) error {
 	// todo: contribute nil check upstream
 	if event.Context == nil {
@@ -124,6 +125,9 @@ func (r *CloudEventListener) handleCheckSuite(event cloudevents.Event, cs *gh.Ch
 		if err != nil {
 			return errors.Wrapf(err, "Error creating build for check_suite event ID: %q", event.Context.AsV02().ID)
 		}
+
+		// Set the builds git revision to the github events SHA
+		build.Spec.Source.Git.Revision = cs.CheckSuite.HeadSHA
 		log.Printf("Created build %q!", build.Name)
 	}
 	return nil

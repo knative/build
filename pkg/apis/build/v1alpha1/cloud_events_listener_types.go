@@ -77,3 +77,7 @@ type CloudEventsListenerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CloudEventsListener `json:"items"`
 }
+
+func (c *CloudEventsListener) TemplateSpec() CloudEventsListenerSpec {
+	return c.Spec
+}
