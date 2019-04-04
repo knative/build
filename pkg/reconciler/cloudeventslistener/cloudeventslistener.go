@@ -51,7 +51,7 @@ var (
 		"The container image for the cloud event listener.")
 )
 
-// Reconciler is the controller.Reconciler implementation for ClusterBuildTemplates resources
+// Reconciler is the controller.Reconciler implementation for CloudEventsListener resources
 type Reconciler struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
@@ -67,7 +67,7 @@ type Reconciler struct {
 var _ controller.Reconciler = (*Reconciler)(nil)
 
 func init() {
-	// Add clusterbuildtemplate-controller types to the default Kubernetes Scheme so Events can be
+	// Add cloudeventslistener-controller types to the default Kubernetes Scheme so Events can be
 	// logged for clusterbuildtemplate-controller types.
 	buildscheme.AddToScheme(scheme.Scheme)
 }
@@ -128,10 +128,9 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	containerArgs := []string{
-		"--eventtype=" + cel.Spec.CloudEventType,
-		"--repo=" + cel.Spec.Repo,
-		"--branch" + cel.Spec.Branch,
-		"--namespace" + cel.Spec.Namespace,
+		"-event-type", cel.Spec.CloudEventType,
+		"-branch", cel.Spec.Branch,
+		"-namespace", cel.Spec.Namespace,
 	}
 	secretName := "knative-cloud-event-listener-" + name
 
