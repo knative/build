@@ -4,7 +4,7 @@ The cloud events listener proposal defines a process by which Knative Eventing c
 
 To do this, an optional CRD `CloudEventsListeners` is provided, which provides a method for Builds to act as an Eventing sink and accept CloudEvents. This makes it possible for any event to trigger any build, providing a lightweight pipeline for common tasks like Image Building.
 
-Inside the CEL spec, a build is defined. Once applied, this new CRD will deploy a small listener which will listen for a specific cloud event from a specific source. Once that has been recieved, the listener populates the SHA we wish to build inside the custom Build that was provided in the Spec.
+Inside the CEL spec, a build is defined. Once applied, this new CRD will deploy a small listener which will listen for a specific cloud event from a specific source. Once that has been received, the listener populates the SHA we wish to build inside the custom Build that was provided in the Spec.
 
 This build is then created by the listener in the namespace defined in the listener config, as any other build. The end result should likely be a new image in a registry, freshly built entirely by knative after CI went green.
 
