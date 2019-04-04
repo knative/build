@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: build.knative.dev/v1alpha1
+kind: cloudeventslistener
 metadata:
   name: build-cloud-event-listener
   namespace: knative-build
@@ -29,16 +29,17 @@ spec:
         role: build-cloud-event-listener
     spec:
       serviceAccountName: build-controller
-      containers:
-      - name: build-cloud-event-listener
-        image: github.com/knative/build/cmd/cloudevent-listener
-        args: [
-          " -build-path", "/tmp/build.json"
-        ]
-        volumeMounts:
-        - name: build-config
-          mountPath: /tmp
-      volumes:
-        - name: build-config
-          configMap:
-            name: build-config
+      build:
+      - name: cel-example-build
+        metadata:
+          name: cel-example-build
+        spec:
+          serviceAccountName: build-auth-example
+          source:
+            git:
+              url: https://github.com/example/build-example.git
+              revision: master
+          steps:
+          - name: ubuntu-example
+            image: ubuntu
+            args: ["ubuntu-build-example", "SECRETS-example.md"]
