@@ -40,6 +40,7 @@ type CloudEventsListenerSpec struct {
 	Build *Build
 }
 
+// CloudEventsListenerSpecStatus is the status of the listener
 type CloudEventsListenerSpecStatus string
 
 // CloudEventsListenerStatus defines the observed state of CloudEventsListener
@@ -47,13 +48,6 @@ type CloudEventsListenerStatus struct {
 	duckv1alpha1.Status `json:",inline"`
 	Namespace           string `json:"namespace"`
 	StatefulSetName     string `json:"statefulSetName"`
-}
-
-type StatefulSetStatus struct {
-	// Namespace is the namespace in which the listener is running.
-	Namespace string `json:"namespace"`
-	// StatefulSetName is the name of the set responsible for executing the listener.
-	StatefulSetName string `json:"statefulSetName"`
 }
 
 // +genclient
@@ -78,6 +72,7 @@ type CloudEventsListenerList struct {
 	Items           []CloudEventsListener `json:"items"`
 }
 
+// TemplateSpec provides access to the CloudEventsListener spec
 func (c *CloudEventsListener) TemplateSpec() CloudEventsListenerSpec {
 	return c.Spec
 }

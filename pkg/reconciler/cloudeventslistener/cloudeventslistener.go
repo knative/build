@@ -100,6 +100,7 @@ func NewController(
 	return impl
 }
 
+// Reconcile will create the necessary statefulset to manage the listener process
 func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	logger := logging.FromContext(ctx)
 

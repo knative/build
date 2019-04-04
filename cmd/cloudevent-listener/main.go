@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	ReceiverPort             = 8088
 	SupportCloudEventVersion = "0.2"
 )
 
@@ -32,6 +31,7 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+// CloudEventListener boots cloudevent receiver and awaits a particular event to build
 type CloudEventListener struct {
 	eventType      string
 	branch         string
