@@ -135,6 +135,9 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		"-branch", cel.Spec.Branch,
 		"-namespace", cel.Spec.Namespace,
 	}
+
+	logger.Infof("launching listener with args type: %s branch: %s namespace: %s", cel.Spec.CloudEventType, cel.Spec.Branch, cel.Spec.Namespace)
+
 	secretName := "knative-cloud-event-listener-secret-" + name
 
 	// mount a secret to house the desired build definition
@@ -164,21 +167,19 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Create a stateful set for the listener. It mounts a secret containing the build information.
-	// The build spec may contain sensetive data and therefore the whole thing is safest as a secret :)
+	// The build spec may contain sensetive data and therefore the whole thing seems safest/easiest as a secret
 	set := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      setName,
 			Namespace: cel.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: func(i int32) *int32 { return &i }(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"statefulset": cel.Name + "-statefulset"},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
-					"statefulset":         cel.Name + "-statefulset",
-					"cloudeventslistener": cel.Name + "-cloudeventslistener",
+					"statefulset": cel.Name + "-statefulset",
 				}},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -188,7 +189,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 							Args:  containerArgs,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "build-volume-mount",
+									Name:      "build-volume",
 									MountPath: "/root/build.json",
 									ReadOnly:  true,
 								},

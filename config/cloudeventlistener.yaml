@@ -15,7 +15,7 @@
 apiVersion: build.knative.dev/v1alpha1
 kind: CloudEventsListener
 metadata:
-  name: build-cloud-event-listener
+  name: build-cloud-events-listener
   namespace: knative-build
 spec:
   selector:
@@ -28,11 +28,15 @@ spec:
         role: build-cloud-event-listener
     spec:
       serviceAccountName: build-controller
+      image: github.com/knative/build/cmd/cloudevent-listener
       build:
       - name: cel-example-build
         metadata:
           name: cel-example-build
         spec:
+          cloud-event-type: "com.github.checksuite"
+          branch: "master"
+          namespace: "knative-build"
           serviceAccountName: build-auth-example
           source:
             git:

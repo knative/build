@@ -25,19 +25,19 @@ import (
 type CloudEventsListenerSpec struct {
 	// Cloud event type we want to listen for
 	// https://godoc.org/github.com/cloudevents/sdk-go/pkg/cloudevents#Event.Type
-	CloudEventType string // cloudevents.Event::GetType()
+	CloudEventType string `json:"cloud-event-type"` // cloudevents.Event::GetType()
 	// The repository location we are interested in.
-	Repo string
+	Repo string `json:"repo"`
 	// Git branch we will create builds for.
-	Branch string
+	Branch string `json:"branch"`
 	// Namespace where the build should be created.
-	Namespace string
+	Namespace string `json:"namespace"`
 	// Type of we are expecting - current support for github or gcs.
-	SourceType string
+	SourceType string `json:"source-type"`
 	// Status of the listener
-	Status *CloudEventsListenerSpecStatus
+	Status *CloudEventsListenerSpecStatus `json:"spec,omitempty"`
 	// Build this listener will create
-	Build *Build
+	Build *Build `json:"build,omitempty"`
 }
 
 // CloudEventsListenerSpecStatus is the status of the listener
