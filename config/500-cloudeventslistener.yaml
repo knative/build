@@ -21,12 +21,12 @@ spec:
   group: build.knative.dev
   version: v1alpha1
   names:
-    kind: cloudeventslistener
+    kind: CloudEventsListener
     plural: cloudeventslisteners
     categories:
     - all
     - knative
-  scope: Cluster
+  scope: Namespaced
   # Enable the status subresource so we start bumping
   # metadata.generation properly
   subresources:

@@ -49,7 +49,7 @@ func main() {
 
 	build, err := loadBuildSpec()
 	if err != nil {
-		log.Fatalf("Failed loading build spec from volume:", err)
+		log.Fatalf("Failed loading build spec from volume: %s", err)
 	}
 
 	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)

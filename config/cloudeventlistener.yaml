@@ -13,12 +13,11 @@
 # limitations under the License.
 
 apiVersion: build.knative.dev/v1alpha1
-kind: cloudeventslistener
+kind: CloudEventsListener
 metadata:
   name: build-cloud-event-listener
   namespace: knative-build
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: build-cloud-event-listener

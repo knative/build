@@ -127,6 +127,7 @@ func main() {
 		clusterBuildTemplateInformer.Informer().HasSynced,
 		imageInformer.Informer().HasSynced,
 		podInformer.Informer().HasSynced,
+		cloudEventsListenerInformer.Informer().HasSynced,
 	} {
 		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
 			logger.Fatalf("failed to wait for cache at index %v to sync", i)

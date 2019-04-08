@@ -4,7 +4,10 @@ metadata:
   name: knative-build-admin
 rules:
   - apiGroups: [""]
-    resources: ["pods", "namespaces", "secrets", "events", "serviceaccounts", "configmaps"]
+    resources: ["pods", "namespaces", "secrets", "events", "serviceaccounts", "configmaps", "statefulsets"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["extensions"]
     resources: ["deployments"]
@@ -16,12 +19,12 @@ rules:
     resources: ["customresourcedefinitions"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["build.knative.dev"]
-    resources: ["builds", "buildtemplates", "clusterbuildtemplates"]
+    resources: ["builds", "buildtemplates", "clusterbuildtemplates", "cloudeventslisteners"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   # We enable the status subresource on the templates CRDs so metadata.generation
   # bumping will work in 1.11
   - apiGroups: ["build.knative.dev"]
-    resources: ["builds/status", "buildtemplates/status", "clusterbuildtemplates/status"]
+    resources: ["builds/status", "buildtemplates/status", "clusterbuildtemplates/status", "cloudeventslisteners/status"]
     verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]
   - apiGroups: ["caching.internal.knative.dev"]
     resources: ["images"]

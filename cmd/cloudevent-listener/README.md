@@ -8,4 +8,6 @@ Inside the CEL spec, a build is defined. Once applied, this new CRD will deploy 
 
 This build is then created by the listener in the namespace defined in the listener config, as any other build. The end result should likely be a new image in a registry, freshly built entirely by knative after CI went green.
 
-The only event supported by this proposal is `com.github.checksuite` but the design should allow for handling nearly any event type
+The only event supported by this proposal is `com.github.checksuite` but the design should allow for handling nearly any event type.
+
+This service could pretty easily be extended to allow it to be able to emit a CloudEvent of its own to whatever endpoint is defined.

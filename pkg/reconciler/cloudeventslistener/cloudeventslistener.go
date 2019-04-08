@@ -83,14 +83,15 @@ func NewController(
 	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
 
 	r := &Reconciler{
-		kubeclientset:  kubeclientset,
-		buildclientset: buildclientset,
-		Logger:         logger,
+		kubeclientset:             kubeclientset,
+		buildclientset:            buildclientset,
+		Logger:                    logger,
+		cloudEventsListenerLister: cloudEventsListenerInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, logger, "CloudEventsListener",
 		reconciler.MustNewStatsReporter("CloudEventsListener", r.Logger))
 
-	logger.Info("Setting up event handler")
+	logger.Info("Setting up cloud-events-listener event handler")
 	// Set up an event handler for when CloudEventsListener resources change
 	cloudEventsListenerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    impl.Enqueue,
@@ -103,6 +104,7 @@ func NewController(
 // Reconcile will create the necessary statefulset to manage the listener process
 func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 	logger := logging.FromContext(ctx)
+	logger.Info("cloud-events-listener reconcile")
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -133,7 +135,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		"-branch", cel.Spec.Branch,
 		"-namespace", cel.Spec.Namespace,
 	}
-	secretName := "knative-cloud-event-listener-" + name
+	secretName := "knative-cloud-event-listener-secret-" + name
 
 	// mount a secret to house the desired build definition
 	secret := corev1.Secret{
@@ -146,10 +148,19 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		},
 	}
 
-	_, err = c.kubeclientset.Core().Secrets(cel.Namespace).Create(&secret)
+	_, err = c.kubeclientset.Core().Secrets(cel.Namespace).Get(secretName, metav1.GetOptions{})
 	if err != nil {
-		logger.Errorf("Unable to create build secret:", err)
-		return err
+		if errors.IsNotFound(err) {
+			_, err = c.kubeclientset.Core().Secrets(cel.Namespace).Create(&secret)
+			if err != nil {
+				logger.Errorf("Unable to create build secret:", err)
+				return err
+			}
+
+		} else {
+			logger.Errorf("Unable to get build secret:", err)
+			return err
+		}
 	}
 
 	// Create a stateful set for the listener. It mounts a secret containing the build information.
@@ -188,10 +199,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 						{
 							Name: "build-volume",
 							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: secretName,
-									},
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretName,
 								},
 							},
 						},
