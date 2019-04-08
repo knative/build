@@ -1,6 +1,6 @@
 # End to end tests
 
-- [Running e2e tests](../README.md#running-e2e-tests)
+- [Running e2e tests](../README.md#Running-end-to-end-tests)
 
 ## Adding end to end tests
 

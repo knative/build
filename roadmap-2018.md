@@ -46,7 +46,7 @@ advances we've made with FTL-like layer caching techniques,
 [remote image rebasing](https://github.com/google/image-rebase), source
 detection, and in general be best-in-class in terms of fast incremental builds.
 
-[GCB](cloud.google.com/container-builder/docs) already maintains a set of
+[GCB](https://cloud.google.com/cloud-build/docs/) already maintains a set of
 [officially-supported builders](https://github.com/GoogleCloudPlatform/cloud-builders),
 and some
 [contributed by community members](https://github.com/GoogleCloudPlatform/cloud-builders-community).
