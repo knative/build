@@ -45,7 +45,7 @@ func Tail(ctx context.Context, out io.Writer, buildName, namespace string) error
 
 	podName, err := podName(cfg, out, buildName, namespace)
 	if err != nil {
-		return fmt.Errorf("Error getting build pod: %v", err)
+		return fmt.Errorf("error getting build pod: %v", err)
 	}
 
 	client, err := corev1.NewForConfig(cfg)
@@ -213,13 +213,13 @@ func streamLogs(ctx context.Context, out io.Writer, containerName string, rc io.
 func podName(cfg *rest.Config, out io.Writer, buildName, namespace string) (string, error) {
 	client, err := buildv1alpha1.NewForConfig(cfg)
 	if err != nil {
-		return "", fmt.Errorf("Error getting build client: %v", err)
+		return "", fmt.Errorf("error getting build client: %v", err)
 	}
 
 	for ; ; time.Sleep(time.Second) {
 		b, err := client.Builds(namespace).Get(buildName, metav1.GetOptions{IncludeUninitialized: true})
 		if err != nil {
-			return "", fmt.Errorf("Error getting build: %v", err)
+			return "", fmt.Errorf("error getting build: %v", err)
 		}
 
 		cluster := b.Status.Cluster
