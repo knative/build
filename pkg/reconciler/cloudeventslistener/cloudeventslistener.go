@@ -145,8 +145,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		},
 	}
 
-	logger.Infof(
-		"launching listener with type: %s branch: %s namespace: %s service account %s",
+	logger.Infof("launching listener with type: %s branch: %s namespace: %s service account %s",
 		cel.Spec.CloudEventType,
 		cel.Spec.Branch,
 		cel.Spec.Namespace,
