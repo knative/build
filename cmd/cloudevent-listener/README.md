@@ -18,7 +18,7 @@ To get this bootstrapped locally:
 
 
 * Get the `ko` command: `go get -u github.com/google/ko/cmd/ko`
-* Load your docker enviroment vars: `eval $(minikube docker-env)`
+* Load your docker environment vars: `eval $(minikube docker-env)`
 * Start a registry: `docker run -it -d -p 5000:5000 registry:2`
 * Set `KO_DOCKER_REPO` to local registry: `export KO_DOCKER_REPO=localhost:5000/<myproject>`
 * Apply build components: `ko apply -L -f config/`
