@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
-	"strings"
 	"sync"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
@@ -144,15 +142,16 @@ func (r *CloudEventListener) HandleRequest(ctx context.Context, event cloudevent
 
 func (r *CloudEventListener) handleCheckSuite(event cloudevents.Event, cs *gh.CheckSuitePayload) error {
 	if cs.CheckSuite.Conclusion == "success" {
+		if cs.CheckSuite.HeadBranch != r.branch {
+			return fmt.Errorf("Mismatched branches. Expected %s Received %s", cs.CheckSuite.HeadBranch, r.branch)
+
+		}
+
 		build, err := r.createBuild(cs.CheckSuite.HeadSHA)
 		if err != nil {
 			return errors.Wrapf(err, "Error creating build for check_suite event ID: %q", event.Context.AsV02().ID)
 		}
 
-		if cs.CheckSuite.HeadBranch != r.branch {
-			return fmt.Errorf("Mismatched branches. Expected %s Received %s", cs.CheckSuite.HeadBranch, r.branch)
-
-		}
 		log.Printf("Created build %q!", build.Name)
 	}
 	return nil
