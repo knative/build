@@ -21,28 +21,31 @@ spec:
   selector:
     matchLabels:
       app: build-cloud-event-listener
+  serviceName: build-cloud-event-listener
   template:
     metadata:
       labels:
-        app: build-cloud-event-listener
         role: build-cloud-event-listener
     spec:
       serviceAccountName: build-controller
-      image: github.com/knative/build/cmd/cloudevent-listener
-      build:
-      - name: cel-example-build
-        metadata:
-          name: cel-example-build
-        spec:
-          cloud-event-type: "com.github.checksuite"
-          branch: "master"
-          namespace: "knative-build"
-          serviceAccountName: build-auth-example
-          source:
-            git:
-              url: https://github.com/example/build-example.git
-              revision: master
-          steps:
-          - name: ubuntu-example
-            image: ubuntu
-            args: ["ubuntu-build-example", "SECRETS-example.md"]
+  listener-image: github.com/knative/build/cmd/cloudevent-listener
+  cloud-event-type: com.github.checksuite
+  branch: master
+  namespace: knative-build
+  service-account: build-controller
+  build:
+    name: cel-example-build
+    metadata:
+      name: cel-example-build
+    namespace: knative-build
+    spec:
+      serviceAccountName: build-auth-example
+      source:
+        git:
+          url: https://github.com/example/build-example.git
+          revision: master
+      steps:
+      - name: ubuntu-example
+        image: ubuntu
+        args: ["ubuntu-build-example", "SECRETS-example.md"]
+

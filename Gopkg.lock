@@ -312,6 +312,14 @@
   revision = "c2b33e84"
 
 [[projects]]
+  branch = "master"
+  digest = "1:41bdb9ed766f5011ec22131caea3ab134ed51bf2d88f1b2cde4841d340873dc8"
+  name = "github.com/joeshaw/envdecode"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c9e0158544672841c3ebf49308f536d918f2e525"
+
+[[projects]]
   digest = "1:da62aa6632d04e080b8a8b85a59ed9ed1550842a0099a55f3ae3a20d02a3745a"
   name = "github.com/joho/godotenv"
   packages = ["."]
@@ -1136,6 +1144,7 @@
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/joeshaw/envdecode",
     "github.com/kelseyhightower/envconfig",
     "github.com/knative/caching/pkg/apis/caching",
     "github.com/knative/caching/pkg/apis/caching/v1alpha1",

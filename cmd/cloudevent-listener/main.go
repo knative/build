@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/joeshaw/envdecode"
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
@@ -21,15 +25,18 @@ import (
 
 const (
 	SupportCloudEventVersion = "0.2"
+	listenerPort             = 8082
+	listenerPath             = "/events"
 )
 
-var (
-	eventType  = flag.String("event-type", "com.github.checksuite", "The event type to listen for. Currently only supports com.github.checksuite")
-	namespace  = flag.String("namespace", "default", "The namespace to create the build in.")
-	buildPath  = flag.String("build-path", "/root/build.json", "The path to the build spec.")
-	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-)
+type Config struct {
+	EventType  string `env:"EVENT_TYPE,default=com.github.checksuite"`
+	BuildPath  string `env:"BUILD_PATH,default=/root/builddata/build.json"`
+	Branch     string `env:"BRANCH,default=master"`
+	MasterURL  string `env:"MASTER_URL"`
+	Kubeconfig string `env:"KUBECONFIG"`
+	Namespace  string `env:"NAMESPACE"`
+}
 
 // CloudEventListener boots cloudevent receiver and awaits a particular event to build
 type CloudEventListener struct {
@@ -43,38 +50,61 @@ type CloudEventListener struct {
 }
 
 func main() {
-	flag.Parse()
+	var cfg Config
+	err := envdecode.Decode(&cfg)
+	if err != nil {
+		log.Fatalf("Failed loading env config: %q", err)
+	}
+
 	logger, _ := logging.NewLogger("", "cloudevent-listener")
 	defer logger.Sync()
 
-	build, err := loadBuildSpec()
+	for _, e := range os.Environ() {
+		pair := strings.Split(e, "=")
+		logger.Infof("%s => %s", pair[0], pair[1])
+	}
+
+	if cfg.Namespace == "" {
+		log.Fatalf("NAMESPACE env var can not be empty")
+	}
+
+	// Load the build spec from the provided secret.
+	build, err := loadBuildSpec(cfg.BuildPath)
 	if err != nil {
 		log.Fatalf("Failed loading build spec from volume: %s", err)
 	}
 
-	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
+	clientcfg, err := clientcmd.BuildConfigFromFlags(cfg.MasterURL, cfg.Kubeconfig)
 	if err != nil {
 		logger.Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	buildClient, err := buildclientset.NewForConfig(cfg)
+	buildClient, err := buildclientset.NewForConfig(clientcfg)
 	if err != nil {
 		logger.Fatalf("Error building Build clientset: %v", err)
 	}
 
 	c := &CloudEventListener{
-		eventType:      *eventType,
+		eventType:      cfg.EventType,
 		build:          build,
-		namespace:      *namespace,
+		namespace:      cfg.Namespace,
 		mux:            &sync.Mutex{},
 		buildclientset: buildClient,
+		branch:         cfg.Branch,
 	}
 
-	log.Print("Starting web server")
+	log.Printf("Starting listener on port %d", listenerPort)
 
-	client, err := client.NewDefault()
+	t, err := http.New(
+		http.WithPort(listenerPort),
+		http.WithPath(listenerPath),
+	)
 	if err != nil {
-		log.Fatalf("Failed to create cloudevent client: %q", err)
+		log.Fatalf("failed to create http client, %v", err)
+	}
+	client, err := client.New(t, client.WithTimeNow(), client.WithUUIDs())
+	if err != nil {
+		log.Fatalf("failed to create client, %v", err)
 	}
 
 	log.Fatalf("Failed to start cloudevent receiver: %q", client.StartReceiver(context.Background(), c.HandleRequest))
@@ -114,30 +144,38 @@ func (r *CloudEventListener) HandleRequest(ctx context.Context, event cloudevent
 		}
 	}
 
-	r.createBuild()
-
 	return nil
 }
 
 func (r *CloudEventListener) handleCheckSuite(event cloudevents.Event, cs *gh.CheckSuitePayload) error {
 	if cs.CheckSuite.Conclusion == "success" {
-		build, err := r.createBuild()
+		build, err := r.createBuild(cs.CheckSuite.HeadSHA)
 		if err != nil {
 			return errors.Wrapf(err, "Error creating build for check_suite event ID: %q", event.Context.AsV02().ID)
 		}
 
-		// Set the builds git revision to the github events SHA
-		build.Spec.Source.Git.Revision = cs.CheckSuite.HeadSHA
+		if cs.CheckSuite.HeadBranch != r.branch {
+			return fmt.Errorf("Mismatched branches. Expected %s Received %s", cs.CheckSuite.HeadBranch, r.branch)
+
+		}
 		log.Printf("Created build %q!", build.Name)
 	}
 	return nil
 }
 
-func (r *CloudEventListener) createBuild() (*v1alpha1.Build, error) {
+func (r *CloudEventListener) createBuild(sha string) (*v1alpha1.Build, error) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
-	newBuild, err := r.buildclientset.BuildV1alpha1().Builds(r.build.Namespace).Create(r.build)
+	build := r.build.DeepCopy()
+	// Set the builds git revision to the github events SHA
+	build.Spec.Source.Git.Revision = sha
+	// Set namespace from config. If they dont match, create will fail.
+	build.Namespace = r.namespace
+
+	log.Printf("Creating build %q sha %q namespace %q", build.Name, sha, build.Namespace)
+
+	newBuild, err := r.buildclientset.BuildV1alpha1().Builds(build.Namespace).Create(build)
 	if err != nil {
 		return nil, err
 	}
@@ -145,9 +183,9 @@ func (r *CloudEventListener) createBuild() (*v1alpha1.Build, error) {
 }
 
 // Read in the build spec info we have prepared to handle builds!
-func loadBuildSpec() (*v1alpha1.Build, error) {
+func loadBuildSpec(path string) (*v1alpha1.Build, error) {
 	b := new(v1alpha1.Build)
-	data, err := ioutil.ReadFile(*buildPath)
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

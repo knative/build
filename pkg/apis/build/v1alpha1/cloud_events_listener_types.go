@@ -34,6 +34,8 @@ type CloudEventsListenerSpec struct {
 	Namespace string `json:"namespace"`
 	// Type of we are expecting - current support for github or gcs.
 	SourceType string `json:"source-type"`
+	// Service account we will use for the listener.
+	ServiceAccount string `json:"source-type"`
 	// Status of the listener
 	Status *CloudEventsListenerSpecStatus `json:"spec,omitempty"`
 	// Build this listener will create

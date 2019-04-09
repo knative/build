@@ -130,13 +130,22 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	}
 
-	containerArgs := []string{
-		"-event-type", cel.Spec.CloudEventType,
-		"-branch", cel.Spec.Branch,
-		"-namespace", cel.Spec.Namespace,
+	containerEnv := []corev1.EnvVar{
+		{
+			Name:  "EVENT_TYPE",
+			Value: cel.Spec.CloudEventType,
+		},
+		{
+			Name:  "BRANCH",
+			Value: cel.Spec.Branch,
+		},
+		{
+			Name:  "NAMESPACE",
+			Value: cel.Spec.Namespace,
+		},
 	}
 
-	logger.Infof("launching listener with args type: %s branch: %s namespace: %s", cel.Spec.CloudEventType, cel.Spec.Branch, cel.Spec.Namespace)
+	logger.Infof("launching listener with type: %s branch: %s namespace: %s", cel.Spec.CloudEventType, cel.Spec.Branch, cel.Spec.Namespace)
 
 	secretName := "knative-cloud-event-listener-secret-" + name
 
@@ -147,7 +156,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			Namespace: cel.Namespace,
 		},
 		Data: map[string][]byte{
-			"build": []byte(buildData),
+			"build.json": []byte(buildData),
 		},
 	}
 
@@ -182,16 +191,24 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 					"statefulset": cel.Name + "-statefulset",
 				}},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: cel.Spec.Template.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
 							Name:  "cloud-events-listener",
 							Image: *listenerImage,
-							Args:  containerArgs,
+							Env:   containerEnv,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "build-volume",
-									MountPath: "/root/build.json",
+									MountPath: "/root/builddata",
 									ReadOnly:  true,
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "listener-port",
+									ContainerPort: int32(8082),
+									HostPort:      int32(8082),
 								},
 							},
 						},
