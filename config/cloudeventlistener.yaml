@@ -48,4 +48,3 @@ spec:
       - name: ubuntu-example
         image: ubuntu
         args: ["ubuntu-build-example", "SECRETS-example.md"]
-

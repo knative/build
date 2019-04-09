@@ -59,13 +59,8 @@ func main() {
 	logger, _ := logging.NewLogger("", "cloudevent-listener")
 	defer logger.Sync()
 
-	for _, e := range os.Environ() {
-		pair := strings.Split(e, "=")
-		logger.Infof("%s => %s", pair[0], pair[1])
-	}
-
 	if cfg.Namespace == "" {
-		log.Fatalf("NAMESPACE env var can not be empty")
+		log.Fatal("NAMESPACE env var can not be empty")
 	}
 
 	// Load the build spec from the provided secret.

@@ -145,7 +145,13 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 		},
 	}
 
-	logger.Infof("launching listener with type: %s branch: %s namespace: %s", cel.Spec.CloudEventType, cel.Spec.Branch, cel.Spec.Namespace)
+	logger.Infof(
+		"launching listener with type: %s branch: %s namespace: %s service account %s",
+		cel.Spec.CloudEventType,
+		cel.Spec.Branch,
+		cel.Spec.Namespace,
+		cel.Spec.ServiceAccount,
+	)
 
 	secretName := "knative-cloud-event-listener-secret-" + name
 
@@ -191,7 +197,7 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 					"statefulset": cel.Name + "-statefulset",
 				}},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: cel.Spec.Template.ServiceAccountName,
+					ServiceAccountName: cel.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
 							Name:  "cloud-events-listener",
