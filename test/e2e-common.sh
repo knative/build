@@ -29,8 +29,8 @@ function knative_setup() {
   ko apply -f config/ || fail_test "Build installation failed"
 
   # Make sure that are no builds or build templates in the current namespace.
-  kubectl delete --ignore-not-found=true builds.build.knative.dev --all
-  kubectl delete --ignore-not-found=true buildtemplates --all
+  kubectl delete --ignore-not-found --now --timeout 60s builds.build.knative.dev --all
+  kubectl delete --ignore-not-found --now --timeout 60s buildtemplates --all
 
   wait_until_pods_running knative-build || fail_test "Build did not come up"
 }
