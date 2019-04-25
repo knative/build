@@ -89,8 +89,11 @@ func (t *TimeoutSet) wait(build *v1alpha1.Build) {
 	case <-t.stopCh:
 	case <-finished:
 	case <-time.After(timeout):
-		if err := t.stopBuild(build); err != nil {
-			t.logger.Errorf("Can't stop build %q after timeout: %s", build.Name, err)
+		// Need to checkout the status of build.
+		if !isDone(&build.Status) {
+			if err := t.stopBuild(build); err != nil {
+				t.logger.Errorf("Can't stop build %q after timeout: %s", build.Name, err)
+			}
 		}
 	}
 }
