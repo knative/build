@@ -189,8 +189,8 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 			return err
 		}
 
-		if err = c.validateBuild(build); err != nil {
-			logger.Errorf("Failed to validate build: %v", err)
+		if buildErr := c.validateBuild(build); buildErr != nil {
+			logger.Errorf("Failed to validate build: %v", buildErr)
 			build.Status = v1alpha1.BuildStatus{
 				Cluster: &v1alpha1.ClusterSpec{
 					PodName: "",
@@ -200,26 +200,28 @@ func (c *Reconciler) Reconcile(ctx context.Context, key string) error {
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
 				Reason:  "BuildValidationFailed",
-				Message: err.Error(),
+				Message: buildErr.Error(),
 			})
-			if err := c.updateStatus(build); err != nil {
+			if err = c.updateStatus(build); err != nil {
 				return err
 			}
-			return err
+			return buildErr
 		}
 
-		p, err = c.startPodForBuild(build)
-		if err != nil {
+		// p is defined above, so we can't use :=.
+		var podErr error
+		p, podErr = c.startPodForBuild(build)
+		if podErr != nil {
 			build.Status.SetCondition(&duckv1alpha1.Condition{
 				Type:    v1alpha1.BuildSucceeded,
 				Status:  corev1.ConditionFalse,
 				Reason:  "BuildExecuteFailed",
-				Message: err.Error(),
+				Message: podErr.Error(),
 			})
-			if err := c.updateStatus(build); err != nil {
+			if err = c.updateStatus(build); err != nil {
 				return err
 			}
-			return err
+			return podErr
 		}
 		// Start goroutine that waits for either build timeout or build finish
 		go c.timeoutHandler.wait(build)
