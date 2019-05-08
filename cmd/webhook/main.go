@@ -73,7 +73,7 @@ func main() {
 		ServiceName:    "build-webhook",
 		DeploymentName: "build-webhook",
 		Namespace:      system.Namespace(),
-		Port:           443,
+		Port:           8443,
 		SecretName:     "build-webhook-certs",
 		WebhookName:    "webhook.build.knative.dev",
 	}
