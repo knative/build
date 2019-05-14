@@ -347,14 +347,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d0d25d17a6ef5842ad4c0ea41af24bd3debd8f6c7f0f18cd49db690962a84a83"
+  digest = "1:b7fed2f0ea8056000867dff3d2df5be3e2d2c42fefa52bd8bd455c51756758da"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "03b0eab127a39bccf71c1eadc3446f7fb13f8669"
+  revision = "ddaab49f4f98e25ff7bd663636e67f534f90bdca"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
