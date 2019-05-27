@@ -41,7 +41,9 @@ required = [
 [[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-03-21
-  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
+  #TODO(mattmoor): DO NOT SUBMIT
+  source = "github.com/mattmoor/pkg-1"
+  revision = "8c054f8dc2eafe40735b9c27835d4ca2b7f9b287"
 
 [[override]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"
