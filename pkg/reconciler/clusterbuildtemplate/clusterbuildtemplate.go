@@ -36,7 +36,6 @@ import (
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
-	"github.com/knative/build/pkg/reconciler"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate/resources"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
@@ -97,8 +96,7 @@ func NewController(
 		imagesLister:                imageInformer.Lister(),
 		Logger:                      logger,
 	}
-	impl := controller.NewImpl(r, logger, "ClusterBuildTemplates",
-		reconciler.MustNewStatsReporter("ClusterBuildTemplates", r.Logger))
+	impl := controller.NewImpl(r, logger, "ClusterBuildTemplates")
 
 	logger.Info("Setting up event handlers")
 	// Set up an event handler for when ClusterBuildTemplate resources change
