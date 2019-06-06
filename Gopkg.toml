@@ -40,8 +40,8 @@ required = [
 
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-03-21
-  revision = "60fdcbcabd2faeb34328d8b2725dc76c59189453"
+  # HEAD as of 2019-06-05
+  revision = "4d86f3ad6f48dffa0846c76711ca6c3697def63c"
 
 [[override]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"

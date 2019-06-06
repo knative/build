@@ -27,7 +27,6 @@ import (
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
-	"github.com/knative/build/pkg/reconciler"
 	"github.com/knative/build/pkg/reconciler/build/resources"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
@@ -106,8 +105,7 @@ func NewController(
 		Logger:                      logger,
 		timeoutHandler:              timeoutHandler,
 	}
-	impl := controller.NewImpl(r, logger, "Builds",
-		reconciler.MustNewStatsReporter("Builds", r.Logger))
+	impl := controller.NewImpl(r, logger, "Builds")
 
 	logger.Info("Setting up event handlers")
 	// Set up an event handler for when Build resources change
