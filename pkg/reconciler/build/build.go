@@ -109,19 +109,13 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 	// Set up an event handler for when Build resources change
-	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    impl.Enqueue,
-		UpdateFunc: controller.PassNew(impl.Enqueue),
-	})
+	buildInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Set up a Pod informer, so that Pod updates trigger Build
 	// reconciliations.
 	podInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Build")),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    impl.EnqueueControllerOf,
-			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
-		},
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl

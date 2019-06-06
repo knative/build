@@ -100,17 +100,11 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 	// Set up an event handler for when ClusterBuildTemplate resources change
-	clusterBuildTemplateInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    impl.Enqueue,
-		UpdateFunc: controller.PassNew(impl.Enqueue),
-	})
+	clusterBuildTemplateInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	imageInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ClusterBuildTemplate")),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    impl.EnqueueControllerOf,
-			UpdateFunc: controller.PassNew(impl.EnqueueControllerOf),
-		},
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl
