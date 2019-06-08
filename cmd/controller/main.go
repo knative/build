@@ -17,114 +17,18 @@ limitations under the License.
 package main
 
 import (
-	"flag"
-	"log"
-	"time"
-
-	buildclientset "github.com/knative/build/pkg/client/clientset/versioned"
-	informers "github.com/knative/build/pkg/client/informers/externalversions"
+	// The set of controllers to run
 	"github.com/knative/build/pkg/reconciler/build"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate"
-	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
-	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
-	"github.com/knative/pkg/signals"
-	"go.uber.org/zap"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-)
 
-const (
-	logLevelKey  = "controller"
-	resyncPeriod = 10 * time.Hour
-)
-
-var (
-	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	"github.com/knative/pkg/injection/sharedmain"
 )
 
 func main() {
-	flag.Parse()
-
-	// Set up signals so we handle the first shutdown signal gracefully
-	ctx := signals.NewContext()
-
-	loggingConfigMap, err := configmap.Load("/etc/config-logging")
-	if err != nil {
-		log.Fatalf("Error loading logging configuration: %v", err)
-	}
-	loggingConfig, err := logging.NewConfigFromMap(loggingConfigMap)
-	if err != nil {
-		log.Fatalf("Error parsing logging configuration: %v", err)
-	}
-	logger, _ := logging.NewLoggerFromConfig(loggingConfig, logLevelKey)
-	defer logger.Sync()
-	logger = logger.With(zap.String(logkey.ControllerType, logLevelKey))
-	ctx = logging.WithLogger(ctx, logger)
-
-	logger.Info("Starting the Build Controller")
-
-	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
-	if err != nil {
-		logger.Fatalf("Error building kubeconfig: %v", err)
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building kubernetes clientset: %v", err)
-	}
-
-	buildClient, err := buildclientset.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building Build clientset: %v", err)
-	}
-
-	cachingClient, err := cachingclientset.NewForConfig(cfg)
-	if err != nil {
-		logger.Fatalf("Error building Caching clientset: %v", err)
-	}
-
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, resyncPeriod)
-	buildInformerFactory := informers.NewSharedInformerFactory(buildClient, resyncPeriod)
-	cachingInformerFactory := cachinginformers.NewSharedInformerFactory(cachingClient, resyncPeriod)
-
-	buildInformer := buildInformerFactory.Build().V1alpha1().Builds()
-	buildTemplateInformer := buildInformerFactory.Build().V1alpha1().BuildTemplates()
-	clusterBuildTemplateInformer := buildInformerFactory.Build().V1alpha1().ClusterBuildTemplates()
-	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
-	podInformer := kubeInformerFactory.Core().V1().Pods()
-
-	// Build all of our controllers, with the clients constructed above.
-	controllers := []*controller.Impl{
-		build.NewController(ctx, logger, kubeClient, podInformer, buildClient, buildInformer,
-			buildTemplateInformer, clusterBuildTemplateInformer),
-		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
-			cachingClient, clusterBuildTemplateInformer, imageInformer),
-		buildtemplate.NewController(logger, kubeClient, buildClient,
-			cachingClient, buildTemplateInformer, imageInformer),
-	}
-
-	informers := []controller.Informer{
-		buildInformer.Informer(),
-		buildTemplateInformer.Informer(),
-		clusterBuildTemplateInformer.Informer(),
-		imageInformer.Informer(),
-		podInformer.Informer(),
-	}
-
-	// Start all of the informers and wait for them to sync.
-	logger.Info("Starting informers.")
-	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-		logger.Fatalw("Failed to start informers", err)
-	}
-
-	// Start all of the controllers.
-	logger.Info("Starting controllers...")
-	controller.StartAll(ctx.Done(), controllers...)
+	sharedmain.Main("controller",
+		build.NewController,
+		buildtemplate.NewController,
+		clusterbuildtemplate.NewController,
+	)
 }

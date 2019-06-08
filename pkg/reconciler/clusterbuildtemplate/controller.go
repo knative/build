@@ -17,31 +17,39 @@ limitations under the License.
 package clusterbuildtemplate
 
 import (
+	"context"
+
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
+	buildclient "github.com/knative/build/pkg/client/injection/client"
+	cbtinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/clusterbuildtemplate"
+	cachingclient "github.com/knative/caching/pkg/client/injection/client"
+	imageinformer "github.com/knative/caching/pkg/client/injection/informers/caching/v1alpha1/image"
+	"github.com/knative/pkg/injection/clients/kubeclient"
+
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
-	clientset "github.com/knative/build/pkg/client/clientset/versioned"
-	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
-	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
-	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
 )
 
 const controllerAgentName = "clusterbuildtemplate-controller"
 
 // NewController returns a new build template controller
 func NewController(
-	logger *zap.SugaredLogger,
-	kubeclientset kubernetes.Interface,
-	buildclientset clientset.Interface,
-	cachingclientset cachingclientset.Interface,
-	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
-	imageInformer cachinginformers.ImageInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
+
+	logger := logging.FromContext(ctx)
+	kubeclientset := kubeclient.Get(ctx)
+	buildclientset := buildclient.Get(ctx)
+	cachingclientset := cachingclient.Get(ctx)
+	clusterBuildTemplateInformer := cbtinformer.Get(ctx)
+	imageInformer := imageinformer.Get(ctx)
 
 	// Enrich the logs with controller name
 	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))

@@ -316,7 +316,7 @@
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [[projects]]
-  digest = "1:9a670ce0109361c513e7103c478dbbea261bb81d41d0f9c822707451bce139bb"
+  digest = "1:d9db296c99530865074caabd07b5a375bc4870b4d00a753910c236c595df7a33"
   name = "github.com/knative/caching"
   packages = [
     "pkg/apis/caching",
@@ -328,13 +328,16 @@
     "pkg/client/informers/externalversions/caching",
     "pkg/client/informers/externalversions/caching/v1alpha1",
     "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/injection/client",
+    "pkg/client/injection/informers/caching/factory",
+    "pkg/client/injection/informers/caching/v1alpha1/image",
     "pkg/client/listers/caching/v1alpha1",
   ]
   pruneopts = "T"
-  revision = "3fc06fd3c9880a9ebb5c401f4b20cf6666cc7bc0"
+  revision = "b6c8f4851e3fb13987782cf8014316141e42fbd3"
 
 [[projects]]
-  digest = "1:63fc6795f52bebfd1b6a412162680be99735580969d26e9431f401f45af07343"
+  digest = "1:d8523cc44ff81851749411eba077c1fe726303a0be63304650a82aa5bde73597"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -348,12 +351,20 @@
     "configmap",
     "controller",
     "injection",
+    "injection/clients/kubeclient",
+    "injection/clients/kubeclient/fake",
+    "injection/informers/kubeinformers/corev1/pod",
+    "injection/informers/kubeinformers/corev1/pod/fake",
+    "injection/informers/kubeinformers/factory",
+    "injection/informers/kubeinformers/factory/fake",
     "kmeta",
     "kmp",
     "logging",
     "logging/logkey",
+    "logging/testing",
     "metrics",
     "metrics/metricskey",
+    "reconciler/testing",
     "signals",
     "system",
     "system/testing",
@@ -363,10 +374,11 @@
     "test/monitoring",
     "test/spoof",
     "test/zipkin",
+    "tracker",
     "webhook",
   ]
   pruneopts = "T"
-  revision = "afdedebb9e4e348baa217eb481ab29abd531988d"
+  revision = "2353d3bfc0b7766de2bf87358cbe2e8611709369"
 
 [[projects]]
   branch = "master"
@@ -547,7 +559,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:85674ac609b704fd4e9f463553b6ffc3a3527a993ae0ba550eb56beaabdfe094"
+  digest = "1:5ab79d2a36037de1ab2908733a2cab0c08b12f6956e3e1eab07cd1b2abf7b903"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -555,11 +567,12 @@
     "internal/bufferpool",
     "internal/color",
     "internal/exit",
+    "internal/ztest",
     "zapcore",
+    "zaptest",
   ]
   pruneopts = "NUT"
-  revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
-  version = "v1.9.1"
+  revision = "67bc79d13d155c02fd008f721863ff8cc5f30659"
 
 [[projects]]
   digest = "1:624a05c7c6ed502bf77364cd3d54631383dafc169982fddd8ee77b53c3d9cccf"
@@ -1119,6 +1132,8 @@
     "github.com/knative/caching/pkg/client/clientset/versioned",
     "github.com/knative/caching/pkg/client/informers/externalversions",
     "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1",
+    "github.com/knative/caching/pkg/client/injection/client",
+    "github.com/knative/caching/pkg/client/injection/informers/caching/v1alpha1/image",
     "github.com/knative/caching/pkg/client/listers/caching/v1alpha1",
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
@@ -1127,9 +1142,14 @@
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/injection",
+    "github.com/knative/pkg/injection/clients/kubeclient",
+    "github.com/knative/pkg/injection/clients/kubeclient/fake",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/pod",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/pod/fake",
     "github.com/knative/pkg/kmeta",
     "github.com/knative/pkg/logging",
     "github.com/knative/pkg/logging/logkey",
+    "github.com/knative/pkg/reconciler/testing",
     "github.com/knative/pkg/signals",
     "github.com/knative/pkg/system",
     "github.com/knative/pkg/system/testing",
@@ -1159,7 +1179,6 @@
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/informers",
-    "k8s.io/client-go/informers/core/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",

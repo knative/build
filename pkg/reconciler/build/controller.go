@@ -19,14 +19,19 @@ package build
 import (
 	"context"
 
+	buildclient "github.com/knative/build/pkg/client/injection/client"
+	buildinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/build"
+	buildtemplateinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/buildtemplate"
+	clusterbuildtemplateinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/clusterbuildtemplate"
+	"github.com/knative/pkg/injection/clients/kubeclient"
+	podinformer "github.com/knative/pkg/injection/informers/kubeinformers/corev1/pod"
+
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	clientset "github.com/knative/build/pkg/client/clientset/versioned"
-	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/logging/logkey"
 	"go.uber.org/zap"
-	coreinformers "k8s.io/client-go/informers/core/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,14 +42,16 @@ const (
 // NewController returns a new build controller
 func NewController(
 	ctx context.Context,
-	logger *zap.SugaredLogger,
-	kubeclientset kubernetes.Interface,
-	podInformer coreinformers.PodInformer,
-	buildclientset clientset.Interface,
-	buildInformer informers.BuildInformer,
-	buildTemplateInformer informers.BuildTemplateInformer,
-	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
+	cmw configmap.Watcher,
 ) *controller.Impl {
+
+	logger := logging.FromContext(ctx)
+	kubeclientset := kubeclient.Get(ctx)
+	buildclientset := buildclient.Get(ctx)
+	podInformer := podinformer.Get(ctx)
+	buildInformer := buildinformer.Get(ctx)
+	buildTemplateInformer := buildtemplateinformer.Get(ctx)
+	clusterBuildTemplateInformer := clusterbuildtemplateinformer.Get(ctx)
 
 	timeoutHandler := NewTimeoutHandler(logger, kubeclientset, buildclientset, ctx.Done())
 	timeoutHandler.CheckTimeouts()

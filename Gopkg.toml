@@ -26,6 +26,10 @@ required = [
   name = "k8s.io/gengo"
   revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
 
+[[override]]
+  name = "go.uber.org/zap"
+  revision = "67bc79d13d155c02fd008f721863ff8cc5f30659"
+
 [[constraint]]
   name = "k8s.io/api"
   version = "kubernetes-1.12.6"
@@ -44,13 +48,13 @@ required = [
 
 [[constraint]]
   name = "github.com/knative/caching"
-  # HEAD as of 2019-03-21
-  revision = "3fc06fd3c9880a9ebb5c401f4b20cf6666cc7bc0"
+  # HEAD as of 2019-06-08
+  revision = "b6c8f4851e3fb13987782cf8014316141e42fbd3"
 
 [[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-06-08
-  revision = "afdedebb9e4e348baa217eb481ab29abd531988d"
+  revision = "2353d3bfc0b7766de2bf87358cbe2e8611709369"
 
 [[override]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"
