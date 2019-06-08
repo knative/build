@@ -8,6 +8,7 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
+  "github.com/knative/pkg/codegen/cmd/injection-gen",
   "github.com/knative/caching/pkg/apis/caching",
   "github.com/knative/test-infra/scripts",
   "github.com/knative/test-infra/tools/dep-collector",
@@ -16,6 +17,14 @@ required = [
 [[override]]
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
+
+[[override]]
+  name = "k8s.io/klog"
+  version = "v0.2.0"
+
+[[override]]
+  name = "k8s.io/gengo"
+  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
 
 [[constraint]]
   name = "k8s.io/api"
@@ -40,8 +49,8 @@ required = [
 
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-06-05
-  revision = "4d86f3ad6f48dffa0846c76711ca6c3697def63c"
+  # HEAD as of 2019-06-08
+  revision = "afdedebb9e4e348baa217eb481ab29abd531988d"
 
 [[override]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"
@@ -76,4 +85,9 @@ required = [
 
 [[prune.project]]
   name = "github.com/knative/test-infra"
+  non-go = false
+
+ [[prune.project]]
+  name = "github.com/knative/pkg"
+  unused-packages = false
   non-go = false
