@@ -34,17 +34,14 @@ import (
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	threadsPerController = 2
-	logLevelKey          = "controller"
-	resyncPeriod         = 10 * time.Hour
+	logLevelKey  = "controller"
+	resyncPeriod = 10 * time.Hour
 )
 
 var (
@@ -54,6 +51,10 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// Set up signals so we handle the first shutdown signal gracefully
+	ctx := signals.NewContext()
+
 	loggingConfigMap, err := configmap.Load("/etc/config-logging")
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
@@ -65,11 +66,9 @@ func main() {
 	logger, _ := logging.NewLoggerFromConfig(loggingConfig, logLevelKey)
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logLevelKey))
+	ctx = logging.WithLogger(ctx, logger)
 
 	logger.Info("Starting the Build Controller")
-
-	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
 
 	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
@@ -101,7 +100,7 @@ func main() {
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 	podInformer := kubeInformerFactory.Core().V1().Pods()
 
-	timeoutHandler := build.NewTimeoutHandler(logger, kubeClient, buildClient, stopCh)
+	timeoutHandler := build.NewTimeoutHandler(logger, kubeClient, buildClient, ctx.Done())
 	timeoutHandler.CheckTimeouts()
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []*controller.Impl{
@@ -113,35 +112,21 @@ func main() {
 			cachingClient, buildTemplateInformer, imageInformer),
 	}
 
-	go kubeInformerFactory.Start(stopCh)
-	go buildInformerFactory.Start(stopCh)
-	go cachingInformerFactory.Start(stopCh)
-
-	for i, synced := range []cache.InformerSynced{
-		buildInformer.Informer().HasSynced,
-		buildTemplateInformer.Informer().HasSynced,
-		clusterBuildTemplateInformer.Informer().HasSynced,
-		imageInformer.Informer().HasSynced,
-		podInformer.Informer().HasSynced,
-	} {
-		if ok := cache.WaitForCacheSync(stopCh, synced); !ok {
-			logger.Fatalf("failed to wait for cache at index %v to sync", i)
-		}
+	informers := []controller.Informer{
+		buildInformer.Informer(),
+		buildTemplateInformer.Informer(),
+		clusterBuildTemplateInformer.Informer(),
+		imageInformer.Informer(),
+		podInformer.Informer(),
 	}
-	var g errgroup.Group
+
+	// Start all of the informers and wait for them to sync.
+	logger.Info("Starting informers.")
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		logger.Fatalw("Failed to start informers", err)
+	}
 
 	// Start all of the controllers.
-	for _, ctrlr := range controllers {
-		ctrlr := ctrlr
-		g.Go(func() error {
-			// We don't expect this to return until stop is called,
-			// but if it does, propagate it back.
-			return ctrlr.Run(threadsPerController, stopCh)
-		})
-	}
-
-	// Wait for all controllers to finish and log errors if there are any
-	if err := g.Wait(); err != nil {
-		logger.Fatalf("Error running controller: %s", err.Error())
-	}
+	logger.Info("Starting controllers...")
+	controller.StartAll(ctx.Done(), controllers...)
 }
