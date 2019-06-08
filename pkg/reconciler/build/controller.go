@@ -17,6 +17,8 @@ limitations under the License.
 package build
 
 import (
+	"context"
+
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
@@ -34,6 +36,7 @@ const (
 
 // NewController returns a new build controller
 func NewController(
+	ctx context.Context,
 	logger *zap.SugaredLogger,
 	kubeclientset kubernetes.Interface,
 	podInformer coreinformers.PodInformer,
@@ -41,8 +44,10 @@ func NewController(
 	buildInformer informers.BuildInformer,
 	buildTemplateInformer informers.BuildTemplateInformer,
 	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
-	timeoutHandler *TimeoutSet,
 ) *controller.Impl {
+
+	timeoutHandler := NewTimeoutHandler(logger, kubeclientset, buildclientset, ctx.Done())
+	timeoutHandler.CheckTimeouts()
 
 	// Enrich the logs with controller name
 	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))

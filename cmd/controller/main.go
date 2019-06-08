@@ -100,12 +100,10 @@ func main() {
 	imageInformer := cachingInformerFactory.Caching().V1alpha1().Images()
 	podInformer := kubeInformerFactory.Core().V1().Pods()
 
-	timeoutHandler := build.NewTimeoutHandler(logger, kubeClient, buildClient, ctx.Done())
-	timeoutHandler.CheckTimeouts()
 	// Build all of our controllers, with the clients constructed above.
 	controllers := []*controller.Impl{
-		build.NewController(logger, kubeClient, podInformer, buildClient, buildInformer,
-			buildTemplateInformer, clusterBuildTemplateInformer, timeoutHandler),
+		build.NewController(ctx, logger, kubeClient, podInformer, buildClient, buildInformer,
+			buildTemplateInformer, clusterBuildTemplateInformer),
 		clusterbuildtemplate.NewController(logger, kubeClient, buildClient,
 			cachingClient, clusterBuildTemplateInformer, imageInformer),
 		buildtemplate.NewController(logger, kubeClient, buildClient,

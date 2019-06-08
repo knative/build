@@ -86,7 +86,7 @@ func (f *fixture) createServiceAccounts(serviceAccounts ...*corev1.ServiceAccoun
 	}
 }
 
-func (f *fixture) newReconciler(stopCh <-chan struct{}) (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
+func (f *fixture) newReconciler(ctx context.Context) (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
 	logger := zap.NewExample().Sugar()
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
@@ -94,8 +94,7 @@ func (f *fixture) newReconciler(stopCh <-chan struct{}) (controller.Reconciler, 
 	buildTemplateInformer := i.Build().V1alpha1().BuildTemplates()
 	clusterBuildTemplateInformer := i.Build().V1alpha1().ClusterBuildTemplates()
 	podInformer := k8sI.Core().V1().Pods()
-	timeoutHandler := NewTimeoutHandler(logger, f.kubeclient, f.client, stopCh)
-	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, timeoutHandler)
+	c := NewController(ctx, logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer)
 	return c.Reconciler, i, k8sI
 }
 
@@ -135,13 +134,13 @@ func TestBuildNotFoundFlow(t *testing.T) {
 	}
 	f.client.PrependReactor("*", "*", reactor)
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	r, i, k8sI := f.newReconciler(ctx)
 	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 		t.Errorf("Expect error syncing build")
@@ -155,10 +154,10 @@ func TestBuildWithBadKey(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, _, _ := f.newReconciler(stopCh)
+	r, _, _ := f.newReconciler(ctx)
 	if err := r.Reconcile(context.Background(), "bad/worse/worst"); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
@@ -174,13 +173,13 @@ func TestBuildNotFoundError(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	r, i, k8sI := f.newReconciler(ctx)
 	// Don't update build informers with test build object
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
@@ -201,13 +200,13 @@ func TestBuildWithMissingServiceAccount(t *testing.T) {
 		kubeclient: k8sfake.NewSimpleClientset(),
 	}
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	r, i, k8sI := f.newReconciler(ctx)
 	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 		t.Errorf("Expect error syncing build")
@@ -249,13 +248,13 @@ func TestBuildWithMissingSecret(t *testing.T) {
 		Secrets:    []corev1.ObjectReference{{Name: "missing-secret"}},
 	})
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	r, i, k8sI := f.newReconciler(ctx)
 	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 		t.Errorf("Expect error syncing build")
@@ -297,13 +296,13 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 		}
 		f.createServiceAccount()
 
-		stopCh := make(chan struct{})
-		defer close(stopCh)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-		r, i, k8sI := f.newReconciler(stopCh)
+		r, i, k8sI := f.newReconciler(ctx)
 		f.updateIndex(i, b)
-		i.Start(stopCh)
-		k8sI.Start(stopCh)
+		i.Start(ctx.Done())
+		k8sI.Start(ctx.Done())
 
 		if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 			t.Errorf("Expect error syncing build")
@@ -355,13 +354,13 @@ func TestBuildWithTemplate(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	r, i, k8sI := f.newReconciler(ctx)
 	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
 	err := i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
 	if err != nil {
@@ -369,8 +368,8 @@ func TestBuildWithTemplate(t *testing.T) {
 	}
 
 	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
 	if err = r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("unexpected expecting error while syncing build: %s", err.Error())
@@ -449,16 +448,16 @@ func TestBasicFlows(t *testing.T) {
 			}
 			f.createServiceAccount()
 
-			stopCh := make(chan struct{})
-			defer close(stopCh)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-			r, i, k8sI := f.newReconciler(stopCh)
+			r, i, k8sI := f.newReconciler(ctx)
 			f.updateIndex(i, b)
-			i.Start(stopCh)
-			k8sI.Start(stopCh)
+			i.Start(ctx.Done())
+			k8sI.Start(ctx.Done())
 
 			// Reconcile to pick up changes.
-			ctx := context.Background()
+			ctx = context.Background()
 			if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
 				t.Errorf("error syncing build: %v", err)
 			}
@@ -521,14 +520,15 @@ func TestTimeoutFlow(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	ctx := context.Background()
+	r, i, k8sI := f.newReconciler(ctx)
+	f.updateIndex(i, b)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
+
+	ctx = context.Background()
 	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
 		t.Errorf("Not Expect error when syncing build")
 	}
@@ -568,15 +568,15 @@ func TestCancelledFlow(t *testing.T) {
 	}
 	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	r, i, k8sI := f.newReconciler(ctx)
 	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	i.Start(ctx.Done())
+	k8sI.Start(ctx.Done())
 
-	ctx := context.Background()
+	ctx = context.Background()
 	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
 		t.Errorf("Not Expect error when syncing build")
 	}
