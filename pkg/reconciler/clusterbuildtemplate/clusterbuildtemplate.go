@@ -24,27 +24,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
 
 	"github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
-	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
 	"github.com/knative/build/pkg/reconciler/buildtemplate"
 	"github.com/knative/build/pkg/reconciler/clusterbuildtemplate/resources"
 	cachingclientset "github.com/knative/caching/pkg/client/clientset/versioned"
-	cachinginformers "github.com/knative/caching/pkg/client/informers/externalversions/caching/v1alpha1"
 	cachinglisters "github.com/knative/caching/pkg/client/listers/caching/v1alpha1"
 	"github.com/knative/pkg/system"
 )
-
-const controllerAgentName = "clusterbuildtemplate-controller"
 
 // Reconciler is the controller.Reconciler implementation for ClusterBuildTemplates resources
 type Reconciler struct {
@@ -73,41 +67,6 @@ func init() {
 	// Add clusterbuildtemplate-controller types to the default Kubernetes Scheme so Events can be
 	// logged for clusterbuildtemplate-controller types.
 	buildscheme.AddToScheme(scheme.Scheme)
-}
-
-// NewController returns a new build template controller
-func NewController(
-	logger *zap.SugaredLogger,
-	kubeclientset kubernetes.Interface,
-	buildclientset clientset.Interface,
-	cachingclientset cachingclientset.Interface,
-	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
-	imageInformer cachinginformers.ImageInformer,
-) *controller.Impl {
-
-	// Enrich the logs with controller name
-	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
-
-	r := &Reconciler{
-		kubeclientset:               kubeclientset,
-		buildclientset:              buildclientset,
-		cachingclientset:            cachingclientset,
-		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
-		imagesLister:                imageInformer.Lister(),
-		Logger:                      logger,
-	}
-	impl := controller.NewImpl(r, logger, "ClusterBuildTemplates")
-
-	logger.Info("Setting up event handlers")
-	// Set up an event handler for when ClusterBuildTemplate resources change
-	clusterBuildTemplateInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	imageInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ClusterBuildTemplate")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
 }
 
 // Reconcile implements controller.Reconciler

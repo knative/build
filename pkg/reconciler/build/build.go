@@ -25,19 +25,16 @@ import (
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
 	clientset "github.com/knative/build/pkg/client/clientset/versioned"
 	buildscheme "github.com/knative/build/pkg/client/clientset/versioned/scheme"
-	informers "github.com/knative/build/pkg/client/informers/externalversions/build/v1alpha1"
 	listers "github.com/knative/build/pkg/client/listers/build/v1alpha1"
 	"github.com/knative/build/pkg/reconciler/build/resources"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -45,8 +42,7 @@ import (
 )
 
 const (
-	controllerAgentName = "build-controller"
-	defaultTimeout      = 10 * time.Minute
+	defaultTimeout = 10 * time.Minute
 )
 
 // Reconciler is the controller.Reconciler implementation for Builds resources
@@ -78,47 +74,6 @@ func init() {
 	// Add build-controller types to the default Kubernetes Scheme so Events can be
 	// logged for build-controller types.
 	buildscheme.AddToScheme(scheme.Scheme)
-}
-
-// NewController returns a new build template controller
-func NewController(
-	logger *zap.SugaredLogger,
-	kubeclientset kubernetes.Interface,
-	podInformer coreinformers.PodInformer,
-	buildclientset clientset.Interface,
-	buildInformer informers.BuildInformer,
-	buildTemplateInformer informers.BuildTemplateInformer,
-	clusterBuildTemplateInformer informers.ClusterBuildTemplateInformer,
-	timeoutHandler *TimeoutSet,
-) *controller.Impl {
-
-	// Enrich the logs with controller name
-	logger = logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
-
-	r := &Reconciler{
-		kubeclientset:               kubeclientset,
-		buildclientset:              buildclientset,
-		buildsLister:                buildInformer.Lister(),
-		buildTemplatesLister:        buildTemplateInformer.Lister(),
-		clusterBuildTemplatesLister: clusterBuildTemplateInformer.Lister(),
-		podsLister:                  podInformer.Lister(),
-		Logger:                      logger,
-		timeoutHandler:              timeoutHandler,
-	}
-	impl := controller.NewImpl(r, logger, "Builds")
-
-	logger.Info("Setting up event handlers")
-	// Set up an event handler for when Build resources change
-	buildInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Set up a Pod informer, so that Pod updates trigger Build
-	// reconciliations.
-	podInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Build")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
 }
 
 // Reconcile implements controller.Reconciler

@@ -23,22 +23,28 @@ import (
 	"testing"
 	"time"
 
+	// Link in the fakes so they get injected into injection.Fake
+	fakebuildclient "github.com/knative/build/pkg/client/injection/client/fake"
+	fakebuildinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/build/fake"
+	fakebtinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/buildtemplate/fake"
+	fakecbtinformer "github.com/knative/build/pkg/client/injection/informers/build/v1alpha1/clusterbuildtemplate/fake"
+	fakekubeclient "github.com/knative/pkg/injection/clients/kubeclient/fake"
+	fakepodinformer "github.com/knative/pkg/injection/informers/kubeinformers/corev1/pod/fake"
+
 	"github.com/google/go-cmp/cmp"
 	v1alpha1 "github.com/knative/build/pkg/apis/build/v1alpha1"
-	"github.com/knative/build/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/build/pkg/client/informers/externalversions"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
+
+	rtesting "github.com/knative/pkg/reconciler/testing"
 )
 
 // TODO(jasonhall): Test pod creation fails
@@ -51,9 +57,7 @@ var ignoreVolatileTime = cmp.Comparer(func(_, _ apis.VolatileTime) bool { return
 type fixture struct {
 	t *testing.T
 
-	client     *fake.Clientset
-	kubeclient *k8sfake.Clientset
-	objects    []runtime.Object
+	objects []runtime.Object
 }
 
 func newBuild(name string) *v1alpha1.Build {
@@ -69,42 +73,61 @@ func newBuild(name string) *v1alpha1.Build {
 	}
 }
 
-func (f *fixture) createServiceAccount() {
+func (f *fixture) createServiceAccount(ctx context.Context) {
 	f.t.Helper()
-	f.createServiceAccounts(&corev1.ServiceAccount{
+	f.createServiceAccounts(ctx, &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "default"},
 	})
 }
 
-func (f *fixture) createServiceAccounts(serviceAccounts ...*corev1.ServiceAccount) {
+func (f *fixture) createServiceAccounts(ctx context.Context, serviceAccounts ...*corev1.ServiceAccount) {
 	f.t.Helper()
 
 	for _, sa := range serviceAccounts {
-		if _, err := f.kubeclient.CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(sa); err != nil {
+		if _, err := fakekubeclient.Get(ctx).CoreV1().ServiceAccounts(metav1.NamespaceDefault).Create(sa); err != nil {
 			f.t.Fatalf("Failed to create ServiceAccount: %v", err)
 		}
 	}
 }
 
-func (f *fixture) newReconciler(stopCh <-chan struct{}) (controller.Reconciler, informers.SharedInformerFactory, kubeinformers.SharedInformerFactory) {
-	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriod)
-	logger := zap.NewExample().Sugar()
-	i := informers.NewSharedInformerFactory(f.client, noResyncPeriod)
-	buildInformer := i.Build().V1alpha1().Builds()
-	buildTemplateInformer := i.Build().V1alpha1().BuildTemplates()
-	clusterBuildTemplateInformer := i.Build().V1alpha1().ClusterBuildTemplates()
-	podInformer := k8sI.Core().V1().Pods()
-	timeoutHandler := NewTimeoutHandler(logger, f.kubeclient, f.client, stopCh)
-	c := NewController(logger, f.kubeclient, podInformer, f.client, buildInformer, buildTemplateInformer, clusterBuildTemplateInformer, timeoutHandler)
-	return c.Reconciler, i, k8sI
+func (f *fixture) createBuild(ctx context.Context, builds ...*v1alpha1.Build) {
+	f.t.Helper()
+
+	for _, build := range builds {
+		if _, err := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(metav1.NamespaceDefault).Create(build); err != nil {
+			f.t.Fatalf("Failed to create Build: %v", err)
+		}
+	}
 }
 
-func (f *fixture) updateIndex(i informers.SharedInformerFactory, b *v1alpha1.Build) {
-	i.Build().V1alpha1().Builds().Informer().GetIndexer().Add(b)
+func (f *fixture) createBuildTemplate(ctx context.Context, bts ...*v1alpha1.BuildTemplate) {
+	f.t.Helper()
+
+	for _, bt := range bts {
+		if _, err := fakebuildclient.Get(ctx).BuildV1alpha1().BuildTemplates(metav1.NamespaceDefault).Create(bt); err != nil {
+			f.t.Fatalf("Failed to create BuildTemplate: %v", err)
+		}
+	}
 }
 
-func (f *fixture) updatePodIndex(i kubeinformers.SharedInformerFactory, p *corev1.Pod) {
-	i.Core().V1().Pods().Informer().GetIndexer().Add(p)
+func (f *fixture) newReconciler(ctx context.Context) controller.Reconciler {
+	return NewController(ctx, configmap.NewStaticWatcher()).Reconciler
+}
+
+func (f *fixture) updateIndex(ctx context.Context, b *v1alpha1.Build) {
+	fakebuildinformer.Get(ctx).Informer().GetIndexer().Add(b)
+}
+
+func (f *fixture) updatePodIndex(ctx context.Context, p *corev1.Pod) {
+	fakepodinformer.Get(ctx).Informer().GetIndexer().Add(p)
+}
+
+func (f *fixture) updateBuildTemplateIndex(ctx context.Context, bt *v1alpha1.BuildTemplate) {
+	fakebtinformer.Get(ctx).Informer().GetIndexer().Add(bt)
+}
+
+func (f *fixture) updateClusterBuildTemplateIndex(ctx context.Context, cbt *v1alpha1.ClusterBuildTemplate) {
+	fakecbtinformer.Get(ctx).Informer().GetIndexer().Add(cbt)
 }
 
 func getKey(b *v1alpha1.Build, t *testing.T) string {
@@ -119,12 +142,16 @@ func getKey(b *v1alpha1.Build, t *testing.T) string {
 func TestBuildNotFoundFlow(t *testing.T) {
 	b := newBuild("test")
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b},
-		client:     fake.NewSimpleClientset(b),
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t:       t,
+		objects: []runtime.Object{b},
 	}
-	f.createServiceAccount()
+
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	f.createBuild(ctx, b)
+	f.createServiceAccount(ctx)
 
 	// induce failure when fetching build information in controller
 	reactor := func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -133,15 +160,13 @@ func TestBuildNotFoundFlow(t *testing.T) {
 		}
 		return false, nil, nil
 	}
-	f.client.PrependReactor("*", "*", reactor)
+	fakebuildclient.Get(ctx).PrependReactor("*", "*", reactor)
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	r := f.newReconciler(ctx)
+	f.updateIndex(ctx, b)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 		t.Errorf("Expect error syncing build")
@@ -150,15 +175,16 @@ func TestBuildNotFoundFlow(t *testing.T) {
 
 func TestBuildWithBadKey(t *testing.T) {
 	f := &fixture{
-		t:          t,
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t: t,
 	}
-	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, _ := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	r, _, _ := f.newReconciler(stopCh)
+	f.createServiceAccount(ctx)
+
+	r := f.newReconciler(ctx)
 	if err := r.Reconcile(context.Background(), "bad/worse/worst"); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
 	}
@@ -167,20 +193,22 @@ func TestBuildWithBadKey(t *testing.T) {
 func TestBuildNotFoundError(t *testing.T) {
 	b := newBuild("test")
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b},
-		client:     fake.NewSimpleClientset(b),
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t:       t,
+		objects: []runtime.Object{b},
 	}
-	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
+	f.createBuild(ctx, b)
+	f.createServiceAccount(ctx)
+
+	r := f.newReconciler(ctx)
 	// Don't update build informers with test build object
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("Unexpected error while syncing build: %s", err.Error())
@@ -195,26 +223,28 @@ func TestBuildWithMissingServiceAccount(t *testing.T) {
 	}
 
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b},
-		client:     fake.NewSimpleClientset(b),
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t:       t,
+		objects: []runtime.Object{b},
 	}
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	f.createBuild(ctx, b)
+
+	r := f.newReconciler(ctx)
+	f.updateIndex(ctx, b)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 		t.Errorf("Expect error syncing build")
 	} else if !kuberrors.IsNotFound(err) {
 		t.Errorf("Expect error to be not found err: %s", err.Error())
 	}
-	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
 	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
@@ -239,30 +269,32 @@ func TestBuildWithMissingSecret(t *testing.T) {
 	}
 
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b},
-		client:     fake.NewSimpleClientset(b),
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t:       t,
+		objects: []runtime.Object{b},
 	}
-	f.createServiceAccounts(&corev1.ServiceAccount{
+
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	f.createBuild(ctx, b)
+	f.createServiceAccounts(ctx, &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "banana-sa"},
 		Secrets:    []corev1.ObjectReference{{Name: "missing-secret"}},
 	})
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	r := f.newReconciler(ctx)
+	f.updateIndex(ctx, b)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
 
 	if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 		t.Errorf("Expect error syncing build")
 	} else if !kuberrors.IsNotFound(err) {
 		t.Errorf("Expect error to be not found err: %s", err.Error())
 	}
-	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
 	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
@@ -290,27 +322,29 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			},
 		}
 		f := &fixture{
-			t:          t,
-			objects:    []runtime.Object{b},
-			client:     fake.NewSimpleClientset(b),
-			kubeclient: k8sfake.NewSimpleClientset(),
+			t:       t,
+			objects: []runtime.Object{b},
 		}
-		f.createServiceAccount()
 
-		stopCh := make(chan struct{})
-		defer close(stopCh)
+		ctx, informers := rtesting.SetupFakeContext(t)
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-		r, i, k8sI := f.newReconciler(stopCh)
-		f.updateIndex(i, b)
-		i.Start(stopCh)
-		k8sI.Start(stopCh)
+		f.createBuild(ctx, b)
+		f.createServiceAccount(ctx)
+
+		r := f.newReconciler(ctx)
+		f.updateIndex(ctx, b)
+		if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+			t.Fatalf("Failed to start informers %v", err)
+		}
 
 		if err := r.Reconcile(context.Background(), getKey(b, t)); err == nil {
 			t.Errorf("Expect error syncing build")
 		} else if !kuberrors.IsNotFound(err) {
 			t.Errorf("Expect error to be not found err: %s", err.Error())
 		}
-		buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+		buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
 		b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Errorf("error fetching build: %v", err)
@@ -348,36 +382,32 @@ func TestBuildWithTemplate(t *testing.T) {
 	}
 
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b, tmpl},
-		client:     fake.NewSimpleClientset(b, tmpl),
-		kubeclient: k8sfake.NewSimpleClientset(),
-	}
-	f.createServiceAccount()
-
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
-
-	err := i.Build().V1alpha1().BuildTemplates().Informer().GetIndexer().Add(tmpl)
-	if err != nil {
-		t.Errorf("Unexpected error when adding cluster build template to build informer: %s", err.Error())
+		t:       t,
+		objects: []runtime.Object{b, tmpl},
 	}
 
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	if err = r.Reconcile(context.Background(), getKey(b, t)); err != nil {
+	f.createBuild(ctx, b)
+	f.createBuildTemplate(ctx, tmpl)
+	f.createServiceAccount(ctx)
+
+	r := f.newReconciler(ctx)
+	f.updateIndex(ctx, b)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
+
+	f.updateBuildTemplateIndex(ctx, tmpl)
+
+	if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("unexpected expecting error while syncing build: %s", err.Error())
 	}
 
-	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
-	b, err = buildClient.Get(b.Name, metav1.GetOptions{})
+	buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
+	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
 	}
@@ -442,28 +472,29 @@ func TestBasicFlows(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			b := newBuild(c.desc)
 			f := &fixture{
-				t:          t,
-				objects:    []runtime.Object{b},
-				client:     fake.NewSimpleClientset(b),
-				kubeclient: k8sfake.NewSimpleClientset(),
+				t:       t,
+				objects: []runtime.Object{b},
 			}
-			f.createServiceAccount()
 
-			stopCh := make(chan struct{})
-			defer close(stopCh)
+			ctx, informers := rtesting.SetupFakeContext(t)
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
 
-			r, i, k8sI := f.newReconciler(stopCh)
-			f.updateIndex(i, b)
-			i.Start(stopCh)
-			k8sI.Start(stopCh)
+			f.createBuild(ctx, b)
+			f.createServiceAccount(ctx)
+
+			r := f.newReconciler(ctx)
+			f.updateIndex(ctx, b)
+			if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+				t.Fatalf("Failed to start informers %v", err)
+			}
 
 			// Reconcile to pick up changes.
-			ctx := context.Background()
-			if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+			if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 				t.Errorf("error syncing build: %v", err)
 			}
 
-			buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+			buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
 			b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Errorf("error fetching build: %v", err)
@@ -479,18 +510,18 @@ func TestBasicFlows(t *testing.T) {
 			}
 
 			podName := b.Status.Cluster.PodName
-			p, err := f.kubeclient.CoreV1().Pods(metav1.NamespaceDefault).Get(podName, metav1.GetOptions{})
+			p, err := fakekubeclient.Get(ctx).CoreV1().Pods(metav1.NamespaceDefault).Get(podName, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("error getting pod %q: %v", podName, err)
 			}
 			p.Status = c.podStatus
-			if _, err := f.kubeclient.CoreV1().Pods(metav1.NamespaceDefault).Update(p); err != nil {
+			if _, err := fakekubeclient.Get(ctx).CoreV1().Pods(metav1.NamespaceDefault).Update(p); err != nil {
 				t.Fatalf("error updating pod %q: %v", podName, err)
 			}
 
 			// Reconcile to pick up pod changes.
-			f.updatePodIndex(k8sI, p)
-			f.updateIndex(i, b)
+			f.updatePodIndex(ctx, p)
+			f.updateIndex(ctx, b)
 			if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
 				t.Errorf("error syncing build: %v", err)
 			}
@@ -514,26 +545,28 @@ func TestTimeoutFlow(t *testing.T) {
 	b.Spec.Timeout = &metav1.Duration{Duration: 500 * time.Millisecond}
 
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b},
-		client:     fake.NewSimpleClientset(b),
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t:       t,
+		objects: []runtime.Object{b},
 	}
-	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	ctx := context.Background()
-	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+	f.createBuild(ctx, b)
+	f.createServiceAccount(ctx)
+
+	r := f.newReconciler(ctx)
+	f.updateIndex(ctx, b)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
+
+	if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("Not Expect error when syncing build")
 	}
 
-	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
 	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
@@ -561,27 +594,28 @@ func TestCancelledFlow(t *testing.T) {
 	b := newBuild("cancelled")
 
 	f := &fixture{
-		t:          t,
-		objects:    []runtime.Object{b},
-		client:     fake.NewSimpleClientset(b),
-		kubeclient: k8sfake.NewSimpleClientset(),
+		t:       t,
+		objects: []runtime.Object{b},
 	}
-	f.createServiceAccount()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	ctx, informers := rtesting.SetupFakeContext(t)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	r, i, k8sI := f.newReconciler(stopCh)
-	f.updateIndex(i, b)
-	i.Start(stopCh)
-	k8sI.Start(stopCh)
+	f.createBuild(ctx, b)
+	f.createServiceAccount(ctx)
 
-	ctx := context.Background()
-	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
+	r := f.newReconciler(ctx)
+	f.updateIndex(ctx, b)
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		t.Fatalf("Failed to start informers %v", err)
+	}
+
+	if err := r.Reconcile(context.Background(), getKey(b, t)); err != nil {
 		t.Errorf("Not Expect error when syncing build")
 	}
 
-	buildClient := f.client.BuildV1alpha1().Builds(b.Namespace)
+	buildClient := fakebuildclient.Get(ctx).BuildV1alpha1().Builds(b.Namespace)
 	b, err := buildClient.Get(b.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("error fetching build: %v", err)
@@ -597,7 +631,7 @@ func TestCancelledFlow(t *testing.T) {
 	}
 	b.Spec.Status = v1alpha1.BuildSpecStatusCancelled
 
-	f.updateIndex(i, b)
+	f.updateIndex(ctx, b)
 	if err := r.Reconcile(ctx, getKey(b, t)); err != nil {
 		t.Errorf("error syncing build: %v", err)
 	}
