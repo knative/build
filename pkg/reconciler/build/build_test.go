@@ -44,7 +44,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 
-	. "github.com/knative/pkg/reconciler/testing"
+	rtesting "github.com/knative/pkg/reconciler/testing"
 )
 
 // TODO(jasonhall): Test pod creation fails
@@ -146,7 +146,7 @@ func TestBuildNotFoundFlow(t *testing.T) {
 		objects: []runtime.Object{b},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -178,7 +178,7 @@ func TestBuildWithBadKey(t *testing.T) {
 		t: t,
 	}
 
-	ctx, _ := SetupFakeContext(t)
+	ctx, _ := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -197,7 +197,7 @@ func TestBuildNotFoundError(t *testing.T) {
 		objects: []runtime.Object{b},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -227,7 +227,7 @@ func TestBuildWithMissingServiceAccount(t *testing.T) {
 		objects: []runtime.Object{b},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -273,7 +273,7 @@ func TestBuildWithMissingSecret(t *testing.T) {
 		objects: []runtime.Object{b},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -326,7 +326,7 @@ func TestBuildWithNonExistentTemplates(t *testing.T) {
 			objects: []runtime.Object{b},
 		}
 
-		ctx, informers := SetupFakeContext(t)
+		ctx, informers := rtesting.SetupFakeContext(t)
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -386,7 +386,7 @@ func TestBuildWithTemplate(t *testing.T) {
 		objects: []runtime.Object{b, tmpl},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -476,7 +476,7 @@ func TestBasicFlows(t *testing.T) {
 				objects: []runtime.Object{b},
 			}
 
-			ctx, informers := SetupFakeContext(t)
+			ctx, informers := rtesting.SetupFakeContext(t)
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
@@ -549,7 +549,7 @@ func TestTimeoutFlow(t *testing.T) {
 		objects: []runtime.Object{b},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -598,7 +598,7 @@ func TestCancelledFlow(t *testing.T) {
 		objects: []runtime.Object{b},
 	}
 
-	ctx, informers := SetupFakeContext(t)
+	ctx, informers := rtesting.SetupFakeContext(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
