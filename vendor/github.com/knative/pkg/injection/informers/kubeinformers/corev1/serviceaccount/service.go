@@ -14,40 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package factory
+package serviceaccount
 
 import (
 	"context"
 
-	"github.com/knative/pkg/logging"
-
-	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
+	corev1 "k8s.io/client-go/informers/core/v1"
 
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/injection"
-	"github.com/knative/pkg/injection/clients/apiextclient"
+	"github.com/knative/pkg/injection/informers/kubeinformers/factory"
+	"github.com/knative/pkg/logging"
 )
 
 func init() {
-	injection.Default.RegisterInformerFactory(withInformerFactory)
+	injection.Default.RegisterInformer(withInformer)
 }
 
 // Key is used as the key for associating information
 // with a context.Context.
 type Key struct{}
 
-func withInformerFactory(ctx context.Context) context.Context {
-	axc := apiextclient.Get(ctx)
-	return context.WithValue(ctx, Key{},
-		informers.NewSharedInformerFactory(axc, controller.GetResyncPeriod(ctx)))
+func withInformer(ctx context.Context) (context.Context, controller.Informer) {
+	f := factory.Get(ctx)
+	inf := f.Core().V1().ServiceAccounts()
+	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 
-// Get extracts the Kubernetes Api Extensions InformerFactory from the context.
-func Get(ctx context.Context) informers.SharedInformerFactory {
+// Get extracts the Kubernetes Service Account informer from the context.
+func Get(ctx context.Context) corev1.ServiceAccountInformer {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
 		logging.FromContext(ctx).Panicf(
-			"Unable to fetch %T from context.", (informers.SharedInformerFactory)(nil))
+			"Unable to fetch %T from context.", (corev1.ServiceAccountInformer)(nil))
 	}
-	return untyped.(informers.SharedInformerFactory)
+	return untyped.(corev1.ServiceAccountInformer)
 }
