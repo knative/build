@@ -53,7 +53,7 @@ required = [
 
 [[override]]
   name = "github.com/knative/pkg"
-  branch = "master"
+  branch = "release-0.7"
 
 [[override]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"
