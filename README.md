@@ -1,4 +1,11 @@
-# Knative build
+# Knative Build
+
+> :rotating_light: **NOTE: There is
+[an open proposal to deprecate this component](https://github.com/knative/build/issues/614)
+in favor of [Tekton Pipelines](https://github.com/tektoncd/pipeline). If you
+are a new user, consider using Tekton Pipelines, or another tool, to build
+and release. If you use Knative Build today, please give feedback on the
+deprecation proposal.**
 
 [![GoDoc](https://godoc.org/github.com/knative/build?status.svg)](https://godoc.org/github.com/knative/build)
 [![Go Report Card](https://goreportcard.com/badge/knative/build)](https://goreportcard.com/report/knative/build)
